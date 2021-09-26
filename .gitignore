@@ -1,3 +1,10 @@
+# Import from battlesnake 
+*.DS_Store
+*.pyc
+.cmd
+.idea
+.vscode
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

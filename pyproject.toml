@@ -7,3 +7,4 @@ authors = ["Battlesnake Developers <developers@battlesnake.com>", "@idzol <p.kub
 [tool.poetry.dependencies]
 python = "^3.8"
 Flask = "^2.0.1"
+pandas = "^1.3.3"
