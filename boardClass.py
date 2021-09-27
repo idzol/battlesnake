@@ -10,25 +10,21 @@ import random as rand
 # board.py
 class board(): 
     
-    # globals 
-    height = 0 
-    width = 0 
-    
-    maxdepth = 3    # search depth for moves 
-    maxpaths = 100
-    
     legend = {
-        'you-head':11,
-        'you-body':10,
-        'enemy-head':21,
-        'enemy-body':20,
-        'food':30,
+        'you-head':10,
+        'you-body':11,
+        'you-tail':12,
+        'enemy-head':20,  # Snake ID * value .. 
+        'enemy-body':21,
+        'enemy-body':22,
+        'food':-30,       
         'hazard':31
     }
+    # routing algorithm avoids positive values & attracted to negative values 
         
     # board matrices 
-    land = np.zeros((height, width), np.int8) 
-    mask = np.ones((height, width), np.int8)
+    land = [] 
+    mask = [] 
     
     distance = []   # Array of distance 
     threat = []     # Array of threat rating 
@@ -43,8 +39,20 @@ class board():
     predict = []  # Array of board in n moves (prediction)
     
 
-    # def __init__()
-    #   set dimensions ..
+    def __init__(self, width=0, height=0, maxdepth=3, maxpaths=100):
+      # globals 
+      self.height = width
+      self.width = height
+
+      self.land = np.zeros((height, width), np.intc) 
+      self.mask = np.ones((height, width), np.intc)
+
+      self.maxdepth = maxdepth
+      # search depth for moves.  
+      # why does 4 fail. Latency, loop?
+      
+      self.maxpaths = maxpaths
+
 
     def setDimensions(self, x, y):
         if isinstance(x, int) and isinstance(y, int):
@@ -94,6 +102,7 @@ class board():
     def getMaxDepth(self):
         return self.maxdepth
     
+
     def updateBoards(self,data):
         
         # Update dimensions 
@@ -115,6 +124,7 @@ class board():
         di = self.updateDijkstra()
 
         return True
+
 
     def XYToLoc(self, pt):
         # w = self.width 
@@ -208,7 +218,7 @@ class board():
 
         for i in range(0,w):
             for j in range(0,h):
-                d = distanceToPoint(head, {'x':i, 'y':j})
+                d = distanceToPoint(head, {'x':i, 'y':j}, "point")
                 self.distance[i, j] = d
 
     # assign a "threat" value based on distance to enemy snake and size
@@ -216,6 +226,7 @@ class board():
         # data -> snake, enemy
         pass 
   
+
     def updateDijkstra(self):
         
         # TODO: Improve .. 
@@ -267,6 +278,8 @@ class board():
             for p in paths:
                 # p = [ [0, 0], .. ] 
                 newpaths = newpaths + self.definePaths(p, b)
+                # TODO:  Minidijkstra
+                # newpaths = self.removeHighWeightPath(newpaths)
                 
             paths = paths + newpaths
             # print(paths)
@@ -337,7 +350,52 @@ class board():
         # print(str(a) + ":" + str(nodes))
         return nodes 
 
- 
+
+    def removeHighWeightPath(self, paths):
+
+        dijmax = 1000
+        pathlow = []
+        pathhigh = []
+
+        for path in paths:
+            
+            # Translate vectors into points 
+            pts = []
+            va = []
+            
+            for vb in path:
+                
+                # Skip first point (need two points for line)  
+                if (len(va)):
+                    # Add points in line 
+                    # print(str(va)+str(vb))
+                    pts = pts + getPointsInLine(va, vb)
+
+                va = vb 
+            
+            # calculate path weight    
+            pmask = self.drawMask(pts)                
+            dij = self.dijkstra
+            pdij = dij * pmask
+            dijtotal = sum(map(sum,pdij)) 
+
+            # save best path  
+            if (dijtotal > dijmax):
+                pass
+                # Ignore path 
+                # pathhigh.append(path)
+            else: 
+                pathlow.append(path)
+
+        # print("PATH-HIGH")
+        # print(str(pathhigh))
+        # print("PATH-LOW")
+        # print(str(pathlow))
+
+        return pathlow
+
+
+
     def leastWeightPath(self, paths, target):
 
         # paths = [ [[0, 0]], [[0, 0], [1, 0]], [[0, 0], [2, 0]] ...
@@ -380,9 +438,14 @@ class board():
                 pmask = self.drawMask(pts)                
                 dij = self.dijkstra
 
-                # pdij = np.logical_and(dij, pmask)
+                # print("DIJKSTRA")
+                # print (str(dij))
+                # print ("MASK")
+                # print (str(pmask))
                 pdij = dij * pmask
-
+                
+                # print ("DIJMASK")
+                # print (str(pdij))
 
                 dijtotal = sum(map(sum,pdij)) 
 
@@ -410,7 +473,7 @@ class board():
             # px = p[0]
             # py = p[1]          
             # pmap['x':px, 'y':py] = False
-            pmask[p[1], p[0]] = 1
+            pmask[p[0], p[1]] = 1
               
         return pmask
 
@@ -470,15 +533,26 @@ def getPointsInLine(a, b):
     return line
 
   
-def distanceToPoint(a, b):
-  
-    d = 0
-    try:
-        dx = abs(a['x'] - b['x'])
-        dy = abs(a['y'] - b['y'])
-        d = dx + dy
-    except: 
-        d = -1 
-        
-    return d
+def distanceToPoint(a, b, type="array"):
+    
+    try: 
 
+      if(type=="point"):
+        ax = a['x']
+        bx = b['x']
+        ay = a['y']
+        by = b['y']
+      else:
+        ax = a[1]
+        bx = b[1]
+        ay = a[0]
+        by = b[0]
+    
+      dx = abs(ax - bx)
+      dy = abs(ay - by)
+      d = dx + dy
+      return d
+
+    except: 
+      return -1
+  
