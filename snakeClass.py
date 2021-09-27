@@ -7,8 +7,17 @@ class snake:
 
     strategy = "enlarge"  # "enlarge"
     lastStrategy = ""
-    strategyList = ["enlarge", "attack", "defend", "stalk", "eat"]
+    strategyList = ["enlarge", "attack", "defend", "stalk", "eat", "taunt"]
+
+    # Enlarge -- focus on maximising snake size 
+    # Eat -- focus on restoring health (may end up same as enlarge)..
+    # Taunt -- full health, no attack options. eg. draw patterns
+    # Attack -- larger, opportunity to kill (Eg. head to head collision)
+    # Stalk -- larger, stay close to head.  Intercept food .. 
+    # etc
+
     interrupt = False
+    # trigger interrupt on critical situations (eg. low health, under threat)
 
     head = {}  # Dict - point {"x": 0, "y": 0}
     body = {}  # Dict - list [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} 

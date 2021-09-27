@@ -144,7 +144,7 @@ def getClosestItem(bo, its, loc, t):
             # print (it)
             
             itp = bo.XYToLoc(it.getLocation())
-            d = distanceToPoint(itp, loc)
+            d = distanceToPoint(itp, loc, "array")
             if (d < lowest):
                 lowest = d 
                 name = it.getName()
@@ -161,17 +161,30 @@ def getItemByName(its, name):
 
   return {}
 
-def distanceToPoint(a, b):
-  
-    d = 0
-    try:
-        dx = abs(a[0] - b[0])
-        dy = abs(a[1] - b[1])
-        d = dx + dy
+
+def distanceToPoint(a, b, type="array"):
+    
+    try: 
+
+      if(type=="point"):
+        ax = a['x']
+        bx = b['x']
+        ay = a['y']
+        by = b['y']
+      else:
+        ax = a[1]
+        bx = b[1]
+        ay = a[0]
+        by = b[0]
+    
+      dx = abs(ax - bx)
+      dy = abs(ay - by)
+      d = dx + dy
+      return d
+
     except: 
-        d = -1 
-        
-    return d
+      return -1
+  
     
 # def isSamePoint(a: Dict[str, int], b: Dict[str, int])
 
