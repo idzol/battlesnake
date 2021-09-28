@@ -11,12 +11,30 @@ class item:
     itemType = "" 
     types = ["food","hazard"]
     location = {}    # {"x":0,"y":0}
-
+    distances = {}
+    
     def __init__(self, t, p):
         self.type = t
         self.location = p 
         self.name = str(t) + "@x" + str(p['x']) + "y" + str(p['y'])
+
+    # # TODO:  is this complete?  
+    # def getDistances(self, things): 
+            
+    #     d = []
+    #     for t in things: 
+    #         d.append(self.getDistance(t))
+            
+    #     return d 
+    
+    # # TODO:  is this complete? 
+    # def getDistance(self, thing): 
         
+    #     n = thing['name']
+    #     d = thing.getLocation[dist]
+
+    #     return {n:d}
+            
     def getName(self):
         return self.name
 
@@ -36,3 +54,6 @@ class item:
     def setLocation(self, pt):
         self.location = {'x':pt['x'], 'y':pt['y']}
         return True 
+
+                           
+  
