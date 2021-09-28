@@ -1,27 +1,20 @@
 from typing import List, Dict
 
-import numpy as np
-import pandas as pd
-import random as rand
+import math 
 
-# from functions import distanceToPoint
-# TODO: move updateDistance / distanceToPoint into functions? 
+import numpy as np
+# import pandas as pd
+# import random as rand
+
+import constants as CONST
+import functions as fn 
 
 # board.py
 class board(): 
     
-    legend = {
-        'you-head':10,
-        'you-body':11,
-        'you-tail':12,
-        'enemy-head':20,  # Snake ID * value .. 
-        'enemy-body':21,
-        'enemy-body':22,
-        'food':-30,       
-        'hazard':31
-    }
-    # routing algorithm avoids positive values & attracted to negative values 
-        
+    # Import map values 
+    legend = CONST.legend
+
     # board matrices 
     land = [] 
     mask = [] 
@@ -218,7 +211,7 @@ class board():
 
         for i in range(0,w):
             for j in range(0,h):
-                d = distanceToPoint(head, {'x':i, 'y':j}, "point")
+                d = fn.distanceToPoint(head, {'x':i, 'y':j}, "point")
                 self.distance[i, j] = d
 
     # assign a "threat" value based on distance to enemy snake and size
@@ -254,10 +247,160 @@ class board():
         self.predict.append(bd)
         # solid = you & snakes & items 
 
+
+    # Give every item unique index .. 
+    def assignIndices(self, sn, it):
+        
+        si = []
+        fi = []
+        hi = []
+        n = 1 
+        
+        labels = ['you:idzol']
+            # s1:crepes
+            # s2:..
+            # f1:food
+            # h1:hazard
   
+        for s in sn:
+            si.append(n)
+            name = s.getName()
+            labels.append("s" + n + ":"+str(name))
+            n = n + 1
+
+        fn = 1
+        hn = 1 
+        for i in it:
+            t = i.getType()
+
+            if (t == "food"):
+                name = s.getLabel()
+                labels.append("f" + fn + ":food")
+                fn = fn + 1 
+                fi.append(n)
+
+            elif (t == "hazard"):
+                name = s.getLabel()
+                labels.append("h" + fn + ":food")
+                hn = hn + 1 
+                hi.append(n)
+
+            n = n + 1
+                
+        self.youIndex = 0 
+        self.snakeIndex = si # [1, 2]
+        self.foodIndex = fi # [3, 4, 5]
+        self.hazardIndex = hi # [6, 7]
+        self.labels = labels
+        
+        print(str(labels))
+        print(str(si))
+        print(str(fi))
+        print(str(hi))
+
+        return 1
+
+
+    def calculateDistances(self, snakes, items): 
+    
+        n = len(snakes) + len(items)
+        dists = np.zeros((n, n), np.intc)
+
+        things = snakes
+        things = things.append(items)
+
+        for t1 in range(0, things):
+            for t2 in range(0, things):
+                t1loc = things[t1].getLocation()
+                t2loc = things[t2].getLocation()
+                d = fn.calculateDistance(t1loc, t2loc)
+                dists[t1, t2] = d 
+        
+        self.distances = dists
+        
+        print(str(dists))
+        
+        return dists
+
+        # eg. 
+        # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
+        # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
+        # [ 9, 3, 0, 4, 2 ]   
+
+
+    # Go through snakes and estimate most likely path 
+    def predictEnemyMoves(self, snakes, items):
+        
+        # get foods
+        w = self.width
+        h = self.height
+        
+        fs = self.foodIndex
+        predict = []
+        
+        for sn in snakes:
+            
+            # Assume strategy is food 
+            start = sn.getHead()
+            
+            # a = self.XYToLoc(sn.getLocation("head"))
+            iname = self.getClosestItem(sn, items, "food") # ?? 
+            it = getItemByName(items, iname)
+
+            finish = self.XYToLoc(it.getLocation())
+            
+            rt = self.findBestPath(start, finish)
+                # Set depth to 2 or 3 .. 
+                # findBestPath.  start with no prediction? 
+
+            sn.setRoute(rt)
+            predictMatrix(sn) # ??
+
+    # 
+    def getClosestFood(sn, items): 
+
+      return 1 
+
+
+    def predictMatrix(self, snakes):
+      
+      depth = self.predictDepth
+      w = self.width
+      h = self.height
+      
+      predict = []
+      # predict = [turns][w, h]  # np.zeros((w, h), np.intc) 
+      self.maxPredictTurns = 10
+
+      for sn in snakes:
+          for t in range(0, turns):
+      
+              # get route for snake
+              rt = sn.getRoute()
+              # snake as array 
+              # eraseTail (getTail)
+              # eraseHead (getHead)
+              # newHead (turns[t])
+              # newTail () 
+              # paintNewSnake
+              # sn.predict[i][r[0], r[1]] = 1:
+          
+      for t in range(0, turns): 
+          for sn in snakes:
+            pass 
+            # sum all pred matrices 
+            # p[t] = p[t] + sn.getPredict(t)
+      # self.predict[t] = p[tt 
+
+    # Return future predict matrix 
+    def getPredictMatrix(self, t):
+        
+        return self.predict[t]
+        
+
     # TODO: work in progress
-    # Check for collission in x rounds time 
-    def checkCollisionPredict(bo, route):
+    # Check for collision in x rounds time 
+    def predictCollisionFuture(bo, route):
         # for r in route:
         #   i = i + 1 
         #   board = predict[i]
@@ -369,7 +512,7 @@ class board():
                 if (len(va)):
                     # Add points in line 
                     # print(str(va)+str(vb))
-                    pts = pts + getPointsInLine(va, vb)
+                    pts = pts + fn.getPointsInLine(va, vb)
 
                 va = vb 
             
@@ -427,7 +570,7 @@ class board():
                     if (len(va)):
                         # Add points in line 
                         # print(str(va)+str(vb))
-                        pts = pts + getPointsInLine(va, vb)
+                        pts = pts + fn.getPointsInLine(va, vb)
 
                     va = vb 
 
@@ -477,82 +620,78 @@ class board():
               
         return pmask
 
-# TODO:  Move to functions.py or other (solve for recursion error..)
-
-def getPointsInLine(a, b):
-    # a = [0, 0], b = [2, 0]
-    # a = [2, 0], b = [2, 2]
-    
-    # print("LINE POINTS")
-    # print(str(a) + str(b))
-    
-    ax = a[0]
-    ay = a[1]
-    bx = b[0]
-    by = b[1]
-
-    line = []
-
-    # Point (not a line)
-    if (ax == bx) & (ay == by): 
-        return [] 
-    
-    # Line along Y 
-    elif (ax == bx):
-        # Decide up or down 
-        if (ay > by):
-            inc = -1
-        else:
-            inc = 1
+    # Return quadrant with highest/lowest space 
+    # Used if cannot reach destination 
+    def findSpace(self): 
+        w = self.width 
+        h = self.height
+        bd = self.combine
         
-        ayd = ay
-        while (ayd != by):
-            ayd = ayd + inc
-            line.append([ax, ayd])
+        xmid = math.floor((w-1)/ 2)
+        ymid = math.floor((h-1)/ 2)
 
-    # Line along X
-    elif (ay == by):
-        # Decide up or down 
-        if ax > bx: 
-            inc = -1
-        else:
-            inc = 1
+        quads = [0] * 4
+        # 0 - NW top left 
+        # 1 - NE top right 
+        # 2 - SW bottom left
+        # 3 - SE bottom right 
+
+        # break into quadrants 
+        y = h
+        x = 0
+        for row in bd: 
+          y = y - 1
+          for cell in row: 
+            x = x + 1
+            if(cell == 0): 
+              if (x < xmid & y > ymid):
+                i = 0
+              elif (x > xmid & y > ymid):
+                i = 1
+              elif (x < xmid & y < ymid):
+                i = 2
+              elif (x > xmid & y < ymid):
+                i = 3
+              else:
+                pass 
+                # on the line 
+                # ie. inbetween quadrants
         
-        axd = ax    
-        while (axd != bx):
-            axd = axd + inc
-            line.append([axd, ay])
-            
-    # Not a perpendicular line 
-    else:
-        return []
+            quads[i] = quads[i] + 1
 
-    # line.append(b)
-    # print("LINE")
-    # print(str(line))
-    return line
+        # return quadrants 
+        return quads 
+      
+    # Return quadrant with highest/lowest threat
+    def findThreat(self):
+        pass 
+        # break into quadrants 
+        # return 
 
-  
-def distanceToPoint(a, b, type="array"):
-    
-    try: 
+    def getClosestItem(self, its, loc, t):
 
-      if(type=="point"):
-        ax = a['x']
-        bx = b['x']
-        ay = a['y']
-        by = b['y']
-      else:
-        ax = a[1]
-        bx = b[1]
-        ay = a[0]
-        by = b[0]
-    
-      dx = abs(ax - bx)
-      dy = abs(ay - by)
-      d = dx + dy
-      return d
+        lowest = 100 
+        name = ""
+        
+        if (t == "food"):
+          for it in its:     
+                # print (it)
+                
+                itp = self.XYToLoc(it.getLocation())
+                d = fn.distanceToPoint(itp, loc, "array")
+                if (d < lowest):
+                    lowest = d 
+                    name = it.getName()
+                    # TODO: if two of same dist, returns top left. do we want to change / randomise this? 
 
-    except: 
-      return -1
-  
+        return name
+
+
+    def getItemByName(self, items, name):
+
+      for it in items: 
+          if it.getName() == name:
+            return it 
+
+      return {}
+

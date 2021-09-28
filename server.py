@@ -11,7 +11,7 @@ from snakeClass import snake
 from boardClass import board
 from itemClass import item
 
-from functions import selectDestination, chooseMove
+from logic import selectDestination, chooseMove
 
 app = Flask(__name__)
 
@@ -96,9 +96,14 @@ def handle_move():
 
     # decide move 
     move = chooseMove(data, theBoard, ourSnek)
-    
+    # shout = ourSnek.getShout()
+
     print(f"MOVE: {move}")
+    # print(f"SHOUT: {shout}")
+    
     return {"move": move}
+    # return {'move': move, 'shout': shout}
+  
 
 
 @app.post("/end")

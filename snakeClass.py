@@ -1,5 +1,7 @@
 from typing import List, Dict
 
+import constants as CONST
+
 # from functions import selectDestination
 
 
@@ -107,3 +109,19 @@ class snake:
 
     def getTarget(self):
       return self.target
+
+
+    def getShout(self):
+        
+        # shouts = []
+        # Import from constants 
+
+        strat = self.getStrategy()
+  
+        #     if (strategy=="enlarge"):
+        #     elif (strategy=="taunt"):
+        #     else
+          
+        shout = CONST.shouts[int(len(taunts) * rand.random())]
+        return shout
+
