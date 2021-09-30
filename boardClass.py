@@ -32,21 +32,23 @@ class board():
     predict = []  # Array of board in n moves (prediction)
     
 
-    def __init__(self, width=0, height=0, maxdepth=3, maxpaths=100):
+    def __init__(self, data):
       # globals 
-      self.height = width
-      self.width = height
+      height = data['board']['height']
+      width = data['board']['width']
+
+      self.height = height
+      self.width = width
 
       self.land = np.zeros((height, width), np.intc) 
       self.mask = np.ones((height, width), np.intc)
 
-      self.maxdepth = maxdepth
-      # search depth for moves.  
-      # why does 4 fail. Latency, loop?
+      # Routing limits 
+      self.maxdepth = CONST.maxSearchDepth      
+      self.maxpaths = CONST.maxOwnPaths
+      self.maxPredictTurns = CONST.maxPredictTurns
       
-      self.maxpaths = maxpaths
-
-
+    
     def setDimensions(self, x, y):
         if isinstance(x, int) and isinstance(y, int):
             self.width = x
@@ -61,13 +63,34 @@ class board():
         return [self.width, self.height]
    
 
-    def setPoint(self, p: Dict[str, int]):
-        self.land[p["x"], p["y"]] = 1
-        return True 
+    def setPoint(self, p: Dict[str, int], t="array"):
+      try:
+        if (t=="dict"):
+          self.land[p["x"], p["y"]] = 1
+          return True 
+
+        elif (t=="array"):
+          self.land[p] = 1
+          return True
+
+      except:
+        return False
+
+    # def getPoint(self, x, y):
+    #     return self.land[x, y]
     
-    def getPoint(self, x, y):
-        return self.land[x, y]
+    def getPoint(self, p: Dict[str, int], t="array"):
+      try:
+        if (t=="dict"):
+          return self.land[p["x"], p["y"]]
+          
+        elif (t=="array"):
+          return self.land[p]
+
+      except:
+        return []
     
+
     def getSolid(self):
         return self.solid
 
@@ -141,12 +164,14 @@ class board():
         for pt in body: 
             px = pt['x']
             py = pt['y']
-            self.you[h-py-1, px] = self.legend['you-body']
+            # self.you[h-py-1, px] = CONST.legend['you-body']
+            self.you[py, px] = CONST.legend['you-body']
 
         head = data['you']['head']
         px = head['x']
         py = head['y']
-        self.you[h-py-1, px] = self.legend['you-head']
+        # self.you[h-py-1, px] = CONST.legend['you-head']
+        self.you[py, px] = CONST.legend['you-head']
 
         return self.you 
  
@@ -169,12 +194,14 @@ class board():
                 for pt in body: 
                     px = pt['x']
                     py = pt['y']
-                    self.snakes[h-py-1, px] = self.legend['enemy-body']
+                    # self.snakes[h-py-1, px] = self.legend['enemy-body']
+                    self.snakes[py, px] = self.legend
 
                 head = sk['head']
                 px = head['x']
                 py = head['y']
-                self.snakes[h-py-1, px] = self.legend['enemy-head']
+                # self.snakes[h-py-1, px] = self.legend['enemy-head']
+                self.snakes[py, px] = self.legend['enemy-head']
 
         return self.snakes 
 
@@ -191,12 +218,14 @@ class board():
         for fd in fds: 
             px = fd['x']
             py = fd['y']
-            self.items[h-py-1, px] = self.legend['food']
+            # self.items[h-py-1, px] = self.legend['food']
+            self.items[py, px] = self.legend['food']
 
         for hd in hds: 
             px = hd['x']
             py = hd['y']
-            self.items[h-py-1, px] = self.legend['hazard']
+            # self.items[h-py-1, px] = self.legend['hazard']
+            self.items[py, px] = self.legend['hazard']
 
         return self.items
  
@@ -211,7 +240,7 @@ class board():
 
         for i in range(0,w):
             for j in range(0,h):
-                d = fn.distanceToPoint(head, {'x':i, 'y':j}, "point")
+                d = fn.distanceToPoint(head, {'x':i, 'y':j}, "dict")
                 self.distance[i, j] = d
 
     # assign a "threat" value based on distance to enemy snake and size
@@ -345,7 +374,7 @@ class board():
             
             # a = self.XYToLoc(sn.getLocation("head"))
             iname = self.getClosestItem(sn, items, "food") # ?? 
-            it = getItemByName(items, iname)
+            it = self.getItemByName(items, iname)
 
             finish = self.XYToLoc(it.getLocation())
             
@@ -354,13 +383,7 @@ class board():
                 # findBestPath.  start with no prediction? 
 
             sn.setRoute(rt)
-            predictMatrix(sn) # ??
-
-    # 
-    def getClosestFood(sn, items): 
-
-      return 1 
-
+  
 
     def predictMatrix(self, snakes):
       
@@ -370,7 +393,8 @@ class board():
       
       predict = []
       # predict = [turns][w, h]  # np.zeros((w, h), np.intc) 
-      self.maxPredictTurns = 10
+      
+      turns = self.maxPredictTurns
 
       for sn in snakes:
           for t in range(0, turns):
@@ -430,7 +454,7 @@ class board():
         bestpath = self.leastWeightPath(paths, b)
 
         print("COMBINE-MAP")
-        print(str(self.combine))
+        fn.printMap(self.combine)
 
         print("BEST-PATH")
         print(str(bestpath))
@@ -465,14 +489,41 @@ class board():
         # print(str(paths))    
         return paths 
 
-                
+
+    def findClosestWall(self, sn):
+    
+        start = sn.getLocation("head")
+        ax = start[1]
+        ay = start[0]
+
+        w = self.width
+        h = self.height
+        walls = [[ay, 0], # Left
+              [ay, w],    # Right
+              [h, ax],    # Up
+              [0, ax]]    # Down
+
+        # Possible that snake is on wall 
+        paths = []
+        for w in walls: 
+
+            path = fn.getPointsInLine(start,w)
+            if(path != []):
+              paths.append(path)
+
+        # TODO: 
+        # * Split out dijkstra function
+        # * Modify leastWeightPath to optionnl target
+        # return leastWeightPath(paths)
+
+
     def findPossiblePathPoints(self, a):
 
         w = self.width 
         h = self.height
         
-        ax = a[0]
-        ay = a[1]
+        ax = a[1]
+        ay = a[0]
         
         nodes = []
         
@@ -480,13 +531,13 @@ class board():
         for wx in range(0, w):
             if wx != ax: 
                 # nodes.append([{'x':wx, 'y':ay}])
-                nodes.append([wx, ay])
+                nodes.append([ay, wx])
         
         for hy in range(0, h):
             if hy != ay:
-                nodes.append([ax, hy])
+                nodes.append([hy, ax])
 
-        # TODO:  Eliminate any with collisions to improve performance if rqd
+        # TODO:  Eliminate any with collisions to improve performance 
         # for n in nodes:
         #    .. 
         
@@ -600,11 +651,11 @@ class board():
         
         print ("DIJKSTRA-PATH")
         print("Value: " + str(dijlast))
-        print(str(bestdij))
+        fn.printMap(bestdij)
         return bestpath 
     
     
-    def drawMask(self, pts):
+    def drawMask(self, pts, t="array"):
         # Create as mask 
                 
         w = self.width 
@@ -616,13 +667,61 @@ class board():
             # px = p[0]
             # py = p[1]          
             # pmap['x':px, 'y':py] = False
-            pmask[p[0], p[1]] = 1
-              
+            if (t=="array"):
+              pmask[p[0], p[1]] = 1
+
         return pmask
 
+
+    def findDirectionWith(self, t=CONST.legend['empty']):
+      # TODO: Update to allow array
+      # .. eg. [CONST.legend['hazard'], CONST.legend['food']]
+
+        w = self.width 
+        h = self.height
+        bd = self.combine
+        
+        xmid = math.floor((w-1)/ 2)
+        ymid = math.floor((h-1)/ 2)
+
+        sides = [0] * 4
+        # 0 - Top 
+        # 1 - Bottom
+        # 2 - Left
+        # 3 - Right 
+
+        # break into quadrants 
+        y = h
+        x = 0
+        for row in bd: 
+          y = y - 1
+          for cell in row: 
+            x = x + 1
+            if(cell == t): 
+              if (y < ymid):
+                i = 0
+              elif (y > ymid):
+                i = 1
+              elif (x < xmid):
+                i = 2
+              elif (x > xmid):
+                i = 3
+              else:
+                pass 
+                # on the line 
+                # ie. inbetween quadrants
+        
+            sides[i] = sides[i] + 1
+
+        # return quadrants 
+        return sides
+
+
+def findQuadrantWith(self, t=CONST.legend['empty']):
+
     # Return quadrant with highest/lowest space 
-    # Used if cannot reach destination 
-    def findSpace(self): 
+    # Used if cannot reach destination
+    def findQuadrantWith(self, t=CONST.legend['empty']):
         w = self.width 
         h = self.height
         bd = self.combine
@@ -643,7 +742,7 @@ class board():
           y = y - 1
           for cell in row: 
             x = x + 1
-            if(cell == 0): 
+            if(cell == t): 
               if (x < xmid & y > ymid):
                 i = 0
               elif (x > xmid & y > ymid):

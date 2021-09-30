@@ -5,7 +5,6 @@ import random as rand
 # import pandas as pd
 
 import functions as fn
-# from functions import getDirection, comparePoints, distanceToPoint, chartPath, setPath, printMap, raiseError
 
 from snakeClass import snake
 from boardClass import board
@@ -25,19 +24,31 @@ def selectDestination(bo: board, sn: snake, its: item):  # b = board(), s = stra
         # Select a random x/y 
         x = int(bo.width * rand.random()) 
         y = int(bo.height * rand.random()) 
-        target = {'x':x, 'y':y}
+        # target = {'x':x, 'y':y}
+        target = [y, x]
 
     elif (strat == "enlarge"): 
         # Get location of food(s)
-        a = bo.XYToLoc(sn.getLocation("head"))
+        # a = bo.XYToLoc(sn.getLocation("head"))
+        a = sn.getLocation("head")
+        
         iname = getClosestItem(bo, its, a, "food")
         it = getItemByName(its, iname)
-        target = bo.XYToLoc(it.getLocation())
+        # target = bo.XYToLoc(it.getLocation())
+        target = it.getLocation()
         
         # Find nearest food 
         # getClosestObject
         
         pass 
+
+    elif (strat == "idle"): 
+        # health full.  Follow wall  
+        pass
+
+        # find closest wall (dijkstra)
+        # target = getClosestWall()
+
 
     elif (strat == "eat"): 
         # same as enlarge but driven by hunger 
@@ -63,22 +74,23 @@ def selectDestination(bo: board, sn: snake, its: item):  # b = board(), s = stra
     return target
 
 
-def chooseMove(data: dict, bo: board, sn: snake) -> str:
+def chooseMove(bo: board, sn: snake) -> str:
     """
     data: https://docs.battlesnake.com/references/api/sample-move-request
     return: "up", "down", "left" or "right"
     """
     
-    pHead = data['you']['head']
+    pHead = sn.getLocation("head") 
     pDest = sn.getTarget()
+    
     print("TARGET")
-    print(str(bo.XYToLoc(pDest)))
+    print(str(pDest))
 
     # get route 
     # lRoute = getRouteToTarget(pHead, pDest)
     
-    start = bo.XYToLoc(pHead)
-    finish = bo.XYToLoc(pDest)
+    start = pHead
+    finish = pDest
 
     lRoute = bo.findBestPath(start, finish) 
     # TODO: Save route to optimise later 
@@ -101,6 +113,8 @@ def chooseMove(data: dict, bo: board, sn: snake) -> str:
     # Set route search limit 
     # eg. while(time < 400ms)
   
+
+# ERROR: can't handle if its[] = it (single item)
 def getClosestItem(bo, its, loc, t):
 
     lowest = 100 
@@ -110,7 +124,9 @@ def getClosestItem(bo, its, loc, t):
        for it in its:     
             # print (it)
             
-            itp = bo.XYToLoc(it.getLocation())
+            # itp = bo.XYToLoc(it.getLocation())
+            itp = it.getLocation()
+            
             d = fn.distanceToPoint(itp, loc, "array")
             if (d < lowest):
                 lowest = d 

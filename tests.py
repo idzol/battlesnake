@@ -1,25 +1,23 @@
 """
-Ref - https://docs.python.org/3/library/unittest.html
-Shell - python -m unittest tests.py -v
-        # python tests.py -v
+Ref:  https://docs.python.org/3/library/unittest.html
+Shell:  python -m unittest tests.py -v
+        python tests.py -v
+        echo '{"json":"obj"}' | python -m json.tool
 """
 import unittest
 import json 
-import constants
+import constants as CONST
 
 import functions as fn 
+from logic import selectDestination, chooseMove, getClosestItem, getItemByName
 
-import pandas as pd
 import numpy as np
 
-# from functions import getRouteToTarget
-# selectDestination, chooseMove, getDirection, comparePoints, chartPath, setPath, initialise_snake, raiseError
-
-# from snakeClass import snake
+from snakeClass import snake
 from boardClass import board
-# from itemClass import item
+from itemClass import item
 
-# Test arrays 
+# ============ TEST DATA =================
 
 test_food = np.array(
 [[12,31, 0, 0, 0, 0, 0],
@@ -30,6 +28,15 @@ test_food = np.array(
  [ 0,31, 0, 0, 0, 0, 0],
  [ 0, 0, 0, 0, 0, 0, -30]])
 
+test_sides_empty = [15,18,12,20]
+test_quads_empty = [4,9,7,8]
+
+test_sides_food = [0,1,0,1]
+test_quads_food = [0,0,0,1]
+
+test_foodname = "food@x0y6"
+test_foodtarget = [7,7]
+test_foodmove = "down"
 test_foodpath = np.array(
 [[ 0, 0, 0, 0, 0, 0, 0],
  [ 1, 0, 0, 0, 0, 0, 0],
@@ -39,43 +46,116 @@ test_foodpath = np.array(
  [ 5, 0, 0, 0, 0, 0, 0],
  [ 6, 7, 8, 9,10,11,12]])
     
-json_vals = {
+test_food2 = np.array(
+[[12,11,10, 0, 0, 0, 0],
+ [31,31,31,31,31,31, 0],
+ [ 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, -30, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, -30]])
 
-    'height':11,
-    'width':11,
-    'you_body':"[{'x': 1, 'y': 4}, {'x': 1, 'y': 5}, {'x': 1, 'y': 5}]",
-    'you_head':"{'x': 1, 'y': 4}",
-    'you_len':3,
-    'hazard':"[]",
-    'food':"[{'x': 0, 'y': 6}, {'x': 5, 'y': 5}]"
+test_foodname2 = "food@x4y2"
+test_foodtarget2 = [5,5]
+test_foodmove2 = "right"
+test_foodpath2 = np.array(
+[[ 0, 1, 2, 3, 4, 5, 6],
+ [ 0, 0, 0, 0, 0, 0, 7],
+ [ 0, 0, 0, 0, 0, 0, 8],
+ [ 0, 0, 0, 0, 0, 0, 9],
+ [ 0, 0, 0, 0,12,11,10],
+ [ 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0]])
+
+global json_val
+json_val = {    
+    '$height':str(3),
+    '$width':str(3),
+    
+    '$foods':json.dumps({'x':0, 'y':0}),
+    
+    '$you_health':str(100),
+    '$you_body':json.dumps({'x':0, 'y':0}),
+    '$you_head':json.dumps({'x':0, 'y':0}),
+    '$you_length':str(1),
+
+    '$enemy_health':str(100),
+    '$enemy_body':json.dumps({'x':2, 'y':2}),
+    '$enemy_head':json.dumps({'x':0, 'y':2}),
+    '$enemy_length':str(1),
+    
+    '$hazards':json.dumps([]),
     
 }
 
-# JSON Template for data 
-
-json_template = """{{'game': 
- {{'id': '0549018e-0a9f-4401-97b2-115f1f82e33b', 'ruleset': 
- {{'name': 'solo', 'version': 'v1.0.22', 'settings': 
- {{'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': 
- {{'shrinkEveryNTurns': 0}}, 'squad': 
- {{'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}}}}, 'timeout': 500}}, 'turn': 1, 
- 'board': {{
- 'height': $height, 
-  'width': $width, 
- 'snakes': [{{'id': 'gs_JMJSHhdpyWtGSj66Sv3Dt8yD', 
- 'name': 'Test snek', 'latency': '172',  'health': 99, 
- 'body': {you_body}, 
- 'head': {you_head}, 
- 'length': {you_len}, 
- 'shout': '', 'squad': ''}}], 
- 'food': $food , 
- 'hazards': {hazard} }}, 
- 'you': {{'id': 'gs_JMJSHhdpyWtGSj66Sv3Dt8yD', 'name': 'Test snek', 'latency': '172', 
- 'health': 99, 
- 'body': {you_body}, 
- 'head': {you_head}, 
- 'length': {you_len}, 
- 'shout': '', 'squad': ''}}}}
+global json_test
+json_test = """
+{
+   "game":{
+      "id":"testgame",
+      "ruleset":{
+         "name":"solo",
+         "version":"v1.0.22",
+         "settings":{
+            "foodSpawnChance":15,
+            "minimumFood":1,
+            "hazardDamagePerTurn":0,
+            "royale":{
+               "shrinkEveryNTurns":0
+            },
+            "squad":{
+               "allowBodyCollisions":false,
+               "sharedElimination":false,
+               "sharedHealth":false,
+               "sharedLength":false
+            }
+         }
+      },
+      "timeout":500
+   },
+   "turn":0,
+   "board":{
+      "height":$height,
+      "width":$width,
+      "snakes":[
+         {
+            "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yD",
+            "name":"idzol",
+            "latency":"",
+            "health":$you_health,
+            "body":$you_body,
+            "head":$you_head,
+            "length":$you_length,
+            "shout":"",
+            "squad":""
+         },
+         {
+            "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yE",
+            "name":"crepes",
+            "latency":"",
+            "health":$enemy_health,
+            "body":$enemy_body,
+            "head":$enemy_head,
+            "length":$enemy_length,
+            "shout":"",
+            "squad":""
+         }
+      ],
+      "food":$foods,
+      "hazards":$hazards
+   },
+   "you":{
+      "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yD",
+      "name":"idzol",
+      "latency":"",
+      "health":$you_health,
+      "body":$you_body,
+      "head":$you_head,
+      "length":$you_length,
+      "shout":"",
+      "squad":""
+   }
+}
 """
 
 if __name__ == "__main__":
@@ -83,6 +163,81 @@ if __name__ == "__main__":
     # getRouteToTargetTest()
     # boardClassTest()
 
+
+def loadTestData(test_map):
+  global json_val
+  global json_test
+
+  width = len(test_map[-1])
+  height = len(test_map)
+
+  # Co-ordinates are reversed (y axis)
+  y = 0 
+  x = 0
+  you_head = "" 
+  you_body = []
+  enemy_head = "" 
+  enemy_body = []
+  hazards = []
+  foods = []
+  
+  for row in test_map:
+      y = y + 1
+      x = 0
+      for cell in row:
+        x = x + 1
+        xy = {'x':x, 'y':y}
+        if (cell==CONST.legend['you-head']):
+          you_head = xy
+        elif(cell==CONST.legend['you-body']):
+          you_body.append(xy)
+        elif(cell==CONST.legend['you-tail']):
+          you_body.append(xy)
+          # may be inserted out of order ..
+        elif(cell==CONST.legend['enemy-head']):
+          you_head = xy
+        elif(cell==CONST.legend['enemy-body']):
+          you_body.append(xy)
+        elif(cell==CONST.legend['enemy-tail']):
+          you_body.append(xy)
+        elif(cell==CONST.legend['food']): 
+          foods.append(xy)    
+        elif(cell==CONST.legend['hazard']):
+          hazards.append(xy)
+
+  json_val = { 
+      '$height':str(height),
+      '$width':str(width),
+      
+      '$foods':json.dumps(foods),
+      
+      '$you_health':str(100),
+      '$you_body':json.dumps(you_body),
+      '$you_head':json.dumps(you_head),
+      '$you_length':str(len(you_body)),
+
+      '$enemy_health':str(100),
+      '$enemy_body':json.dumps({'x':2, 'y':2}),
+      '$enemy_head':json.dumps({'x':0, 'y':2}),
+      '$enemy_length':str(1),
+      
+      '$hazards':json.dumps(hazards),
+      
+  }
+
+  # nonlocal json_test
+  for key in json_val:
+      json_test = json_test.replace(key,json_val[key])
+
+  try:
+      d = json.loads(json_test)
+  except:
+      print("ERROR: Incorrect JSON format.  Check variable in json_template, and keys in json_vals")
+  # print(str(foods))
+  return d
+
+
+# =========================================
 class functionsTest(unittest.TestCase):
 
   def test_getDirection(self): 
@@ -170,6 +325,31 @@ class functionsTest(unittest.TestCase):
       self.assertEqual(result, md)
 
 
+# test
+#    Function testcases 
+#    itemClass 
+#        def getDistances(self, things) 
+#        def getDistance(self, thing)
+
+#    boardClass 
+#       def assignIndices(self, sn, it)
+#       def calculateDistances(self, snakes, items) 
+#       def predictEnemyMoves(self, sn, its)
+#       def predictMatrix 
+
+#    functions
+#       def printMap(m)
+
+#    snakeClass
+#       def shouts(self)
+
+#    logic 
+#       Separated functions to avoid recursion
+
+
+
+# ======================================
+
 class boardClassTest(unittest.TestCase):
 
     # def __init__():
@@ -230,7 +410,38 @@ class boardClassTest(unittest.TestCase):
         
         # self.assertEqual(result, c)
 
+      def test_findDirectionWith(self):
 
+
+        bo = board()
+
+        data = loadTestData(test_food)
+        bo.loadTestData(data)
+        
+        c = test_sides_empty
+        result = bo.findDirectionWith(CONST.legend['empty'])
+        self.assertEqual(result, c)
+
+        c = test_sides_food        
+        result = bo.findDirectionWith(CONST.legend['food'])
+        self.assertEqual(result, c)
+
+
+      def test_findQuadrantWith(self):
+        
+        bo = board()
+        data = loadTestData(test_food)
+        bo.loadTestData(data)
+
+        c = test_quads_empty
+        bo.findQuadrantWith(CONST.legend['empty'])
+        self.assertEqual(result, c)
+
+        c = test_quads_food
+        bo.findQuadrantWith(CONST.legend['food'])
+        self.assertEqual(result, c)
+
+            
       def loadTestPath(test_map):
 
         width = len(test_map[-1])
@@ -253,57 +464,139 @@ class boardClassTest(unittest.TestCase):
         return correct_path
 
 
-      def loadTestData(test_map):
-
-        width = len(test_map[-1])
-        height = len(test_map)
-
-        # Co-ordinates are reversed (y axis)
-        y = height 
-        x = 0
-        you_head = "" 
-        you_body = []
-        enemy_head = "" 
-        enemy_body = []
-        hazard = []
-        food = []
+# ======================================
+class logicTest(unittest.TestCase):
+  
+  def test_selectDestChooseMove(self):
         
-        for row in test_map:
-            y = y - 1
-            for cell in row:
-              x = x + 1
-              xy = {'x':x, 'y':y}
-              if (cell=='you-head'):
-                you_head = xy
-              elif(cell=='you-body'):
-                you_body.append(xy)
-              elif(cell=='you-tail'):
-                you_body.append(xy)
-                # may be inserted out of order ..
-              elif(cell=='enemy-head'):
-                you_head = xy
-              elif(cell=='enemy-body'):
-                you_body.append(xy)
-              elif(cell=='enemy-tail'):
-                you_body.append(xy)
-              elif(cell=='food'): 
-                food.append(xy)    
-              elif(cell=='hazard'):
-                hazard.append(xy)
+    # bo.setDimensions(data)
 
-        json_vals = {
+    data = loadTestData(test_food)
+    
+    sn = snake()
+    strat = "enlarge"
+    sn.setStrategy(strat)
 
-          'height':height,
-          'width':width,
-          'you_head':str(you_head),
-          'you_body':str(you_body),
-          'you_len':len(you_body),
-          'hazard':str(hazard),
-          'food':str(food) 
-        }
-                
-        json_template.format(**json_vals)
-        data = json.loads(json_template)
-        print(str(data))
-        return data
+    bo = board(data)
 
+    foods = data['board']['food']
+    print(str(foods))
+    theItems = []
+    for f in foods:
+      it = item("food", f) 
+      theItems.append(it)  
+      print(str(f))
+
+    c = test_foodtarget
+    result = selectDestination(bo, sn, theItems)
+    self.assertEqual(result, c)
+
+    c = test_foodmove
+    result = chooseMove(data, bo, sn)
+    self.assertEqual(result, c)
+
+    data = loadTestData(test_food2)
+    foods = data['board']['food']
+    theItems = []
+    for f in foods:
+      it = item("food", f) 
+      theItems.append(it)
+    
+    c = test_foodtarget2
+    result = selectDestination(bo, sn, it)
+    self.assertEqual(result, c)
+
+    c = test_foodmove2
+    result = chooseMove(data, bo, sn)
+    self.assertEqual(result, c)
+
+
+  def test_getClosestItem(self):
+    
+    bo = board()
+    
+    data = loadTestData(test_food)
+    items = []
+    foods = data['board']['food']
+    for f in foods:
+      it = item("food", f) 
+      items.append(it)
+
+    loc = data['you']['head']
+    c = test_foodname
+    result = getClosestItem(bo, items, loc, "food")
+    c = self.assertEqual(result, c)
+
+    data = loadTestData(test_food2)
+    items = []
+    foods = data['board']['food']
+    for f in foods:
+      it = item("food", f) 
+      items.append(it)
+
+    print(str(foods))
+    loc = data['you']['head']
+    print(str(loc))
+    c = test_foodname2
+    print(str(c))
+    result = getClosestItem(bo, items, loc, "food")
+    print(str(items))
+    c = self.assertEqual(result, c)
+
+
+  def test_getItemByName(self):
+    
+    data = loadTestData(test_food)
+    foods = data['board']['food']
+    items = []
+    for f in foods:
+      it = item("food", f) 
+      items.append(it)
+
+    name = test_foodname
+    c = test_foodtarget
+    result = getItemByName(items, name)
+    self.assertEqual(result, c)
+
+    data = loadTestData(test_food2)
+    foods = data['board']['food']
+    items = []
+    for f in foods:
+      it = item("food", f) 
+      items.append(it)
+
+    name = test_foodname2
+    c = test_foodtarget2
+    result = getItemByName(items, name)
+    self.assertEqual(result, c)
+    
+
+# ======================================
+
+class itemClassTest(unittest.TestCase):
+  
+  def test_getDistances(self):
+    pass 
+    # getDistances(self):
+
+  def test_getDistance(self):
+    pass 
+    # getDistance(self, thing):
+
+
+# ======================================
+# 
+#    boardClass 
+#       def assignIndices(self, sn, it)
+#       def calculateDistances(self, snakes, items) 
+#       def predictEnemyMoves(self, sn, its)
+#       def predictMatrix 
+
+#    functions
+#       def printMap(m)
+
+#    snakeClass
+#       def shouts(self)
+
+#    logic 
+#       Separated functions to avoid recursion
