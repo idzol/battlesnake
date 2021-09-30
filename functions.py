@@ -1,6 +1,6 @@
 import random as rand
 from typing import Dict
-# import numpy as np
+import numpy as np
 # import pandas as pd
 
 # move = getMove(pHead, route.pop(0)) 
@@ -21,9 +21,9 @@ def getDirection(a, b):
       if (bx > ax): 
           move = "right"
       if (by < ay): 
-          move = "up"
-      if (by > ay): 
           move = "down"
+      if (by > ay): 
+          move = "up" 
 
     except: 
       pass 
@@ -36,7 +36,7 @@ def getDirection(a, b):
     return move
 
 
-def comparePoints(a: Dict[str, int], b: Dict[str, int]): 
+def comparePoints(a, b, t="array"): 
 
     if(a['x'] == b['x'] and a['y'] == b['y']):
         return True
@@ -44,16 +44,16 @@ def comparePoints(a: Dict[str, int], b: Dict[str, int]):
         return False 
 
 
-
 def distanceToPoint(a, b, type="array"):
     
-    try: 
+    try:
 
-      if(type=="point"):
+      if(type=="dict"):
         ax = a['x']
         bx = b['x']
         ay = a['y']
         by = b['y']
+
       else:
         ax = a[1]
         bx = b[1]
@@ -76,6 +76,11 @@ def getPointsInLine(a, b):
     # print("LINE POINTS")
     # print(str(a) + str(b))
     
+    # TODO:  
+    # Confirm a & b are list [a, b]
+    # Confirm ax, bx are int
+    # Paths inverted somewhere .. 
+  
     ax = a[0]
     ay = a[1]
     bx = b[0]
@@ -139,12 +144,18 @@ def initialise_snake(data: dict) -> str:
 # Invert coordinate system 
 def printMap(m):
     # Iterate through map array backwards
-    md = []
-    for i in range(1, len(m)+1): 
-        md.append(m[-i])
-        print(str(m[-i]))
+    
+    h = len(m)
+    w = len(m[0])
 
-    return md 
+    md = np.zeros([h,w],np.intc)
+
+    for y in range(0, h):
+      for x in range(0, w): 
+        md[h-y-1,x] = m[y,x]
+
+    print(md)
+    return md
 
 def raiseError(e):
     # error_status = True 

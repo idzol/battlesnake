@@ -1,9 +1,10 @@
 
 
 # Routing variables 
-maxDepth = 3
-maxPaths = 100
+maxSearchDepth = 3
+maxOwnPaths = 100
 maxPredictTurns = 10
+shoutFrequency = 10
 
 # Board legend 
 legend = {
@@ -12,9 +13,10 @@ legend = {
     'you-tail':12,
     'enemy-head':20,  # Snake ID * value .. 
     'enemy-body':21,
-    'enemy-body':22,
+    'enemy-tail':22,
     'food':-30,       
-    'hazard':31
+    'hazard':31,
+    'empty':0
 }
 
 # Snake attitude 

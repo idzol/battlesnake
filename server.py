@@ -2,6 +2,7 @@ import logging
 import os
 
 import time
+# import math
 
 from flask import Flask
 from flask import request
@@ -16,11 +17,18 @@ from logic import selectDestination, chooseMove
 app = Flask(__name__)
 
 # Globals 
+# TODO:  Understand scope of these items..
 print("GLOBAL: Define game objects")
-theBoard = board()
-theItems = []       # array of item() class
+
+global theBoard 
+global theItems 
+global ourSnek 
+global codeTime
+
+# theBoard = board()
+theItems = []          # array of item() class
 ourSnek = snake()
-perf = []           # time - list dict
+codeTime = {}           # time - dict
 
 # Register snake 
 @app.get("/")
@@ -37,53 +45,66 @@ def handle_info():
 
 @app.post("/start")
 def handle_start():
+    global theBoard 
+    global theItems 
+    global ourSnek 
+    global codeTime
+
+    # perf['start'] = time.time()
     data = request.get_json()
 
     print(f"START {data['game']['id']}")
 
     # initialise game (theGame)
-
+    
     # initialise board (theBoard)
-    dataBoard = data['board']
-    boardWidth = int(dataBoard["width"])
-    boardHeight = int(dataBoard["height"])
-    theBoard.setDimensions(boardWidth, boardHeight)
-
+    theBoard = board(data)
+    
     # initialise items (theItems)
     theItems = []
 
-    # initialise our snake (ourSnek)
+    # (re)initialise our snake (ourSnek)
     ourSnek.__init__()
    
     # initialise other snakes (otherSneks)
 
-
     # initalise / reset other vars
-    perf = [] 
-
+    # perf['init'] = time.time()
+    
     return "ok"
 
 
 @app.post("/move")
 def handle_move():
+    global theBoard 
+    global theItems 
+    global ourSnek 
+    global codeTime  
+
+    # perf['move'] = time.time()
     data = request.get_json()
 
     # perf.append({['strat_end']:time.time()})
 
     # update board (theBoard)
     dataBoard = data['board']
-    boardWidth = int(dataBoard["width"])
-    boardHeight = int(dataBoard["height"])
+    boardWidth = int(dataBoard['width'])
+    boardHeight = int(dataBoard['height'])
     theBoard.setDimensions(boardWidth, boardHeight)
     theBoard.updateBoards(data)
 
+    turn = int(data['turn'])
+    
     # update items / objects (theItems)
     foods = data['board']['food']
     theItems = []
+  
     for f in foods:
       it = item("food", f) 
       theItems.append(it)
 
+    # perf['move_init'] = time.time()
+  
     # update snake (ourSnek) 
     ourSnek.setLocation(data)
     ourSnek.updateStrategy(data) # check strategy 
@@ -95,19 +116,27 @@ def handle_move():
     ourSnek.setTarget(dest)
 
     # decide move 
-    move = chooseMove(data, theBoard, ourSnek)
-    # shout = ourSnek.getShout()
+    move = chooseMove(theBoard, ourSnek)
+    
+    # perf['move_choose'] = time.time()
+    
+    shout = ourSnek.setShout(turn)
 
     print(f"MOVE: {move}")
-    # print(f"SHOUT: {shout}")
+    print(f"SHOUT: {shout}")
     
-    return {"move": move}
+    return {"move": move,"shout":shout}
     # return {'move': move, 'shout': shout}
   
 
 
 @app.post("/end")
 def end():
+    global theBoard 
+    global theItems 
+    global ourSnek 
+    global codeTime
+  
     data = request.get_json()
 
     print(f"END {data['game']['id']}")

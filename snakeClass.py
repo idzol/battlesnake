@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+import random as rand
 import constants as CONST
 
 # from functions import selectDestination
@@ -7,10 +8,7 @@ import constants as CONST
 
 class snake:
 
-    strategy = "enlarge"  # "enlarge"
-    lastStrategy = ""
     strategyList = ["enlarge", "attack", "defend", "stalk", "eat", "taunt"]
-
     # Enlarge -- focus on maximising snake size 
     # Eat -- focus on restoring health (may end up same as enlarge)..
     # Taunt -- full health, no attack options. eg. draw patterns
@@ -18,20 +16,23 @@ class snake:
     # Stalk -- larger, stay close to head.  Intercept food .. 
     # etc
 
-    interrupt = False
-    # trigger interrupt on critical situations (eg. low health, under threat)
+    # strategy = "enlarge"  # "enlarge"
+    # lastStrategy = ""
 
-    head = {}  # Dict - point {"x": 0, "y": 0}
-    body = {}  # Dict - list [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} 
-    target = {} # Dict - point 
-    route = {}  # Dict - list 
+    # interrupt = False
+    # # trigger interrupt on critical situations (eg. low health, under threat)
+
+    # head = {}  # Dict - point {"x": 0, "y": 0}
+    # body = {}  # Dict - list [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} 
+    # target = {} # Dict - point 
+    # route = {}  # Dict - list 
     
-    aggro = 20   # out of 100 
-    hunger = 0  # out of 100 
+    # aggro = 20   # out of 100 
+    # hunger = 0   # out of 100 
     
     # TODO:  Deduplicate with above
-    def __init__(self):
-        self.strategy = "enlarge"  # "enlarge"
+    def __init__(self, data=""):
+        self.strategy = "enlarge"
         self.lastStrategy = ""
         self.interrupt = False
 
@@ -43,18 +44,39 @@ class snake:
         self.aggro = 20   # out of 100 
         self.hunger = 0  # out of 100 
 
-    def getLocation(self, t):
-        if(t == "head"):
-          return self.head 
-        elif(t == "body"):
+        self.setLocation(data)
+        self.shout = ""
+  
+    # TODO:  Only supports dict for body ..  
+    def getLocation(self, p, t="array"):
+
+        h = self.head
+        b = self.body
+        if(p == "head"):
+
+          if(t == "array"):
+            return ([h['y'],h['x']])
+          else:
+            return h
+
+        elif(p == "body"):
           return self.body 
+          
         else: 
           return {}
 
+    # TODO:  Include list / array option    
     def setLocation(self, data):
-        self.head = data['you']['head'] 
-        self.head = data['you']['body'] 
+        try:
+          self.head = data['you']['head'] 
+          self.body = data['you']['body'] 
 
+        except: 
+          self.head = {'x':0,'y':0} 
+          self.head = {'x':0,'y':0}
+          # self.head = [0,0]
+          # self.body = [0,0]
+        
     def setRoute(self, r):
         self.route = r
         return True
@@ -104,24 +126,26 @@ class snake:
 
       return True
   
+    # TODO: Try save all points as array (not dict)
     def setTarget(self, dest):
       self.target = dest
 
     def getTarget(self):
       return self.target
 
-
-    def getShout(self):
-        
-        # shouts = []
-        # Import from constants 
-
-        strat = self.getStrategy()
-  
+    def setShout(self, turn):
+      
+      # Shout every 10 turns 
+      if (turn % CONST.shoutFrequency == 0): 
+        strat = self.getStrategy()  
         #     if (strategy=="enlarge"):
         #     elif (strategy=="taunt"):
-        #     else
-          
-        shout = CONST.shouts[int(len(taunts) * rand.random())]
-        return shout
+        #     ...  
+        self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
+        
+      return self.getShout()
 
+
+    def getShout(self):
+      return self.shout
+      

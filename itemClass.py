@@ -4,6 +4,8 @@
 # import pandas as pd
 # import random as rand
 
+import constants as CONST
+
 # import itemClass as item
 class item:
 
@@ -14,6 +16,7 @@ class item:
     distances = {}
     
     def __init__(self, t, p):
+
         self.type = t
         self.location = p 
         self.name = str(t) + "@x" + str(p['x']) + "y" + str(p['y'])
@@ -48,11 +51,22 @@ class item:
         self.type = t
         return True
 
-    def getLocation(self):
-        return self.location
+    # TODOL Take either 
+    def getLocation(self, t="array"):
+        p = self.location
 
-    def setLocation(self, pt):
-        self.location = {'x':pt['x'], 'y':pt['y']}
+        if(t=="array"):
+          return [p['y'],p['x']]
+        else:
+          return self.location
+
+    def setLocation(self, pt, t="array"):
+
+        if(t=="array"):
+          self.location = {'x':pt['x'], 'y':pt['y']}
+        else:
+          self.location = pt 
+
         return True 
 
                            
