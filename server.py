@@ -58,7 +58,7 @@ def handle_start():
     # initialise game (theGame)
     
     # initialise board (theBoard)
-    theBoard = board(data)
+    theBoard = board()
     
     # initialise items (theItems)
     theItems = []
@@ -128,7 +128,6 @@ def handle_move():
     return {"move": move,"shout":shout}
     # return {'move': move, 'shout': shout}
   
-
 
 @app.post("/end")
 def end():

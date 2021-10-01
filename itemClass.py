@@ -16,10 +16,16 @@ class item:
     distances = {}
     
     def __init__(self, t, p):
+      
+        if(not isinstance(p, dict)):
+          print("ERROR: item(t,p) expects location as dict")
+          name = t + "@-1"
+        else: 
+          name = t + "@" + "x" + str(p['x']) + "y" + str(p['y']) 
 
-        self.type = t
-        self.location = p 
-        self.name = str(t) + "@x" + str(p['x']) + "y" + str(p['y'])
+        self.setType(t)
+        self.setLocation(p) 
+        self.setName(name)
 
     # # TODO:  is this complete?  
     # def getDistances(self, things): 
@@ -51,23 +57,21 @@ class item:
         self.type = t
         return True
 
-    # TODOL Take either 
-    def getLocation(self, t="array"):
-        p = self.location
+    def getLocation(self):
+        return self.location
 
-        if(t=="array"):
-          return [p['y'],p['x']]
+    def setLocation(self, pt):
+
+        if (isinstance(pt, list)):
+          self.location = pt
+          return True 
+
+        elif (isinstance(pt, dict)):
+          self.location = [pt['y'], pt['x']]
+          return True
+        
         else:
-          return self.location
-
-    def setLocation(self, pt, t="array"):
-
-        if(t=="array"):
-          self.location = {'x':pt['x'], 'y':pt['y']}
-        else:
-          self.location = pt 
-
-        return True 
+          return False
 
                            
   

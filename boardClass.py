@@ -32,10 +32,11 @@ class board():
     predict = []  # Array of board in n moves (prediction)
     
 
-    def __init__(self, data):
+    def __init__(self, height=0, width=0):
+      
       # globals 
-      height = data['board']['height']
-      width = data['board']['width']
+      # height = data['board']['height']
+      # width = data['board']['width']
 
       self.height = height
       self.width = width
@@ -143,16 +144,17 @@ class board():
 
 
     def XYToLoc(self, pt):
-        # w = self.width 
-        h = self.height
 
         if(isinstance(pt, dict)):
           px = pt['x']
           py = pt['y']
-          return [h-py-1, px]
+          return [py, px]
           
-        else:
+        elif(isinstance(pt, list)):
           return pt
+
+        else:
+          return [-1,-1]
 
     def updateBoardYou(self, data):
         # Array of snek (101-head, 100-body)
@@ -195,13 +197,13 @@ class board():
                     px = pt['x']
                     py = pt['y']
                     # self.snakes[h-py-1, px] = self.legend['enemy-body']
-                    self.snakes[py, px] = self.legend
+                    self.snakes[py, px] = CONST.legend['enemy-body']
 
                 head = sk['head']
                 px = head['x']
                 py = head['y']
                 # self.snakes[h-py-1, px] = self.legend['enemy-head']
-                self.snakes[py, px] = self.legend['enemy-head']
+                self.snakes[py, px] = CONST.legend['enemy-head']
 
         return self.snakes 
 
@@ -236,11 +238,12 @@ class board():
         h = self.height
         self.distance = np.zeros((h, w), np.intc) 
         
-        head = data['you']['head']
+        # Distances from snake head 
+        head = self.XYtoLoc(data['you']['head'])
 
         for i in range(0,w):
             for j in range(0,h):
-                d = fn.distanceToPoint(head, {'x':i, 'y':j}, "dict")
+                d = fn.distanceToPoint(head, [j, i])
                 self.distance[i, j] = d
 
     # assign a "threat" value based on distance to enemy snake and size
@@ -372,11 +375,10 @@ class board():
             # Assume strategy is food 
             start = sn.getHead()
             
-            # a = self.XYToLoc(sn.getLocation("head"))
             iname = self.getClosestItem(sn, items, "food") # ?? 
             it = self.getItemByName(items, iname)
 
-            finish = self.XYToLoc(it.getLocation())
+            finish = it.getLocation()
             
             rt = self.findBestPath(start, finish)
                 # Set depth to 2 or 3 .. 
@@ -434,7 +436,11 @@ class board():
   
   
     def findBestPath(self, a, b):  
-        
+        if (isinstance(a, dict) or isinstance(b, dict)):
+          print("ERROR: findBestPath(self, a, b) - dict received when list array expected") 
+          return -1
+
+
         paths = [[a]]  
         # paths = [ [ [0, 0], .. ], .. ]
         
@@ -589,8 +595,7 @@ class board():
         return pathlow
 
 
-
-    def leastWeightPath(self, paths, target):
+    def leastWeightPath(self, paths, target=[]):
 
         # paths = [ [[0, 0]], [[0, 0], [1, 0]], [[0, 0], [2, 0]] ...
         # ...  [[0, 0], [2, 0], [2, 0]] ]
@@ -603,11 +608,13 @@ class board():
         
         for path in paths:
             
-            # Check path actually made it to the target
-            if (path[-1] != target):
-                pass 
-            
-            else: 
+            # Check path actually made it to the target, or invoked without target 
+            try: 
+              finish = path[-1]
+            except: 
+              finish = []
+
+            if (finish == target or len(target) == 0): 
                 # Translate vectors into points 
                 pts = []
                 va = []
@@ -631,7 +638,7 @@ class board():
                 # calculate path weight    
                 pmask = self.drawMask(pts)                
                 dij = self.dijkstra
-
+              
                 # print("DIJKSTRA")
                 # print (str(dij))
                 # print ("MASK")
@@ -648,7 +655,8 @@ class board():
                     bestpath = pts 
                     bestdij = pdij
                     dijlast = dijtotal
-        
+
+
         print ("DIJKSTRA-PATH")
         print("Value: " + str(dijlast))
         fn.printMap(bestdij)
@@ -776,8 +784,8 @@ def findQuadrantWith(self, t=CONST.legend['empty']):
           for it in its:     
                 # print (it)
                 
-                itp = self.XYToLoc(it.getLocation())
-                d = fn.distanceToPoint(itp, loc, "array")
+                itp = it.getLocation()
+                d = fn.distanceToPoint(itp, loc)
                 if (d < lowest):
                     lowest = d 
                     name = it.getName()

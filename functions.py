@@ -44,21 +44,17 @@ def comparePoints(a, b, t="array"):
         return False 
 
 
-def distanceToPoint(a, b, type="array"):
-    
+def distanceToPoint(a, b):
+    if(isinstance(a,dict) or isinstance(b,dict)):
+      print("ERROR: distanceToPoint(a,b) expecting array list, received dict)")
+      return -1 
+
     try:
 
-      if(type=="dict"):
-        ax = a['x']
-        bx = b['x']
-        ay = a['y']
-        by = b['y']
-
-      else:
-        ax = a[1]
-        bx = b[1]
-        ay = a[0]
-        by = b[0]
+      ax = a[1]
+      bx = b[1]
+      ay = a[0]
+      by = b[0]
     
       dx = abs(ax - bx)
       dy = abs(ay - by)
@@ -144,18 +140,22 @@ def initialise_snake(data: dict) -> str:
 # Invert coordinate system 
 def printMap(m):
     # Iterate through map array backwards
+    try: 
+      h = len(m)
+      w = len(m[0])
+
+      md = np.zeros([h,w],np.intc)
+
+      for y in range(0, h):
+        for x in range(0, w): 
+          md[h-y-1,x] = m[y,x]
+
+      print(md)
     
-    h = len(m)
-    w = len(m[0])
+    except: 
+      print("ERROR: Could not print map")
 
-    md = np.zeros([h,w],np.intc)
 
-    for y in range(0, h):
-      for x in range(0, w): 
-        md[h-y-1,x] = m[y,x]
-
-    print(md)
-    return md
 
 def raiseError(e):
     # error_status = True 

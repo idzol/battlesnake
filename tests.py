@@ -8,6 +8,8 @@ import unittest
 import json 
 import constants as CONST
 
+import ast 
+
 import functions as fn 
 from logic import selectDestination, chooseMove, getClosestItem, getItemByName
 
@@ -20,9 +22,9 @@ from itemClass import item
 # ============ TEST DATA =================
 
 test_food = np.array(
-[[12,31, 0, 0, 0, 0, 0],
- [11,31, 0, 0, 0, 0, 0],
- [10,31, 0, 0, 0, 0, 0],
+[[11,31, 0, 0, 0, 0, 21],
+ [11,31, 0, 0, 0, 0, 21],
+ [10,31, 0, 0, 0, 0, 20],
  [ 0,31, 0, 0, 0, 0, 0],
  [ 0,31, 0, 0, 0, 0, 0],
  [ 0,31, 0, 0, 0, 0, 0],
@@ -34,8 +36,8 @@ test_quads_empty = [4,9,7,8]
 test_sides_food = [0,1,0,1]
 test_quads_food = [0,0,0,1]
 
-test_foodname = "food@x0y6"
-test_foodtarget = [7,7]
+test_foodname = "food@x6y0"
+test_foodtarget = [0,6]
 test_foodmove = "down"
 test_foodpath = np.array(
 [[ 0, 0, 0, 0, 0, 0, 0],
@@ -47,16 +49,16 @@ test_foodpath = np.array(
  [ 6, 7, 8, 9,10,11,12]])
     
 test_food2 = np.array(
-[[12,11,10, 0, 0, 0, 0],
+[[11,11,10, 0, 0, 0, 0],
  [31,31,31,31,31,31, 0],
  [ 0, 0, 0, 0, 0, 0, 0],
  [ 0, 0, 0, 0, 0, 0, 0],
- [ 0, 0, 0, 0, -30, 0, 0],
+ [ 0, 0, 0, 0,-30, 0, 0],
  [ 0, 0, 0, 0, 0, 0, 0],
- [ 0, 0, 0, 0, 0, 0, -30]])
+ [21,21,20, 0, 0, 0,-30]])
 
 test_foodname2 = "food@x4y2"
-test_foodtarget2 = [5,5]
+test_foodtarget2 = [2,4]
 test_foodmove2 = "right"
 test_foodpath2 = np.array(
 [[ 0, 1, 2, 3, 4, 5, 6],
@@ -67,29 +69,8 @@ test_foodpath2 = np.array(
  [ 0, 0, 0, 0, 0, 0, 0],
  [ 0, 0, 0, 0, 0, 0, 0]])
 
-global json_val
-json_val = {    
-    '$height':str(3),
-    '$width':str(3),
-    
-    '$foods':json.dumps({'x':0, 'y':0}),
-    
-    '$you_health':str(100),
-    '$you_body':json.dumps({'x':0, 'y':0}),
-    '$you_head':json.dumps({'x':0, 'y':0}),
-    '$you_length':str(1),
-
-    '$enemy_health':str(100),
-    '$enemy_body':json.dumps({'x':2, 'y':2}),
-    '$enemy_head':json.dumps({'x':0, 'y':2}),
-    '$enemy_length':str(1),
-    
-    '$hazards':json.dumps([]),
-    
-}
-
-global json_test
-json_test = """
+global json_template
+json_template = """
 {
    "game":{
       "id":"testgame",
@@ -165,14 +146,14 @@ if __name__ == "__main__":
 
 
 def loadTestData(test_map):
-  global json_val
-  global json_test
+  global json_template
+  json_t = json_template
 
   width = len(test_map[-1])
   height = len(test_map)
 
   # Co-ordinates are reversed (y axis)
-  y = 0 
+  y = width
   x = 0
   you_head = "" 
   you_body = []
@@ -182,10 +163,9 @@ def loadTestData(test_map):
   foods = []
   
   for row in test_map:
-      y = y + 1
+      y = y - 1
       x = 0
       for cell in row:
-        x = x + 1
         xy = {'x':x, 'y':y}
         if (cell==CONST.legend['you-head']):
           you_head = xy
@@ -195,17 +175,18 @@ def loadTestData(test_map):
           you_body.append(xy)
           # may be inserted out of order ..
         elif(cell==CONST.legend['enemy-head']):
-          you_head = xy
+          enemy_head = xy
         elif(cell==CONST.legend['enemy-body']):
-          you_body.append(xy)
+          enemy_body.append(xy)
         elif(cell==CONST.legend['enemy-tail']):
           you_body.append(xy)
         elif(cell==CONST.legend['food']): 
           foods.append(xy)    
         elif(cell==CONST.legend['hazard']):
           hazards.append(xy)
-
-  json_val = { 
+        x = x + 1
+        
+  json_v = { 
       '$height':str(height),
       '$width':str(width),
       
@@ -217,23 +198,23 @@ def loadTestData(test_map):
       '$you_length':str(len(you_body)),
 
       '$enemy_health':str(100),
-      '$enemy_body':json.dumps({'x':2, 'y':2}),
-      '$enemy_head':json.dumps({'x':0, 'y':2}),
+      '$enemy_body':json.dumps(enemy_body),
+      '$enemy_head':json.dumps(enemy_head),
       '$enemy_length':str(1),
       
-      '$hazards':json.dumps(hazards),
+      '$hazards':json.dumps(hazards)
       
   }
 
   # nonlocal json_test
-  for key in json_val:
-      json_test = json_test.replace(key,json_val[key])
-
+  for key in json_v:
+      json_t = json_t.replace(key,json_v[key])
+      # print(str(json_t))
   try:
-      d = json.loads(json_test)
+      d = json.loads(json_t)
   except:
       print("ERROR: Incorrect JSON format.  Check variable in json_template, and keys in json_vals")
-  # print(str(foods))
+  
   return d
 
 
@@ -244,7 +225,7 @@ class functionsTest(unittest.TestCase):
       
       a = [1,1]
       bn = [[1,2],[1,0],[2,1],[0,1]]
-      cn = ['right','left','down','up']
+      cn = ['right','left','up','down']
       # X - left, right [0][X]
       # Y - up, down.   [Y][0] 
 
@@ -275,23 +256,11 @@ class functionsTest(unittest.TestCase):
       an = [[0,0],[10,10],[5,10],[0,5],[1,1],[1,1],[1,1],[1,1],[1,1]]
       bn = [[10,10],[0,0],[0,5],[10,5],[1,2],[1,0],[0,1],[2,1],[1,1]]
       cn = [20,20,10,10,1,1,1,1,0]
-      t = "array"       
 
       for c in cn: 
         a = an.pop(0)
         b = bn.pop(0)
-        result = fn.distanceToPoint(a, b, t)
-        self.assertEqual(result, c)
-
-      an = [{'x':0,'y':0},{'x':5,'y':10},{'x':1,'y':1},{'x':1,'y':1}]
-      bn = [{'x':10,'y':10},{'x':0,'y':0},{'x':1,'y':2},{'x':1,'y':1}]
-      cn = [20,15,1,0]
-      t = "point"   
-     
-      for c in cn: 
-        a = an.pop(0)
-        b = bn.pop(0)
-        result = fn.distanceToPoint(a, b, t)
+        result = fn.distanceToPoint(a, b)
         self.assertEqual(result, c)
   
 
@@ -311,19 +280,6 @@ class functionsTest(unittest.TestCase):
         b = bn.pop(0)
         result = fn.getPointsInLine(a, b)
         self.assertEqual(result, c)
-
-
-  def test_printMap(self):
-      # Iterate through map array backwards 
-      m = [[1,2],
-          [3,4]]
-      
-      md = [[3,4],
-          [1,2]]
-    
-      result = fn.printMap(m)
-      self.assertEqual(result, md)
-
 
 # test
 #    Function testcases 
@@ -460,7 +416,7 @@ class boardClassTest(unittest.TestCase):
               if(cell != 0):
                 correct_path[cell] = [x, y]
 
-        print(str(correct_path))
+        # print(str(correct_path))
         return correct_path
 
 
@@ -477,70 +433,90 @@ class logicTest(unittest.TestCase):
     strat = "enlarge"
     sn.setStrategy(strat)
 
-    bo = board(data)
+    w = data['board']['width']
+    h = data['board']['height']
+    bo = board()
+    bo.setDimensions(w, h)
 
     foods = data['board']['food']
-    print(str(foods))
+    # print(str(foods))
     theItems = []
     for f in foods:
       it = item("food", f) 
       theItems.append(it)  
-      print(str(f))
+      # print(str(f))
 
     c = test_foodtarget
     result = selectDestination(bo, sn, theItems)
     self.assertEqual(result, c)
 
+    bo.updateBoards(data)
+    sn.setLocation(data)
+    sn.setTarget(result)
+    # sn.setTarget([0,6])
+    
+    result = chooseMove(bo, sn)
+
     c = test_foodmove
-    result = chooseMove(data, bo, sn)
     self.assertEqual(result, c)
 
     data = loadTestData(test_food2)
+    
+    bo.updateBoards(data)
+    sn.setLocation(data)
+    sn.setTarget(result)
+
     foods = data['board']['food']
-    theItems = []
+    items = []
     for f in foods:
       it = item("food", f) 
-      theItems.append(it)
+      items.append(it)
     
+    result = selectDestination(bo, sn, items)
     c = test_foodtarget2
-    result = selectDestination(bo, sn, it)
     self.assertEqual(result, c)
 
+    result = chooseMove(bo, sn)
     c = test_foodmove2
-    result = chooseMove(data, bo, sn)
     self.assertEqual(result, c)
 
 
-  def test_getClosestItem(self):
+  def test_getClosestItemA(self):
     
+    # Test food 1 
     bo = board()
+    items = []
     
     data = loadTestData(test_food)
-    items = []
     foods = data['board']['food']
+
     for f in foods:
       it = item("food", f) 
       items.append(it)
-
-    loc = data['you']['head']
-    c = test_foodname
+            
+    # Find distance from head to food 
+    loc = bo.XYToLoc(data['you']['head'])
     result = getClosestItem(bo, items, loc, "food")
+    
+    # Check result 
+    c = test_foodname
     c = self.assertEqual(result, c)
 
-    data = loadTestData(test_food2)
+    # Test food 2  
+    bo = board()
     items = []
+    
+    data = loadTestData(test_food2)
     foods = data['board']['food']
+    
     for f in foods:
       it = item("food", f) 
       items.append(it)
-
-    print(str(foods))
-    loc = data['you']['head']
-    print(str(loc))
-    c = test_foodname2
-    print(str(c))
+  
+    loc = bo.XYToLoc(data['you']['head'])
     result = getClosestItem(bo, items, loc, "food")
-    print(str(items))
+
+    c = test_foodname2  
     c = self.assertEqual(result, c)
 
 
@@ -554,8 +530,10 @@ class logicTest(unittest.TestCase):
       items.append(it)
 
     name = test_foodname
+    it = getItemByName(items, name)
+    result = it.getLocation()
+
     c = test_foodtarget
-    result = getItemByName(items, name)
     self.assertEqual(result, c)
 
     data = loadTestData(test_food2)
@@ -566,8 +544,10 @@ class logicTest(unittest.TestCase):
       items.append(it)
 
     name = test_foodname2
+    it = getItemByName(items, name)
+    result = it.getLocation()
+    
     c = test_foodtarget2
-    result = getItemByName(items, name)
     self.assertEqual(result, c)
     
 

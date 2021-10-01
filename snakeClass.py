@@ -36,10 +36,10 @@ class snake:
         self.lastStrategy = ""
         self.interrupt = False
 
-        self.head = {}  # Dict - point {"x": 0, "y": 0}
-        self.body = {}  # Dict - list [ {"x": 0, ...
-        self.target = {} # Dict - point 
-        self.route = {}  # Dict - list 
+        self.head = [] 
+        self.body = []  
+        self.target = []  
+        self.route = []  
         
         self.aggro = 20   # out of 100 
         self.hunger = 0  # out of 100 
@@ -47,36 +47,41 @@ class snake:
         self.setLocation(data)
         self.shout = ""
   
-    # TODO:  Only supports dict for body ..  
-    def getLocation(self, p, t="array"):
+    def getHead(self):
+        return self.head
 
-        h = self.head
-        b = self.body
+    def getBody(self):
+        return self.body
+
+    def getLocation(self, p):
+
         if(p == "head"):
-
-          if(t == "array"):
-            return ([h['y'],h['x']])
-          else:
-            return h
+          return self.head
 
         elif(p == "body"):
-          return self.body 
+          return self.body
           
         else: 
-          return {}
+          return [-1,-1]
 
     # TODO:  Include list / array option    
     def setLocation(self, data):
         try:
-          self.head = data['you']['head'] 
-          self.body = data['you']['body'] 
+          head = data['you']['head']
+          body = data['you']['body']
+          b = []
+
+          self.head = [head['y'],head['x']]
+
+          for pt in body:
+            b.append([pt['y'],pt['x']])
+          
+          self.body = b
 
         except: 
-          self.head = {'x':0,'y':0} 
-          self.head = {'x':0,'y':0}
-          # self.head = [0,0]
-          # self.body = [0,0]
-        
+          self.head = [-1,-1] 
+          self.body = [-1,-1]
+     
     def setRoute(self, r):
         self.route = r
         return True
@@ -126,9 +131,14 @@ class snake:
 
       return True
   
-    # TODO: Try save all points as array (not dict)
     def setTarget(self, dest):
-      self.target = dest
+      
+      if (isinstance(dest, dict)):
+        self.target = [dest['y'],dest['x']]
+       
+      elif (isinstance(dest, list)):
+        self.target = dest
+
 
     def getTarget(self):
       return self.target

@@ -16,8 +16,8 @@ def selectDestination(bo: board, sn: snake, its: item):  # b = board(), s = stra
 
     target = {} 
     strat = sn.getStrategy()
-        
-# perf.append({['strat_start']:time.time()})
+  
+    # perf.append({['strat_start']:time.time()})
 
     if (strat == "random"):
         # Get dimensions of the board 
@@ -29,12 +29,10 @@ def selectDestination(bo: board, sn: snake, its: item):  # b = board(), s = stra
 
     elif (strat == "enlarge"): 
         # Get location of food(s)
-        # a = bo.XYToLoc(sn.getLocation("head"))
         a = sn.getLocation("head")
         
         iname = getClosestItem(bo, its, a, "food")
         it = getItemByName(its, iname)
-        # target = bo.XYToLoc(it.getLocation())
         target = it.getLocation()
         
         # Find nearest food 
@@ -120,18 +118,20 @@ def getClosestItem(bo, its, loc, t):
     lowest = 100 
     name = ""
     
-    if (t == "food"):
-       for it in its:     
-            # print (it)
-            
-            # itp = bo.XYToLoc(it.getLocation())
-            itp = it.getLocation()
-            
-            d = fn.distanceToPoint(itp, loc, "array")
-            if (d < lowest):
-                lowest = d 
-                name = it.getName()
-                # TODO: if two of same dist, returns top left. do we want to change / randomise this? 
+    # if (t == "food"):
+    for it in its:     
+      
+        itp = it.getLocation()
+        d = fn.distanceToPoint(itp, loc)
+        
+        # print("ITEM:DIST")
+        # print(str(d) + ":" + str(it.getName()))
+
+        if (d < lowest):
+
+            lowest = d 
+            name = it.getName()
+            # TODO: if two of same dist, returns top left. do we want to change / randomise this? 
 
     return name
 
