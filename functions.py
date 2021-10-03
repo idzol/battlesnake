@@ -1,7 +1,10 @@
 import random as rand
-from typing import Dict
 import numpy as np
+
+# from typing import Dict
 # import pandas as pd
+
+import constants as CONST 
 
 # move = getMove(pHead, route.pop(0)) 
 def getDirection(a, b): 
@@ -137,6 +140,32 @@ def initialise_snake(data: dict) -> str:
     pass 
 
 
+# Rotate a directino 
+def rotateMove(a, d=CONST.clockwise): 
+
+  if (CONST.counterclockwise):
+    if (CONST.up):
+        move = CONST.left
+    elif (CONST.left):
+        move = CONST.down
+    elif (CONST.down):
+        move = CONST.right
+    else: # CONST.right
+        move = CONST.up
+
+  else: # CONST.clockwise:  
+    if (CONST.up):
+        move = CONST.right
+    elif (CONST.right):
+        move = CONST.down
+    elif (CONST.down):
+        move = CONST.left
+    else: # CONST.left
+        move = CONST.up
+
+  return move
+
+
 # Invert coordinate system 
 def printMap(m):
     # Iterate through map array backwards
@@ -154,8 +183,6 @@ def printMap(m):
     
     except: 
       print("ERROR: Could not print map")
-
-
 
 def raiseError(e):
     # error_status = True 

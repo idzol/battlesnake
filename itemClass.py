@@ -18,6 +18,7 @@ class item:
     def __init__(self, t, p):
       
         if(not isinstance(p, dict)):
+          # QQ 
           print("ERROR: item(t,p) expects location as dict")
           name = t + "@-1"
         else: 

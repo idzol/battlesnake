@@ -1,25 +1,90 @@
 
+# Log level 
+logFile = "games.log"
+logLevelConsole = 5 
+logLevelPrint = 5
+
+# Snake variables
+healthHigh = 80
+healthMed = 50
+healthLow = 20
+
+threatHigh = 80
+threatMed = 50
+threatLow = 20
+
+aggroHigh = 80
+aggroMed = 50
+aggroMed = 20
 
 # Routing variables 
 maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 10
-shoutFrequency = 10
+
+pathThreshold = 20
+routeThreshold = 50
+
+# Movement directions 
+counterclockwise = "ccw"
+clockwise = "cw"
+up = "up"
+down = "down"
+left = "left"
+right = "right"
+
+moveup = [1, 0]
+movedown = [-1, 0]
+moveleft = [0, -1]
+moveright = [0, 1]
+
+northwest = 0  # "nw"
+northeast = 1  # "ne"
+southwest = 2  # "sw"
+southeast = 3  # "se"
+
+movenw = [1, -1]
+movene = [1, 1]
+movesw = [-1, -1]
+movese = [-1, 1]
+
+north = 0  # "n"
+south = 1  # "s"
+west = 2  # "e"
+east = 3  # "w"
+
+movenorth = moveup
+movesouth  = movedown
+movewest = moveleft
+moveeast = moveright
+
+directionMap = {
+  'north':moveup,
+  'south':movedown,
+  'east':moveeast,
+  'west':movewest,
+  'northwest':movenw,
+  'northeast':movene,
+  'southwest':movesw,
+  'southeast':movese
+}
 
 # Board legend 
 legend = {
-    'you-head':10,
-    'you-body':11,
-    'you-tail':12,
-    'enemy-head':20,  # Snake ID * value .. 
-    'enemy-body':21,
-    'enemy-tail':22,
-    'food':-30,       
-    'hazard':31,
+    'you-head':20,
+    'you-body':21,
+    'you-tail':22,
+    'enemy-head':30,  # Snake ID * value .. 
+    'enemy-body':31,
+    'enemy-tail':32,
+    'food':-10,       
+    'hazard':10,
     'empty':0
 }
 
 # Snake attitude 
+shoutFrequency = 10
+
 shouts = ['Away, you three-inch fool',
     'Come, come, you froward and unable worms!',
     'Go, prick thy face, and over-red thy fear, Thou lily-liver’d boy',
