@@ -26,8 +26,17 @@ class snake:
         self.health = 100 
         self.length = 3
 
-        self.setLocation(data)
+        # TODO: Randomise, only used for some strats 
+        self.direction = "right"
         self.shout = ""
+        self.setLocation(data)
+
+
+    # def resetCounters(self):
+      
+    #     self.direction = ""
+    #     self.shout = ""
+
 
     def showStats(self): 
         print("""
@@ -38,7 +47,8 @@ class snake:
   Head: %s
   Target: %s
   Strategy: %s
-        """ % (self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.strategy))
+  Direction: %s
+        """ % (self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.strategy, self.direction))
 
     def setHead(self, p):
         if (not isinstance(p, list)):
@@ -53,6 +63,12 @@ class snake:
           self.body = p 
           self.setLength(len(p))
 
+    def setDirection(self, d):
+        self.direction = d
+        
+    def getDirection(self):
+        return self.direction
+  
     def setLength(self, l):
           self.length = l + 1   # TODO:  Check if correct (body + head)
 
