@@ -25,16 +25,22 @@ class board():
     distance = []   # Array of distance 
     threat = []     # Array of threat rating 
     you = []     # Array of snek (101-head, 100-body)
+    you_route = []   # Array of snek (minus head)
+
     snakes = []  # Array of other snek (201-head, 200-body)
     items = []   # Array of items (300-food, 301-hazard)
     
     solid = []   # Array of all solids (snakes, walls)
     combine = [] # Array of all layers (snakes, walls, items)
- 
+    
     dijkstra = []
     gradient = []
+    gradients = {} # List of previous gradients 
+                    # 'cell':[turn,gradient]
     predict = []  # Array of board in n moves (prediction)
     
+    recursion_route = 0
+    turn = 0 
 
     def __init__(self, height=0, width=0):
       
@@ -56,7 +62,15 @@ class board():
       self.startTime = time.time() 
       self.win = 0 
       self.loss = 0 
-
+      
+      self.hurry = False
+    
+    
+    def resetCounters(self): 
+      self.turn = 0
+      self.hurry = False
+      self.recursion_route = 0 
+      self.gradients = {}
 
     def setDimensions(self, x, y):
         if isinstance(x, int) and isinstance(y, int):
@@ -71,7 +85,12 @@ class board():
     def getDimensions(self):
         return [self.width, self.height]
    
-
+    def getWidth(self):
+        return self.width 
+      
+    def getHeight(self): 
+        return self.height
+    
     def setPoint(self, p: Dict[str, int], t="array"):
       try:
         if (t=="dict"):
@@ -127,14 +146,23 @@ class board():
     def getMaxDepth(self):
         return self.maxdepth
     
+    def getTurn(self):
+        return self.turn
+
+    def setTurn(self, t):
+        self.turn = t
 
     def updateBoards(self,data):
         
-        # Update dimensions 
-        # setDimensions -- if Royale 
-
+        # Update game parameters  
+        width = int(data['board']['width'])
+        height = int(data['board']['height'])
+        self.setDimensions(width, height)
+        self.setTurn(data['turn'])
+            
         # Update boards
         by = self.updateBoardYou(data)
+        
         bs = self.updateBoardSnakes(data)
         bi = self.updateBoardItems(data)
         
@@ -144,9 +172,10 @@ class board():
 
         # Combine boards
         self.solid = by + bs           # Array of all solids (snakes, walls)
+        
         self.combine = by + bs + bi    # Array of all layers (snakes, walls, items)
          
-        di = self.updateDijkstra()
+        di = self.updateDijkstra(data['you']['head'])
         # gr = self.updateGradient() -- only update when rqd for routing
         
         return True
@@ -179,15 +208,15 @@ class board():
 
         try: 
           head = data['you']['head']
-          px = head['x']
-          py = head['y']
-          self.you[py, px] = CONST.legend['you-head']
+          px_head = head['x']
+          py_head = head['y']
+          self.you[py_head, px_head] = CONST.legend['you-head']
 
         except Exception as e:
           print("INFO: Your snake head not defined. " + str(e))
-                  
+
         return self.you 
- 
+
 
     def updateBoardSnakes(self, data): 
         # Array of snek (201-head, 200-body)
@@ -267,17 +296,21 @@ class board():
         pass 
   
 
-    def updateDijkstra(self):
+    def updateDijkstra(self, data_you):
         
         w = self.width 
         h = self.height
+        ay = data_you['y']
+        ax = data_you['x']
 
         # Default resistance = 1
         ones = np.ones((w, h), np.intc)
 
         # Solids weighted @ 100 
         # Food / hazards weighted @ 1 
-        self.dijkstra = 100 * self.solid + 1 * self.items + ones 
+        # TODO: include hazards (self.items)
+        self.dijkstra = 100 * self.solid + ones
+        self.dijkstra[ay, ax] = 0
 
         return self.dijkstra
 
@@ -466,12 +499,7 @@ class board():
       
         # try simple route
         while 1:
-            # (1) Simple straight line (a->b)  
-            
-            # Set start to zero 
-            # TODO: fix in updateDijkstra?
-            self.dijkstra[a[0], a[1]] = 0 
-
+            # (1) Simple straight line (a->b) 
             log('time', 'Before Basic Route', self.getStartTime())
             if (a[0] == b[0]) or (a[1] == b[1]):
                 if (self.dijkstraSum(a, b) < t):
@@ -480,11 +508,14 @@ class board():
 
             # (2) Simple dog leg (a->c->b) 
             log('time', 'Before Medium Route', self.getStartTime())
-            c1 = [b[0], a[1]] 
-            c2 = [a[0], b[1]]
-            
+            c2 = [b[0], a[1]] 
+            c1 = [a[0], b[1]]
+            # TODO: Inverted c1 & c2 to fix.  Work out why?
+  
             c1sum = self.dijkstraSum(a, c1) + self.dijkstraSum(c1, b)
+            log('route-dijkstra-sum', str(a), str(c1), str(b), c1sum)
             c2sum = self.dijkstraSum(a, c2) + self.dijkstraSum(c2, b)
+            log('route-dijkstra-sum', str(a), str(c2), str(b), c2sum)
             
             if (c1sum <= c2sum) and (c1sum < t):
                 r = [c1, b]
@@ -502,7 +533,8 @@ class board():
         # Return next path/point or [] if no path
         
         log('route-return', r)
-        fn.printMap(self.dijkstra)
+        # fn.printMap(self.dijkstra)
+        fn.printMap(self.solid)
 
         return r 
 
@@ -523,6 +555,13 @@ class board():
         log('time', 'Before Gradient', self.getStartTime())
         self.updateGradient(b)
         log('time', 'Updated Gradient', self.getStartTime())
+
+        # self.getTurn()
+        # Save gradient for future turns 
+        # self.gradients = {
+        #    'b':turn 
+        # self.gradients.append(.)
+
         # log('route-gradient', self.gradient) 
         
         if (self.gradient[a[0],a[1]] > CONST.routeThreshold): 
@@ -552,7 +591,22 @@ class board():
 
 
     def updateGradient(self, b):
-        # global recursionCount 
+        
+        # Exit if timer or recursion exceeded
+        rr = self.recursion_route
+        self.recursion_route = rr + 1
+        if (self.hurry or rr > CONST.maxRecursion):
+          return 
+    
+        if (rr > 0 and rr % 1000):
+            st = self.getStartTime()
+            log('time', 'Gradient 1000', st)
+             
+            # Timer exceeded 
+            diff = 1000 * (time.time() - st)
+            if diff > CONST.timePanic: 
+                log('timer-hurry')
+                self.hurry = True
 
         t = CONST.routeThreshold
         h = self.height
@@ -574,6 +628,10 @@ class board():
                 # Check path is cheaper 
                 if ((d1 < t) and (g0  + d1) < g1):
 
+                    # Gradient can't handle negatives 
+                    if (d1 < 0): 
+                      d1 = 0
+
                     # Update point 
                     self.gradient[b1[0], b1[1]] = g0 + d1 
                     # Recursion 
@@ -582,19 +640,24 @@ class board():
 
     def dijkstraSum(self, a, b, t=CONST.pathThreshold):
     # Sum dijkstra map between two points
+        
+        # fn.printMap(self.dijkstra)
         try: 
           if(a[0] == b[0] and a[1] != b[1]):
             if(a[1] < b[1]): 
-                result = sum(self.dijkstra[a[0], a[1]:b[1]])
+                result = sum(self.dijkstra[a[0], a[1]:b[1]+1])
+                # print('RESULT1:', str(a), str(b), str(result))
             else:
-                result = sum(self.dijkstra[a[0], b[1]:a[1]])
-
+                result = sum(self.dijkstra[a[0], b[1]:a[1]+1])
+                # print('RESULT2:', str(a), str(b), str(result))
           elif (a[1] == b[1] and a[0] != b[0]):  
             if(a[0] < b[0]): 
-                result = sum(self.dijkstra[a[0]:b[0], a[1]])
+                result = sum(self.dijkstra[a[0]:b[0]+1, a[1]])
+                # print('RESULT3:', str(a), str(b), str(result))
             else:
-                result = sum(self.dijkstra[b[0]:a[0], a[1]])
-
+                result = sum(self.dijkstra[b[0]:a[0]+1, a[1]])
+                # print('RESULT4:', str(a), str(b), str(result))
+          
           else:
             result = t + 1
         
@@ -617,14 +680,15 @@ class board():
               [0, ax]]    # Down
 
         # Possible that snake is on wall 
-        paths = []
-        for w in walls: 
-            if(w != start):
-              paths.append([start, w])
-  
-        print("WALL-PATHS")
-        print(str(walls))
-        return self.leastWeightPath(paths)
+        if start in walls: 
+          r = []
+          # print("A")
+        else:
+          r = self.leastWeightLine(start, walls)
+          # print("B")
+
+        log('route-findclosestwall', str(walls), r)
+        return r 
 
     
     def drawMask(self, pts, t="array"):
@@ -778,6 +842,30 @@ class board():
         return self.startTime
 
 
+    # def leastweightPath(self, paths):
+      # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ... 
+      # return path 
+
+
+    def leastWeightLine(self, a, points):
+        # Find path with smallest dijkstra value 
+        # paths = [[5, 0], [5, 10], [10, 5], [0, 5]]
+          
+        # Set arbitrarily large value 
+        best = CONST.routeThreshold
+        r = [] 
+
+        for p in points: 
+          # Check path weigth 
+          psum = self.dijkstraSum(a, p)
+          if psum < best: 
+            best = psum
+            r = p 
+
+        log('route-leastline-dsum', str(points), str(a), str(r), best)
+
+        return r 
+      
 # === DEPRECATED === 
 
     # def findBestPath(self, a, b):  
@@ -925,74 +1013,4 @@ class board():
     #     return pathlow
 
 
-    # def leastWeightPath(self, paths, target=[]):
-
-    #     # paths = [ [[0, 0]], [[0, 0], [1, 0]], [[0, 0], [2, 0]] ...
-    #     # ...  [[0, 0], [2, 0], [2, 0]] ]
-         
-    #     # Find path with smallest dijkstra value 
-    #     # Set arbitrarily large value 
-    #     bestpath = []
-    #     bestdij = []
-    #     dijlast = 1000000
-        
-    #     for path in paths:
-            
-    #         # Check path actually made it to the target, or invoked without target 
-    #         try: 
-    #           finish = path[-1]
-              
-    #         except: 
-    #           finish = []
-
-    #         if (finish == target or len(target) == 0): 
-    #             # Translate vectors into points 
-    #             pts = []
-    #             va = []
-                
-    #             # print ("VECTORS")
-    #             # print (str(path))               
-                
-    #             for vb in path:
-                    
-    #                 # Skip first point (need two points for line)  
-    #                 if (len(va)):
-    #                     # Add points in line 
-    #                     # print(str(va)+str(vb))
-    #                     pts = pts + fn.getPointsInLine(va, vb)
-
-    #                 va = vb 
-
-    #             # print ("VECTOR-POINTS")
-    #             # print (str(pts))
-               
-    #             # calculate path weight    
-    #             pmask = self.drawMask(pts)                
-    #             dij = self.dijkstra
-              
-    #             # print("DIJKSTRA")
-    #             # print (str(dij))
-    #             # print ("MASK")
-    #             # print (str(pmask))
-    #             try:
-    #               pdij = dij * pmask
-    #             except Exception as e: 
-    #               print(str("ERROR: Boards not initialised.  Try bo.updateBoards(data). " + str(e)))
-
-    #             # print ("DIJMASK")
-    #             # print (str(pdij))
-
-    #             dijtotal = sum(map(sum,pdij)) 
-
-    #             # save best path  
-    #             if (dijtotal < dijlast):
-    #                 bestpath = pts 
-    #                 bestdij = pdij
-    #                 dijlast = dijtotal
-
-
-    #     print ("DIJKSTRA-PATH")
-    #     print("Value: " + str(dijlast))
-    #     fn.printMap(bestdij)
-    #     return bestpath 
-     
+  

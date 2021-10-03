@@ -53,15 +53,15 @@ def handle_start():
     # print(f"START {data['game']['id']}")
     log("start", data['game']['id'])
     
-    # initialise game (theGame)
-    
-    # initialise board (theBoard)
+    # Initialise game (theBoard)
+    # TODO: Don't reinitliaise board & clear counters,eg. keep win stats 
     theBoard = board()
     
     # initialise items (theItems)
     theItems = []
 
-    # (re)initialise our snake (ourSnek)
+    # Initialise our snake (ourSnek)
+    # TODO: Don't reinitliaise snake & clear counters, eg. adjust strategy keep win stats 
     ourSnek.__init__()
      
     # initialise other snakes (otherSneks)
@@ -79,19 +79,15 @@ def handle_move():
     global ourSnek 
     global codeTime  
 
-    theBoard.setStartTime()
-
     # Start clock
+    theBoard.setStartTime()
     data = request.get_json()
     log('time', 'Start Move', theBoard.getStartTime())
-
+    turn = data['turn']
+    
     # Update board (theBoard)
-    width = int(data['board']['width'])
-    height = int(data['board']['height'])
-    theBoard.setDimensions(width, height)
+    theBoard.resetCounters()
     theBoard.updateBoards(data)
-
-    turn = int(data['turn'])
     
     # Update items / objects (theItems)
     foods = data['board']['food']
@@ -124,6 +120,7 @@ def handle_move():
 
     # Translate target to move 
     move = translatePath(theBoard, ourSnek)
+    ourSnek.setDirection(move)
     shout = ourSnek.setShout(turn)
     log('time', 'Path complete', theBoard.getStartTime())
 

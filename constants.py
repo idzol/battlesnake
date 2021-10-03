@@ -1,8 +1,11 @@
+# Time variable 
+timeLow = 100
+timePanic = 200
 
 # Log level 
 logFile = "games.log"
-logLevelConsole = 5 
-logLevelPrint = 5
+logLevelConsole = 6
+logLevelPrint = 6
 
 # Snake variables
 healthHigh = 80
@@ -17,10 +20,14 @@ aggroHigh = 80
 aggroMed = 50
 aggroMed = 20
 
+# Strategy variables 
+strategyDepth = 3
+
 # Routing variables 
 maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 10
+maxRecursion = 2000
 
 pathThreshold = 20
 routeThreshold = 50
@@ -28,6 +35,21 @@ routeThreshold = 50
 # Movement directions 
 counterclockwise = "ccw"
 clockwise = "cw"
+
+ccwMap = {
+  'up':'left',
+  'left':'down',
+  'down':'right',
+  'right':'up'
+}
+
+cwMap = {
+  'up':'right',
+  'right':'down',
+  'down':'left',
+  'left':'up'
+}
+
 up = "up"
 down = "down"
 left = "left"
@@ -59,10 +81,16 @@ movewest = moveleft
 moveeast = moveright
 
 directionMap = {
+  'up':moveup,
+  'down':movedown,
+  'right':moveright,
+  'left':moveleft,
+
   'north':moveup,
   'south':movedown,
-  'east':moveeast,
-  'west':movewest,
+  'east':moveleft,
+  'west':moveright,
+
   'northwest':movenw,
   'northeast':movene,
   'southwest':movesw,

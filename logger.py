@@ -13,6 +13,8 @@ messages = {
 
     'time':[2, "TIME"],
 
+    'timer-hurry':[2, "INFO", "Move time reached CONST.timePanic"],
+
     # Server 
     'healthcheck':[5,"INFO", "Healthcheck - OK"],
     'interrupt':[3,"INTERRUPT"," %s"],
@@ -29,10 +31,21 @@ messages = {
     'route-return':[6,"ROUTE", " %s"],
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"],
-    
-    # 'findbestpath-debug':[3,"PATH", " %s:%s:%s"],
+    'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s = %d"],
+    'route-findclosestwall':[6,"WALLPATH"," %s %s"],
+    'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],
     'route-gradient':[3,"PATH", " Gradient %s"],
-    
+
+    # Strategy 
+    'strategy-iterate':[5,"STRAT", "Updated - %s"],
+    'strategy-eat':[6,"EAT", " %s %s %s %s"],
+    'strategy-attack':[6,"ATTACK", " %s %s %s %s"],
+    'strategy-kill':[6,"KILL", " %s %s %s %s"],
+    'strategy-defend':[6,"DEFEND", " %s %s %s %s"],
+    'strategy-survive':[6,"SURVIVE", " %s %s %s %s"],
+    'strategy-findwall':[5,"FINDWALL", " Target %s"],
+    'strategy-trackwall':[5,"TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
+          
     # Functions 
     # 'findbestpath-usage':[4,"WARN", "findBestPath(self, a, b) - dict received when list array expected"],
     

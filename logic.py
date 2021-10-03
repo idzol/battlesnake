@@ -3,6 +3,8 @@ import random as rand
 # from typing import Dict
 # import numpy as np
 # import pandas as pd
+import time as time 
+import copy as copy 
 
 import functions as fn
 from logger import log
@@ -68,114 +70,134 @@ def checkInterrupts(bo:board, sn: snake):
 def stateMachine(bo:board, sn: snake, its: list): 
 
     strategy, strategyinfo = sn.getStrategy()
-    start = sn.getHead()
-
+    
     # Progress state machine
     target = []
     
     # print("STATE MACHINE", str(strategy), str(strategyinfo))
-    # Wait 
-    if(strategy[0]=="Idle"):
+    i = 0
+    while not len(target):
+      # ConserveMoves 
+      start = copy.copy(sn.getHead())
+      print("H1",str(sn.getHead()))
+      if(strategy[0]=="Kill"):
 
+          if (strategy[1] == "Collide"):
+              target = headOnCollision(bo, sn) 
+              
+              # No kill path no longer exists 
+              if(not len(target)): 
+                  strategy = ["Attack","Stalk"]
+              
+  #         if(numMovesAvailable(enemy) < enemy.getLength()):
+  #             strategy[1] = "Block"
+  #             move = blockPath()
+  #             pass 
+              
+
+      if(strategy[0]=="Defend"):
+          # d = bo.findDirectionWith(CONST.empty)
+          # target = CONST.directionMap['d']
+          pass 
+
+      if(strategy[0]=="Attack"):
+          
+          if(strategy[1]=="Stalk"):
+              # find enemy head square
+              # stay X squares ahead 
+              # wait for kill 
+              pass 
+          
+          
+          if(strategy[1]=="Spiral"):
+              # find central point of map
+              # spiral of death 
+              pass 
+          
+          # Spiral  
+
+      if(strategy[0]=="Eat"): 
+
+          # No food -- change strategy
+          if(not len(its)):
+            strategy = ["Idle","FindWall"]
+          
+          else: 
+            a = sn.getLocation("head")
+            iname = getClosestItem(bo, its, a, "food")
+            it = getItemByName(its, iname)
+            target = it.getLocation()
+            # TODO: Introduce threat level or and dead end prediction .. 
+
+          # log('strategy-eat', str(a), str(iname), str(it), str(target))
+        
+      if(strategy[0]=="Idle"):
+
+        # Default
         if(strategy[1]==""):
           strategy[1]=="FindWall"
-          # target = [0, 0]
           
         # Find nearest wall 
-        if(strategy[1]=="FindWall"):
-            
-
+        if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
-            
-            # State transition - Move to crawl wall 
-            if(len(target) == 0):
-                strategy[1]= "CrawlWall"
-                
-                direction = int(2 * rand.random())
-                if (direction):
-                    direction = CONST.clockwise 
-                else: 
-                    direction = CONST.counterclockwise 
+            log('strategy-findwall', target)
 
-                strategyinfo['direction'] = direction
-                strategyinfo['proximity'] = 2
-        
-
-        # Track wall clockwise or counterclockwise 
-        if(strategy[1]=="CrawlWall"):
-        
-            d = strategyinfo['direction']
+        # Track wall - clockwise or counterclockwise 
+        if(strategy[1]=="CrawlWall"): 
+            r = strategyinfo['rotation']
             p = strategyinfo['proximity']
-        
-            target = trackWall(d, p)
+            target = trackWall(bo, sn, r, p)
     
+        print("H2",str(sn.getHead()))
+          
+      # Optimum use of space 
+      if(strategy[0]=="Survive"):   
+          # find dijkstras way out .. 
+          # .. otherwise slinky pattern until death
+          pass 
+      
+      # NO TARGET -- previous strategy complete (or could not be completed)
+      if(len(target) == 0): 
+          print("H3",str(sn.getHead()))
+          # State transition - Move to crawl wall 
+          if (strategy[1] == "FindWall"): 
+            strategy[1] = "CrawlWall"                
+            # TODO: Move to high/low threat based on aggro
+
+            rotation = int(2 * rand.random())
+            if (rotation):
+                rotation = CONST.clockwise 
+            else: 
+                rotation = CONST.counterclockwise 
+
+            strategyinfo['rotation'] = rotation
+            strategyinfo['proximity'] = 2
+          
+          else:
+            strategy = ["Eat","x"]
+
+          # Check if time exceeds limit 
+          st = bo.getStartTime()
+          diff = 1000 * (time.time() - st)
+          if diff > CONST.timePanic: 
+              log('timer-hurry')
+              bo.hurry = True
+
+          log('time','Strategy updated', st)
+          log('strategy-iterate', str(strategy))
+
+  
+      if (i > CONST.strategyDepth or bo.hurry):
+          # Exit loop
+          target = [0, 0]
+          break
+          # log('strategyInsert random walk 
+          # target = random ... 
+          # interrupt = True 
     
-    # Optimum use of space 
-    if(strategy[0]=="Survive"):
-        
-        # find dijkstras way out .. 
-        # .. otherwise slinky pattern until death
-        pass 
-    
-    # ConserveMoves 
-    if(strategy[0]=="Kill"):
+      i = i + 1 
 
-        if (strategy[1] == "Collide"):
-            target = headOnCollision(bo, sn) 
-            
-            # No kill path no longer exists 
-            if(not len(target)): 
-                strategy = ["Attack","Stalk"]
-            
-#         if(numMovesAvailable(enemy) < enemy.getLength()):
-#             strategy[1] = "Block"
-#             move = blockPath()
-#             pass 
-             
-
-    if(strategy[0]=="Defend"):
-        # d = bo.findDirectionWith(CONST.empty)
-        # target = CONST.directionMap['d']
-        pass 
-
-    if(strategy[0]=="Attack"):
-        
-        if(strategy[1]=="Stalk"):
-            # find enemy head square
-            # stay X squares ahead 
-            # wait for kill 
-            pass 
-        
-        
-        if(strategy[1]=="Spiral"):
-            # find central point of map
-            # spiral of death 
-            pass 
-        
-        # Spiral  
-
-    if(strategy[0]=="Eat"): 
-
-        a = sn.getLocation("head")
-        iname = getClosestItem(bo, its, a, "food")
-        it = getItemByName(its, iname)
-        target = it.getLocation()
-
-        # print("EAT")
-        # print(str(a), str(iname), str(it), str(target))
-        # ** Introduce threat level
-       
-
-    # If error with strategy 
-    if(len(target) == 0): 
-        
-        # Reset strategy  
-        # Insert random walk 
-        strategy = ["Eat","x"]
-        # target = random ... 
-        # strategy = ["Idle","x"]
-        # interrupt = True 
-        
+    print("H4",str(sn.getHead()))    
     return (target, strategy, strategyinfo)
 
 
@@ -187,9 +209,9 @@ def translatePath(bo: board, sn: snake) -> str:
     data: https://docs.battlesnake.com/references/api/sample-move-request
     return: "up", "down", "left" or "right"
     """
-
-    start = sn.getHead() 
-    finish = sn.getTarget()
+    
+    start = copy.copy(sn.getHead())
+    finish = copy.copy(sn.getTarget())
     
     log("path-target", str(finish))
 
@@ -280,37 +302,48 @@ def checkOpenPath(bo, a, b):
 
 def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     
-    # bo.board 
-    # l = sn.getHead()
-    # d = direction  # left, right, up, down
-    # r = rotation    # cw, ccw
-    # p = proximity  # 0, 1, 2..
-  
-    # check path in current direction 
-
-    # i = 4 
-    # pathNotFound = false 
-    # while (pathNotFound and i): 
-    #   pt = l + d * (p + 1) 
-    #   if (openPath(l, pt)): 
-    #     move = d 
-    #   i = i - 1
-    # else:
-    #   d = rotateMove(d, r)
-    #   if (openPath(l, pt)): 
-    # 
-    #  # else (openPath(l, .. if blocked, CONST.up
-    # try CONST.up, if blocked CONST.right
-    # try CONST.right if blocked CONST.down
-    # try CONST.down if blocked CONST left
+    w = bo.getWidth()
+    h = bo.getHeight()
+    a = sn.getHead() # [0,0] 
+    d = sn.getDirection()  # left, right, up, down
     
-    # if (r = CONST.counterclockwise) 
-    # try CONST.left, if blocked, CONST.up
-    # try CONST.up, if blocked CONST.right
-    # try CONST.right if blocked CONST.down
-    # try CONST.down if blocked CONST left
+    # Coordinates - start [ay, ax]
+    ax = a[1]
+    ay = a[0]
+    a1 = [0] * 2
 
-    return []
+    r = rotation    # cw, ccw
+    p = proximity   # 0, 1, 2..
+
+    
+    # TODO:  Update for proximity (ie. X squares away from)
+    # Check path in current direction
+    
+    for i in range(0, 4):
+        # Add one point in current direction 
+        a1[0] = ay + CONST.directionMap[d][0]
+        a1[1] = ax + CONST.directionMap[d][1]
+        
+        # No collision & in bounds 
+        print("TRACK-DIRN", str(a), str(a1), d)
+        if( 0 <= a1[0] < w and 0 <= a1[1] < h):
+            if (bo.solid[a1[0], a1[1]] == 0):
+              print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
+              break
+        
+        # Rotate direction & try again 
+        if(r == CONST.counterclockwise): 
+            d = CONST.ccwMap[d] 
+        else:
+            d = CONST.cwMap[d]
+
+#     else:
+#       d = rotateMove(d, r)
+#       if (openPath(l, pt)): 
+    
+    log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
+    return a1
+  
 
 def numMovesAvailable(bo, sn):
     # while sn.getHead()
