@@ -8,82 +8,128 @@ import constants as CONST
 
 class snake:
 
-    strategyList = ["enlarge", "attack", "defend", "stalk", "eat", "taunt"]
-    # Enlarge -- focus on maximising snake size 
-    # Eat -- focus on restoring health (may end up same as enlarge)..
-    # Taunt -- full health, no attack options. eg. draw patterns
-    # Attack -- larger, opportunity to kill (Eg. head to head collision)
-    # Stalk -- larger, stay close to head.  Intercept food .. 
-    # etc
-
-    # strategy = "enlarge"  # "enlarge"
-    # lastStrategy = ""
-
-    # interrupt = False
-    # # trigger interrupt on critical situations (eg. low health, under threat)
-
-    # head = {}  # Dict - point {"x": 0, "y": 0}
-    # body = {}  # Dict - list [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} 
-    # target = {} # Dict - point 
-    # route = {}  # Dict - list 
-    
-    # aggro = 20   # out of 100 
-    # hunger = 0   # out of 100 
-    
-    # TODO:  Deduplicate with above
     def __init__(self, data=""):
-        self.strategy = "enlarge"
-        self.lastStrategy = ""
+        self.strategy = ["Eat",""]
+        self.strategyinfo = {}
+        self.strategylast = []
+        
         self.interrupt = False
 
-        self.head = {}  # Dict - point {"x": 0, "y": 0}
-        self.body = {}  # Dict - list [ {"x": 0, ...
-        self.target = {} # Dict - point 
-        self.route = {}  # Dict - list 
+        self.head = [] 
+        self.body = []  
+        self.target = []  
+        self.route = []  
         
-        self.aggro = 20   # out of 100 
+        self.threat = 50
+        self.aggro = 50   # out of 100 
         self.hunger = 0  # out of 100 
+        self.health = 100 
+        self.length = 3
 
         self.setLocation(data)
         self.shout = ""
-  
-    # TODO:  Only supports dict for body ..  
-    def getLocation(self, p, t="array"):
 
-        h = self.head
-        b = self.body
+    def showStats(self): 
+        print("""
+  Health: %d
+  Hunger: %d
+  Aggro: %d
+  Threat: %d
+  Head: %s
+  Target: %s
+  Strategy: %s
+        """ % (self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.strategy))
+
+    def setHead(self, p):
+        if (not isinstance(p, list)):
+          print("ERROR: setHead(self, p) - list expected of format [y, x]") 
+        else:       
+          self.head = p
+
+    def setBody(self, p):
+        if (not isinstance(p, list)):
+          print("ERROR: setBody(self, p) - list expected of format [[y1, x1], [y2, x2],..]") 
+        else: 
+          self.body = p 
+          self.setLength(len(p))
+
+    def setLength(self, l):
+          self.length = l + 1   # TODO:  Check if correct (body + head)
+
+    def getLength(self):
+          return self.length
+
+    def getHead(self):
+        return self.head
+
+    def getBody(self):
+        return self.body
+
+    def getLocation(self, p):
+
         if(p == "head"):
-
-          if(t == "array"):
-            return ([h['y'],h['x']])
-          else:
-            return h
+          return self.head
 
         elif(p == "body"):
-          return self.body 
+          return self.body
           
         else: 
-          return {}
+          return [-1,-1]
 
     # TODO:  Include list / array option    
+    def setAll(self, data):
+
+        health = data['you']['health'] 
+
+        self.setLocation(data)
+        self.setHealth(health)
+        
+        aggro = 50
+        hunger = 100 - health
+        threat = 50
+
+        self.setHunger(hunger)
+        self.setThreat(threat) 
+        self.setAggro(aggro)
+        
+
     def setLocation(self, data):
         try:
-          self.head = data['you']['head'] 
-          self.body = data['you']['body'] 
+          head = data['you']['head']
+          body = data['you']['body']
+          b = []
+
+          self.head = [head['y'],head['x']]
+
+          for pt in body:
+            b.append([pt['y'],pt['x']])
+          
+          self.body = b
 
         except: 
-          self.head = {'x':0,'y':0} 
-          self.head = {'x':0,'y':0}
-          # self.head = [0,0]
-          # self.body = [0,0]
-        
+          self.head = [-1,-1] 
+          self.body = [-1,-1]
+     
     def setRoute(self, r):
         self.route = r
         return True
     
     def getRoute(self):
         return self.route
-    
+
+    def getThreat(self):
+        return self.threat
+
+    def setThreat(self, t):
+        self.threat = t
+
+
+    def getHealth(self):
+        return self.health
+
+    def setHealth(self, h):
+        self.health = h
+
     def getHunger(self):
         return self.hunger
     
@@ -99,36 +145,34 @@ class snake:
     
     def setAggro(self,a):
         if isinstance(a, int):
-            aggro = a
+            self.aggro = a
             return True
         else:
             return False 
 
-    def getStrategy(self):
-        return self.strategy
-    
-    def setStrategy(self, s):
-        if (s in self.strategyList):
-            strategy = s
-            return True
-        else:
-            return False
-    
     # review strategy and update 
-    def updateStrategy(self,data):
+    def setStrategy(self, s, sinfo):
     
-      # enlarge 
-      # attack 
-      # defend
-      # eat 
-      # stalk 
-      # random -- loiter 
+      self.strategy = s
+      self.strategyinfo = sinfo
 
-      return True
+
+    # review strategy and update 
+    def getStrategy(self):
+
+      s = self.strategy
+      sinfo = self.strategyinfo
+      return (s, sinfo)
+
   
-    # TODO: Try save all points as array (not dict)
     def setTarget(self, dest):
-      self.target = dest
+      
+      if (isinstance(dest, dict)):
+        self.target = [dest['y'],dest['x']]
+       
+      elif (isinstance(dest, list)):
+        self.target = dest
+
 
     def getTarget(self):
       return self.target
@@ -137,10 +181,11 @@ class snake:
       
       # Shout every 10 turns 
       if (turn % CONST.shoutFrequency == 0): 
-        strat = self.getStrategy()  
+        s, sinfo = self.getStrategy()  
         #     if (strategy=="enlarge"):
         #     elif (strategy=="taunt"):
-        #     ...  
+        #     ... 
+ 
         self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
         
       return self.getShout()

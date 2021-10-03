@@ -1,7 +1,7 @@
 import logging
 import os
 
-import time
+from logger import log
 # import math
 
 from flask import Flask
@@ -12,28 +12,25 @@ from snakeClass import snake
 from boardClass import board
 from itemClass import item
 
-from logic import selectDestination, chooseMove
+from logic import checkInterrupts, stateMachine,translatePath
 
 app = Flask(__name__)
 
 # Globals 
-# TODO:  Understand scope of these items..
-print("GLOBAL: Define game objects")
-
 global theBoard 
 global theItems 
 global ourSnek 
 global codeTime
 
-# theBoard = board()
+theBoard = board()
 theItems = []          # array of item() class
 ourSnek = snake()
-codeTime = {}           # time - dict
+clock = {}           # time - dict
 
 # Register snake 
 @app.get("/")
 def handle_info():
-    print("INFO: Healthcheck - OK")
+    log("healthcheck")
     return {
         "apiversion": "1",
         "author": "idzol", 
@@ -50,28 +47,29 @@ def handle_start():
     global ourSnek 
     global codeTime
 
-    # perf['start'] = time.time()
+    # clock['start'] = time.time()
     data = request.get_json()
 
-    print(f"START {data['game']['id']}")
-
+    # print(f"START {data['game']['id']}")
+    log("start", data['game']['id'])
+    
     # initialise game (theGame)
     
     # initialise board (theBoard)
-    theBoard = board(data)
+    theBoard = board()
     
     # initialise items (theItems)
     theItems = []
 
     # (re)initialise our snake (ourSnek)
     ourSnek.__init__()
-   
+     
     # initialise other snakes (otherSneks)
 
     # initalise / reset other vars
-    # perf['init'] = time.time()
+    # clock['init'] = time.time()
     
-    return "ok"
+    return "ok" 
 
 
 @app.post("/move")
@@ -81,53 +79,62 @@ def handle_move():
     global ourSnek 
     global codeTime  
 
-    # perf['move'] = time.time()
+    theBoard.setStartTime()
+
+    # Start clock
     data = request.get_json()
+    log('time', 'Start Move', theBoard.getStartTime())
 
-    # perf.append({['strat_end']:time.time()})
-
-    # update board (theBoard)
-    dataBoard = data['board']
-    boardWidth = int(dataBoard['width'])
-    boardHeight = int(dataBoard['height'])
-    theBoard.setDimensions(boardWidth, boardHeight)
+    # Update board (theBoard)
+    width = int(data['board']['width'])
+    height = int(data['board']['height'])
+    theBoard.setDimensions(width, height)
     theBoard.updateBoards(data)
 
     turn = int(data['turn'])
     
-    # update items / objects (theItems)
+    # Update items / objects (theItems)
     foods = data['board']['food']
     theItems = []
-  
     for f in foods:
       it = item("food", f) 
       theItems.append(it)
 
-    # perf['move_init'] = time.time()
-  
-    # update snake (ourSnek) 
-    ourSnek.setLocation(data)
-    ourSnek.updateStrategy(data) # check strategy 
-    
-    # TODO: Review state model 
-    # if (ourSnek.lastStrategy != ourSnek.strategy): 
-    # ourSnek.lastStrategy = ourSnek.strategy
-    dest = selectDestination(theBoard, ourSnek, theItems)
-    ourSnek.setTarget(dest)
+    # Update snake (ourSnek) 
+    ourSnek.setAll(data)
 
-    # decide move 
-    move = chooseMove(theBoard, ourSnek)
+    # Initialisation complete 
+    log('time', 'Init complete', theBoard.getStartTime())
     
-    # perf['move_choose'] = time.time()
-    
+    # Check interrupts     
+    strat, stratinfo = checkInterrupts(theBoard, ourSnek)
+    ourSnek.setStrategy(strat, stratinfo) # check 
+
+    # Progress state machine & return target
+    move, strat, stratinfo = stateMachine(theBoard, ourSnek, theItems)
+    ourSnek.setStrategy(strat, stratinfo) # check   
+    # Default strategy if no route found  
+    # if (move == []):
+    #   try different strategy 
+    # 
+    ourSnek.setTarget(move)
+    log('time', 'Strategy complete', theBoard.getStartTime())
+
+    # Strategy Complete 
+
+    # Translate target to move 
+    move = translatePath(theBoard, ourSnek)
     shout = ourSnek.setShout(turn)
+    log('time', 'Path complete', theBoard.getStartTime())
 
-    print(f"MOVE: {move}")
-    print(f"SHOUT: {shout}")
-    
-    return {"move": move,"shout":shout}
-    # return {'move': move, 'shout': shout}
-  
+    # log("strategy", ourSnek.showStats())
+    print("SNAKE")
+    ourSnek.showStats()
+    log("move", move)
+    log("shout", shout)
+
+    log('time', 'Move complete', theBoard.getStartTime())    
+    return {"move": move, "shout":shout}
 
 
 @app.post("/end")
@@ -139,7 +146,8 @@ def end():
   
     data = request.get_json()
 
-    print(f"END {data['game']['id']}")
+    log("end", data['game']['id'])
+
     return "ok"
 
 
