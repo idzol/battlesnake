@@ -1,3 +1,4 @@
+
 import random as rand
 import numpy as np
 
@@ -38,7 +39,7 @@ def getDirection(a, b):
     
     return move
 
-
+  
 def comparePoints(a, b, t="array"): 
 
     if(a['x'] == b['x'] and a['y'] == b['y']):
@@ -67,6 +68,10 @@ def distanceToPoint(a, b):
     except: 
       return -1
 
+
+# def distanceToPointComplex(a, b):
+    # if objects in the way .. 
+    
 
 def getPointsInLine(a, b):
     # a = [0, 0], b = [2, 0]
@@ -126,44 +131,26 @@ def getPointsInLine(a, b):
     # print(str(line))
     return line
 
- 
-# def isSamePoint(a: Dict[str, int], b: Dict[str, int])
 
-def chartPath(b, p):    # b = board(), p = point(x,y)
-    pass
+def getPointsInRoute(rt, a=[]):
+
+    # TODO: Check is of form of route is always [a, b, c] and not [b, c].  optional to provide a, as separate variable until resolved, eg. if len(a) 
+
+    # Translate vectors into points 
+    pts = []
+    va = []
     
-def setPath():
-    pass 
+    for vb in rt:
+    # Skip first point (need two points for line)  
+    
+        if (len(va)):
+            # Add points in line 
+            # print(str(va)+str(vb))
+            pts = pts + getPointsInLine(va, vb)
 
-## Load game data 
-def initialise_snake(data: dict) -> str:
-    pass 
+        va = vb 
 
-
-# Rotate a directino 
-def rotateMove(a, d=CONST.clockwise): 
-
-  if (CONST.counterclockwise):
-    if (CONST.up):
-        move = CONST.left
-    elif (CONST.left):
-        move = CONST.down
-    elif (CONST.down):
-        move = CONST.right
-    else: # CONST.right
-        move = CONST.up
-
-  else: # CONST.clockwise:  
-    if (CONST.up):
-        move = CONST.right
-    elif (CONST.right):
-        move = CONST.down
-    elif (CONST.down):
-        move = CONST.left
-    else: # CONST.left
-        move = CONST.up
-
-  return move
+    return pts
 
 
 # Invert coordinate system 
@@ -189,4 +176,31 @@ def raiseError(e):
     # error_text = e
     print("ERROR: " + str(e))
     return True
+
+# == DEPRECATE == 
+
+# Rotate a direction
+# def rotateMove(a, d=CONST.clockwise): 
+
+#   if (CONST.counterclockwise):
+#     if (CONST.up):
+#         move = CONST.left
+#     elif (CONST.left):
+#         move = CONST.down
+#     elif (CONST.down):
+#         move = CONST.right
+#     else: # CONST.right
+#         move = CONST.up
+
+#   else: # CONST.clockwise:  
+#     if (CONST.up):
+#         move = CONST.right
+#     elif (CONST.right):
+#         move = CONST.down
+#     elif (CONST.down):
+#         move = CONST.left
+#     else: # CONST.left
+#         move = CONST.up
+
+#   return move
 

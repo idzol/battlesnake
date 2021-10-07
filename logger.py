@@ -1,3 +1,5 @@
+import numpy as np
+
 import time as time 
 from time import gmtime, strftime
 
@@ -26,6 +28,10 @@ messages = {
     # Board 
     'updateboardsnakes-warn':[3, "WARN", "Enemy snake head not defined. %s"],
 
+    'predict-update':[3, "INFO", "%s"],
+    'predict-new':[3,"PREDICT POINT", "%s: %s: %s"],
+    'predict-erase':[3,"PREDICT ERASE", "%s: %s: %s"],
+    
     # Routing 
     'route-fromto':[6,"FROM TO", " %s %s"],
     'route-return':[6,"ROUTE", " %s"],
@@ -35,6 +41,8 @@ messages = {
     'route-findclosestwall':[6,"WALLPATH"," %s %s"],
     'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],
     'route-gradient':[3,"PATH", " Gradient %s"],
+    'route-complex-step':[6,"ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
 
     # Strategy 
     'strategy-iterate':[5,"STRAT", "Updated - %s"],
@@ -45,7 +53,22 @@ messages = {
     'strategy-survive':[6,"SURVIVE", " %s %s %s %s"],
     'strategy-findwall':[5,"FINDWALL", " Target %s"],
     'strategy-trackwall':[5,"TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
-          
+
+    # Map 
+    'map':[2, "%s"],
+
+    # Snake
+    'snake-showstats':[2, "SNAKE", """
+  Health: %d
+  Hunger: %d
+  Aggro: %d
+  Threat: %d
+  Head: %s
+  Target: %s
+  Route: %s
+  Strategy: %s
+  Direction: %s"""],
+  
     # Functions 
     # 'findbestpath-usage':[4,"WARN", "findBestPath(self, a, b) - dict received when list array expected"],
     
@@ -67,17 +90,34 @@ def log(src, *vars):
     
     msg = messages[src]
  
-    #  try:
+    output = ""
+
+    # Time function 
     if(src == 'time'):
         time.time()
         diff = 1000 * (time.time() - vars[1]) 
         output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
 
-    else:            
-        output = msg[1] + ": " + msg[2] % vars
+    # Map function
+    elif(src == 'map'):   
+        try: 
+          m = vars[1]
+          h = len(m)
+          w = len(m[0])
 
-    # TODO:  if key does not exist 
-      # 'default', "%s"
+          md = np.zeros([h,w],np.intc)
+          for y in range(0, h):
+            for x in range(0, w): 
+              md[h-y-1,x] = m[y,x]
+            
+          output = str(vars[0]) + "\n" + str(md)
+            
+        except Exception as e:       
+          print(e)
+  
+    # General print function 
+    else:          
+        output = msg[1] + ": " + msg[2] % vars
 
 
     # Print to console 

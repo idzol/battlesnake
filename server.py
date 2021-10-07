@@ -21,9 +21,11 @@ global theBoard
 global theItems 
 global ourSnek 
 global codeTime
+global allSnakes
 
 theBoard = board()
 theItems = []          # array of item() class
+allSnakes = []       # array of snake() class
 ourSnek = snake()
 clock = {}           # time - dict
 
@@ -45,6 +47,7 @@ def handle_start():
     global theBoard 
     global theItems 
     global ourSnek 
+    global allSnakes
     global codeTime
 
     # clock['start'] = time.time()
@@ -61,13 +64,27 @@ def handle_start():
     theItems = []
 
     # Initialise our snake (ourSnek)
-    # TODO: Don't reinitliaise snake & clear counters, eg. adjust strategy keep win stats 
+    allSnakes = []
+
+    # TODO: Combine ourSnek.__init with data)
+    # ourSnek.reset() -- clear counters, eg. adjust strategy keep win state 
     ourSnek.__init__()
-     
+    ourSnek.id = data['you']['id']
+    ourSnek.setType("us")
+    allSnakes.append(ourSnek)
+    
     # initialise other snakes (otherSneks)
+    snakes = data['board']['snakes']
+    for sndata in snakes: 
+        if sndata['id'] != data['you']['id']:
+          sn = snake() 
+          sn.setType("enemy")
+          allSnakes.append(sn)
+    
+      # TODO: check if this creates a deep copy, or pointer to same snake (multiple enemies represented as one snake)  
 
     # initalise / reset other vars
-    # clock['init'] = time.time()
+    # log("start-complete", data['game']['id'])
     
     return "ok" 
 
@@ -77,6 +94,7 @@ def handle_move():
     global theBoard 
     global theItems 
     global ourSnek 
+    global allSnakes
     global codeTime  
 
     # Start clock
@@ -99,29 +117,29 @@ def handle_move():
     # Update snake (ourSnek) 
     ourSnek.setAll(data)
 
+    # Update enemy snakes 
+    theBoard.updatePredict(allSnakes)
+    theBoard.predictSnakeMoves(allSnakes, theItems)
+
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
     
     # Check interrupts     
-    strat, stratinfo = checkInterrupts(theBoard, ourSnek)
-    ourSnek.setStrategy(strat, stratinfo) # check 
-
+    checkInterrupts(theBoard, ourSnek)
+    
     # Progress state machine & return target
-    move, strat, stratinfo = stateMachine(theBoard, ourSnek, theItems)
-    ourSnek.setStrategy(strat, stratinfo) # check   
-    # Default strategy if no route found  
-    # if (move == []):
-    #   try different strategy 
-    # 
-    ourSnek.setTarget(move)
+    stateMachine(theBoard, ourSnek, theItems)
+    
     log('time', 'Strategy complete', theBoard.getStartTime())
 
     # Strategy Complete 
 
     # Translate target to move 
     move = translatePath(theBoard, ourSnek)
-    ourSnek.setDirection(move)
+    
+    move = ourSnek.getDirection()
     shout = ourSnek.setShout(turn)
+
     log('time', 'Path complete', theBoard.getStartTime())
 
     # log("strategy", ourSnek.showStats())
