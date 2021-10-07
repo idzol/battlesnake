@@ -8,9 +8,9 @@ logLevelConsole = 6
 logLevelPrint = 6
 
 # Snake variables
-healthHigh = 80
-healthMed = 50
-healthLow = 20
+healthHigh = 100
+healthMed = 90
+healthLow = 80
 
 threatHigh = 80
 threatMed = 50
@@ -26,7 +26,7 @@ strategyDepth = 3
 # Routing variables 
 maxSearchDepth = 3
 maxOwnPaths = 100
-maxPredictTurns = 10
+maxPredictTurns = 4
 maxRecursion = 2000
 
 pathThreshold = 20

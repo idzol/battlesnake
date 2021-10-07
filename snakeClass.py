@@ -1,7 +1,10 @@
 from typing import List, Dict
 
+import logger as log 
+
 import random as rand
 import constants as CONST
+import copy as copy 
 
 # from functions import selectDestination
 
@@ -26,6 +29,9 @@ class snake:
         self.health = 100 
         self.length = 3
 
+        self.id = ""    # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
+        self.type = ""  # us, team, friendly, enemy 
+
         # TODO: Randomise, only used for some strats 
         self.direction = "right"
         self.shout = ""
@@ -37,57 +43,65 @@ class snake:
     #     self.direction = ""
     #     self.shout = ""
 
+    def showStats(self):
 
-    def showStats(self): 
-        print("""
-  Health: %d
-  Hunger: %d
-  Aggro: %d
-  Threat: %d
-  Head: %s
-  Target: %s
-  Strategy: %s
-  Direction: %s
-        """ % (self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.strategy, self.direction))
+        log.log('snake-showstats', self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.route, self.strategy, self.direction)
+        
 
     def setHead(self, p):
         if (not isinstance(p, list)):
           print("ERROR: setHead(self, p) - list expected of format [y, x]") 
         else:       
-          self.head = p
+          self.head = copy.copy(p)
 
     def setBody(self, p):
         if (not isinstance(p, list)):
           print("ERROR: setBody(self, p) - list expected of format [[y1, x1], [y2, x2],..]") 
-        else: 
-          self.body = p 
-          self.setLength(len(p))
+        else:
+          self.body = copy.copy(p)
+          self.setLength(len(p) + 1)
 
     def setDirection(self, d):
-        self.direction = d
+        self.direction = copy.copy(d)
         
     def getDirection(self):
         return self.direction
   
     def setLength(self, l):
-          self.length = l + 1   # TODO:  Check if correct (body + head)
+          self.length = copy.copy(l)  
+          # TODO:  Check if correct (body + head)
+
+    def setType(self, t):
+        self.type = copy.copy(t)
+        
+    def getType(self):
+        t = copy.copy(self.type)
+        return t
+
+    def setPath(self, p):
+        self.path = copy.copy(p)
+     
+    def getPath(self):
+        p = copy.copy(self.path)
+        return p 
 
     def getLength(self):
-          return self.length
+        return copy.copy(self.length)
 
     def getHead(self):
-        return self.head
+        r = self.head
+        return r[:]
 
     def getBody(self):
-        return self.body
+        r = self.body
+        return r[:]
 
     def getLocation(self, p):
-
         if(p == "head"):
-          return self.head
+          return copy.copy(self.head)
 
         elif(p == "body"):
-          return self.body
+          return copy.copy(self.body)
           
         else: 
           return [-1,-1]
@@ -127,18 +141,19 @@ class snake:
           self.body = [-1,-1]
      
     def setRoute(self, r):
-        self.route = r
+        self.route = copy.copy(r)
         return True
     
     def getRoute(self):
-        return self.route
+        r = self.route
+        return r[:]
 
     def getThreat(self):
-        return self.threat
+        t = copy.copy(self.threat)
+        return t
 
     def setThreat(self, t):
-        self.threat = t
-
+        self.threat = copy.copy(t)
 
     def getHealth(self):
         return self.health
@@ -151,50 +166,49 @@ class snake:
     
     def setHunger(self, h):
         if isinstance(h, int):
-            hunger = h 
+            self.hunger = copy.copy(h) 
             return True
         else:
             return False 
     
     def getAggro(self):
-        return self.aggro
+        a = copy.copy(self.aggro)
+        return a
     
     def setAggro(self,a):
         if isinstance(a, int):
-            self.aggro = a
+            self.aggro = copy.copy(a)
             return True
         else:
             return False 
 
     # review strategy and update 
     def setStrategy(self, s, sinfo):
-    
-      self.strategy = s
-      self.strategyinfo = sinfo
+      self.strategy = copy.copy(s)
+      self.strategyinfo = copy.copy(sinfo)
 
 
     # review strategy and update 
     def getStrategy(self):
-
-      s = self.strategy
-      sinfo = self.strategyinfo
+      s = copy.copy(self.strategy)
+      sinfo = copy.copy(self.strategyinfo)
       return (s, sinfo)
 
   
-    def setTarget(self, dest):
-      
+    def setTarget(self, dest):   
       if (isinstance(dest, dict)):
-        self.target = [dest['y'],dest['x']]
+        t = [dest['y'],dest['x']]
        
       elif (isinstance(dest, list)):
-        self.target = dest
+        t = dest
 
+      self.target = copy.copy(t)
 
     def getTarget(self):
-      return self.target
+      r = self.target
+      return r[:]
 
     def setShout(self, turn):
-      
       # Shout every 10 turns 
       if (turn % CONST.shoutFrequency == 0): 
         s, sinfo = self.getStrategy()  
@@ -203,10 +217,11 @@ class snake:
         #     ... 
  
         self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
-        
+      
       return self.getShout()
 
 
     def getShout(self):
-      return self.shout
+      s = copy.copy(self.shout)
+      return s 
       

@@ -3,6 +3,7 @@
 # import numpy as np
 # import pandas as pd
 # import random as rand
+import copy as copy
 
 import constants as CONST
 
@@ -11,8 +12,8 @@ class item:
 
     name = ""
     itemType = "" 
-    types = ["food","hazard"]
-    location = {}    # {"x":0,"y":0}
+    types = ["food", "hazard"]
+    location = [] 
     distances = {}
     
     def __init__(self, t, p):
@@ -46,25 +47,28 @@ class item:
     #     return {n:d}
             
     def getName(self):
-        return self.name
+        n = self.name
+        return copy.copy(n)
 
     def setName(self, n):
         self.name = n
 
     def getType(self):
-        return self.itemType
+        t = self.itemType
+        return copy.copy(t)
 
     def setType(self, t):
-        self.type = t
+        self.type = copy.copy(t)
         return True
 
     def getLocation(self):
-        return self.location
+        r = self.location
+        return r[:]
 
     def setLocation(self, pt):
 
         if (isinstance(pt, list)):
-          self.location = pt
+          self.location = copy.copy(pt)
           return True 
 
         elif (isinstance(pt, dict)):
