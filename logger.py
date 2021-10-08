@@ -1,3 +1,9 @@
+## CLEANUP
+# log("path-target", str(finish))
+# log('time', 'Before Route', bo.getStartTime())
+# log('time', 'After Route', bo.getStartTime())
+
+
 import numpy as np
 
 import time as time 
@@ -37,6 +43,8 @@ messages = {
     'route-return':[6,"ROUTE", " %s"],
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"],
+    
+    'route-basic':[6,"ROUTE SIMPLE"," %s"],
     'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s = %d"],
     'route-findclosestwall':[6,"WALLPATH"," %s %s"],
     'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],
@@ -45,6 +53,7 @@ messages = {
     'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
 
     # Strategy 
+    'strategy-update':[5,"STRAT", "%s\n%s"],
     'strategy-iterate':[5,"STRAT", "Updated - %s"],
     'strategy-eat':[6,"EAT", " %s %s %s %s"],
     'strategy-attack':[6,"ATTACK", " %s %s %s %s"],

@@ -27,24 +27,31 @@ from itemClass import item
     # .. 
     
 # Changes strategy (state machine) based on external influence 
-def checkInterrupts(bo:board, sn: snake):
+def checkInterrupts(bo:board, snakes):
 
-    # global strategy
+    # Return your snake 
+    you = bo.getIdentity()
+    sn = snakes[you]
     health = sn.getHealth() 
     aggro = sn.getAggro()
     threat = sn.getThreat()
+    path = sn.getRoute()
     strategy, strategyinfo = sn.getStrategy() 
     interrupt = False
 
     # Kill interrupt 
-    if (killPath(bo, sn)): 
-        strategy = ["Kill","Collide"]
+    if (killPath(bo, snakes)):     
+        strategy = ['Kill', 'Collide']
         interrupt = True 
 
-    # Collision & enemy alrger
-    elif (threatPath(bo,sn)): 
-        strategy = ["Survive",""]
-        interrupt = True 
+    elif (largestSnake(bo, snakes) and health > CONST.healthMed):
+        strategy = ['Control', '']
+        strategyinfo['default'] = ['Idle', 'Centre']
+
+    # Collision & enemy larger
+    # elif (pathThreat(bo, start, path, aggro)): 
+    #     strategy = ['Idle', 'FindWall']
+    #     interrupt = True 
 
     # Survive interuupt 
     elif (numMovesAvailable(bo, sn) < sn.getLength()):
@@ -83,13 +90,22 @@ def stateMachine(bo:board, sn: snake, its: list):
 
     strategy, strategyinfo = sn.getStrategy()
     start = sn.getHead()
-    defaultstrategy = ["Idle", "FindWall"]
+    if 'default' in strategyinfo:
+      defaultstrategy = strategyinfo['default']
+    else:
+      defaultstrategy = ['Idle', '']
+
+    # Return your snake 
+    # health = sn.getHealth() 
+    aggro = sn.getAggro()
+    
 
     # Progress state machine
     target = []
     route = [] 
     
-    # print("STATE MACHINE", str(strategy), str(strategyinfo))
+    # log('state-machine-start', str(strategy), str(strategyinfo))
+    
     i = 0
     while not len(target):
       # ConserveMoves 
@@ -108,7 +124,109 @@ def stateMachine(bo:board, sn: snake, its: list):
   #             strategy[1] = "Block"
   #             move = blockPath()
   #             pass 
+
+      if(strategy[0]=="Control"):
+          if (strategy[1]==''):
+            strategy[1]=="Point-A"
+
+          # Patrol A 
+          if (strategy[1]=="Point-A"): 
+
+            # If reached target.
+            if 'control-a' in strategyinfo:
+              if start == strategyinfo['control-a']:
+                strategy[1] = "Point-B" 
+
+            if ('control-path' in strategyinfo):
+              # retrace previous path 
+              target = strategyinfo['control-path'].pop(0)
+              route, weight = bo.route(start, target)
               
+            else: 
+            # Get closest cardinal points (n,e,s,w)            
+              target = bo.findClosestNESW(start)
+              route, weight = bo.route(start, target)
+              strategyinfo['control-a'] = target
+              strategyinfo['enemy-direction'] = bo.findDirectionWith(CONST.legend['enemy-body'])
+            
+            # If no route to target ..
+            if(not len(route)):
+              strategy[1] = "Point-B" 
+               
+          if (strategy[1]=="Point-B"): 
+
+            if 'control-b' in strategyinfo:
+              if start == strategyinfo['control-b']:
+                strategy[1] = "Point-C"
+
+            if ('control-path' in strategyinfo):
+                # retrace previous path 
+                target = strategyinfo['control-path'].pop(-1)
+                route = strategyinfo['control-path']
+            
+            else: 
+              target = bo.invertPoint(strategyinfo['control-a'])
+              route, weight = bo.route(start, target)
+              strategyinfo['control-b'] = target
+              strategyinfo['enemy-direction'] = bo.findDirectionWith
+              
+              # If no route to target or reached target ..
+              if(not len(route)):
+                strategy[1] = "Point-C" 
+              
+              strategyinfo['control-a'] = target
+            
+            
+            if (strategy[1]=="Point-C"): 
+              target = strategyinfo['control-a'] 
+              # Find food on the way 
+              route, weight = bo.route(start, target)
+              
+              # TODO: findFoodInArea
+              # TODO: route(a, b, x) to capture food 
+
+              history = sn.getPathHistory()
+              cpath = []
+
+              # Write path we took to memory 
+              for h in history:
+                if h == target:
+                  break 
+                else:
+                  cpath.insert(0, h)
+
+              # Save control path for next patrol 
+              strategyinfo['control-path'] = cpath 
+            
+ 
+              pass 
+          
+            
+            # patrol('bottom')
+            # if reacehd bottom or weight > threshold
+            # strategy-info('control-line') = path (last w moves) 
+
+            # patrol ('loop')
+            # loop back to top via food 
+
+            # OTHER: sync with other snake, stay two moves ahead.. 
+          
+          # def patrol('top'):
+          #   find enemy snake 
+          #   push in enemy snake direction (eg. right) 
+          #.  check if safe to do so 
+          #.  loop around to lef 
+          #    push (right)
+          #    one square for each len > w 
+
+          # if not front line 
+          #  find food (eg. left
+          #  loop back to start (eg. top to bottom)
+
+          # if area control lost 
+          #  snake crosses area control line 
+          #  strategy = defaultstrategy 
+
 
       if(strategy[0]=="Defend"):
           # d = bo.findDirectionWith(CONST.empty)
@@ -141,16 +259,21 @@ def stateMachine(bo:board, sn: snake, its: list):
             # TODO: Can also eliminate food here.  Boolean allowed (board & items).  Further note -- routing better as it accomodates future path 
 
             # Get closest item 
-            it = bo.getClosestItem(its, start, "food")
+            itsort = bo.findClosestItem(its, start)
             # Get route to target  
-            target = it.getLocation()
+            
+            # Iterate through items 
+            while (len(itsort)):
+                target = itsort.pop(0).getLocation()
+                t = bo.getThreat()
+                threat = t[target[0], target[1]]
+                route, weight = bo.route(start, target)
+                # Look for item with low threat 
+                if weight < CONST.routeThreshold and threat < aggro:
+                    break 
 
-            print("FINISH", str(target))
-            route = bo.route(start, target)
-
-            # If no route to target ..
+            # If no route to target change to default strategy 
             if(not len(route)):
-            # .. then default strategy 
               strategy = defaultstrategy
 
             # TODO: Introduce threat level to "allowed" or "gradient" (route)
@@ -163,15 +286,16 @@ def stateMachine(bo:board, sn: snake, its: list):
         if(strategy[1]==""):
           strategy[1]=="FindWall"
           
-        # Find centre 
-        # if(strategy[1]=="FindCentre"):   
+
+        if(strategy[1]=="FindCentre"): 
+            pass 
         #     target = bo.findCentre(start)
         #     log('strategy-findcentre', target)
 
         # Find nearest wall 
         if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
-            route = bo.route(start, target)
+            route, weight = bo.route(start, target)
             log('strategy-findwall', target)
 
         # Track wall - clockwise or counterclockwise 
@@ -179,7 +303,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             r = strategyinfo['rotation']
             p = strategyinfo['proximity']
             target = trackWall(bo, sn, r, p)
-            route = bo.route(start, target)
+            route, weight = bo.route(start, target)
 
       # Optimum use of space 
       if(strategy[0]=="Survive"):   
@@ -249,28 +373,24 @@ def translatePath(bo: board, sn: snake) -> str:
     start = sn.getHead()
     finish = sn.getTarget()
     
-    log("path-target", str(finish))
-
-    log('time', 'Before Route', bo.getStartTime())
-   
-    # TODO: Optimise -- Only reroute if there is a change to strategy or path == null .. pop next path off route to optimise time 
+    
     # if (change to strategy): 
-    path = bo.route(start, finish) 
-
-    sn.setPath(path)
+    # path = bo.route(start, finish)   
+    path = sn.getRoute()
     if len(path):
       p = path.pop(0)
-  
+
     else: 
       # No next move - cant route to destination
-      # TODO: Move route selection up to strategy ..  change strategy if none found 
-      p = finish
-
-    log('time', 'After Route', bo.getStartTime())
+      # TODO: Random point
+      p = bo.getEmptyAdjacent(start) 
     
     # Translate routepoint to direction
     move = fn.getDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
+    
+    print("ROUTE OUTPUT")
+    print(str(start), str(finish), str(path), str(p), str(move))
     
     sn.setDirection(move)    
     # return move
@@ -285,14 +405,68 @@ def getItemByName(its, name):
   return {}
 
 
-
 # STUBS -- strategy functions to be built 
 
-def killPath(bo, sn):
-    # if larger than enemy 
+
+def largestSnake(bo, snakes):
+    # if larger than enemy
+    you = bo.getIdentity()
+    you_len = snakes[you].getLength() 
+
+    largest = True 
+    for identity in snakes:
+      sn = snakes[identity]
+      if sn.getType() != "us":
+        enemy_len = sn.getLength()
+        if you_len >= (enemy_len + CONST.strategyLargerBy):
+          pass 
+        else:
+          largest = False 
+          
+    return largest 
+
+
+def pathThreat(board, start, path, maxthreat=CONST.aggroLow): 
+    # TODO:  search whole route (currently first vector only) 
+
+    if(len(path)):
+      t = board.getThreat()
+      # First vector 
+      p0 = path.pop(0)
+      # Translate to points 
+      points = fn.getPointsInLine(start, p0) 
+      # Iterate points 
+      for pt in points:
+        # Threat exceeds aggro .. 
+        if (t[pt[0], pt[1]] > maxthreat):
+          return True
+    
+    return False
+
+
+def killPath(bo, snakes):
+
+    killRadius = 2
+
+    you = bo.getIdentity()
+    you_len = snakes[you].getLength() 
+    you_head = snakes[you].getHead() 
+ 
+    for identity in snakes:
+      sn = snakes[identity]
+      if sn.getType() != "us":
+        enemy_len = sn.getLength()
+        enemy_head = sn.getHead()
+        dist = fn.distanceToPoint(you_head, enemy_head)
+        if (you_len > enemy_len) and dist < killRadius:
+          return sn
+          # log('strategy-trigger', "killPath", you_len, enemy_len, dist)
+
+    # if larger than enemy
+    # if range to enemy head < 3 
     # & dijkstra predict enemy == distance to enemy head
     # find path based on snake predic matrix (eg. 1, 2, 3 length)
-    return False
+    return None
 
 def threatPath(bo, sn, dist=2):
     # if enemy larger 
@@ -357,7 +531,7 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         # No collision & in bounds 
         print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
-            if (bo.solid[a1[0], a1[1]] == 0):
+            if (bo.solid[a1[0], a1[1]] < CONST.routeThreshold):
               print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         
@@ -370,7 +544,7 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
     return a1
   
-def gotoCentre(bo, sn, proximity=2):
+def findCentre(bo, sn, proximity=2):
     w = bo.getWidth()
     h = bo.getHeight()
 
@@ -379,7 +553,6 @@ def gotoCentre(bo, sn, proximity=2):
     c = [cx, cy]
 
     # if centre occupied 
-    # if 
     return []
 
     # if within proximity of centre 

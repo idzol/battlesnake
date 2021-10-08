@@ -12,6 +12,9 @@ import copy as copy
 class snake:
 
     def __init__(self, data=""):
+
+        depth = CONST.maxPredictTurns
+        self.predict = [None] * (depth + 1)
         self.strategy = ["Eat",""]
         self.strategyinfo = {}
         self.strategylast = []
@@ -22,6 +25,7 @@ class snake:
         self.body = []  
         self.target = []  
         self.route = []  
+        self.routeHistory = []
         
         self.threat = 50
         self.aggro = 50   # out of 100 
@@ -30,6 +34,7 @@ class snake:
         self.length = 3
 
         self.id = ""    # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
+        self.name = ""  # idzol, brensch .. 
         self.type = ""  # us, team, friendly, enemy 
 
         # TODO: Randomise, only used for some strats 
@@ -38,10 +43,32 @@ class snake:
         self.setLocation(data)
 
 
-    # def resetCounters(self):
-      
-    #     self.direction = ""
-    #     self.shout = ""
+    def setAll(self, data):
+
+        health = data['health'] 
+        length = data['length'] 
+        
+        self.setLocation(data)
+        self.setHealth(health)
+        self.setLength(length)
+
+        aggro = 50
+        hunger = 100 - health
+        threat = 50
+
+        self.setHunger(hunger)
+        self.setThreat(threat) 
+        self.setAggro(aggro)
+        
+
+    def setEnemy(self, data):
+        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
+        length = data['length'] 
+        
+        self.setLocation(data)
+        self.setLength(length)
+        # self.setHealth(health)
+
 
     def showStats(self):
 
@@ -61,6 +88,13 @@ class snake:
           self.body = copy.copy(p)
           self.setLength(len(p) + 1)
 
+    def savePath(self):
+        h = self.getHead()
+        rth = self.routeHistory
+        rth.insert(0, h)
+        self.routeHistory = rth
+        # print("PATH HISTORY", str(rth))
+
     def setDirection(self, d):
         self.direction = copy.copy(d)
         
@@ -74,6 +108,12 @@ class snake:
     def getId(self):
         i = copy.copy(self.identity)
         return i
+
+    def setName(self, n):
+        self.name = copy.copy(n)
+        
+    def getName(self):
+        return copy.copy(self.name)
         
     def setLength(self, l):
           self.length = copy.copy(l)  
@@ -86,13 +126,6 @@ class snake:
         t = copy.copy(self.type)
         return t
 
-    def setPath(self, p):
-        self.path = copy.copy(p)
-     
-    def getPath(self):
-        p = copy.copy(self.path)
-        return p 
-
     def getLength(self):
         return copy.copy(self.length)
 
@@ -104,6 +137,13 @@ class snake:
         r = self.body
         return r[:]
 
+    def setPredict(self, p):
+        self.predict = copy.copy(p)
+        
+    def getPredict(self):
+        p = copy.copy(self.predict)
+        return p
+
     def getLocation(self, p):
         if(p == "head"):
           return copy.copy(self.head)
@@ -114,28 +154,6 @@ class snake:
         else: 
           return [-1,-1]
 
-    # TODO:  Include list / array option    
-    def setAll(self, data):
-
-        health = data['health'] 
-        
-        self.setLocation(data)
-        self.setHealth(health)
-        
-        aggro = 50
-        hunger = 100 - health
-        threat = 50
-
-        self.setHunger(hunger)
-        self.setThreat(threat) 
-        self.setAggro(aggro)
-        
-
-    def setEnemy(self, data):
-        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
-       
-        self.setLocation(data)
-        # self.setHealth(health)
         
         
     def setLocation(self, data):
