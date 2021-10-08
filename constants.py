@@ -18,7 +18,7 @@ threatLow = 20
 
 aggroHigh = 80
 aggroMed = 50
-aggroMed = 20
+aggroLow = 20
 
 # Strategy variables 
 strategyDepth = 3
@@ -31,7 +31,6 @@ maxPredictTurns = 4
 maxRecursion = 2000
 
 routesolid = 50
-routesemisolid = 25
 routeresistance = 1
 
 pathThreshold = 20

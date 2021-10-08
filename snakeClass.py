@@ -43,10 +43,32 @@ class snake:
         self.setLocation(data)
 
 
-    # def resetCounters(self):
-      
-    #     self.direction = ""
-    #     self.shout = ""
+    def setAll(self, data):
+
+        health = data['health'] 
+        length = data['length'] 
+        
+        self.setLocation(data)
+        self.setHealth(health)
+        self.setLength(length)
+
+        aggro = 50
+        hunger = 100 - health
+        threat = 50
+
+        self.setHunger(hunger)
+        self.setThreat(threat) 
+        self.setAggro(aggro)
+        
+
+    def setEnemy(self, data):
+        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
+        length = data['length'] 
+        
+        self.setLocation(data)
+        self.setLength(length)
+        # self.setHealth(health)
+
 
     def showStats(self):
 
@@ -132,28 +154,6 @@ class snake:
         else: 
           return [-1,-1]
 
-    # TODO:  Include list / array option    
-    def setAll(self, data):
-
-        health = data['health'] 
-        
-        self.setLocation(data)
-        self.setHealth(health)
-        
-        aggro = 50
-        hunger = 100 - health
-        threat = 50
-
-        self.setHunger(hunger)
-        self.setThreat(threat) 
-        self.setAggro(aggro)
-        
-
-    def setEnemy(self, data):
-        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
-       
-        self.setLocation(data)
-        # self.setHealth(health)
         
         
     def setLocation(self, data):

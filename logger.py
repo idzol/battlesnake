@@ -43,6 +43,8 @@ messages = {
     'route-return':[6,"ROUTE", " %s"],
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"],
+    
+    'route-basic':[6,"ROUTE SIMPLE"," %s"],
     'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s = %d"],
     'route-findclosestwall':[6,"WALLPATH"," %s %s"],
     'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],

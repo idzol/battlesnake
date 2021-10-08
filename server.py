@@ -121,9 +121,13 @@ def handle_move():
     # Load game data (support for multi games)
     data = request.get_json()
     game_id = data['game']['id']
-    theBoard = game[game_id][0]
-    ourSnek = game[game_id][1]
-    allsnakes = game[game_id][2]
+    if game_id in game: 
+        theBoard = game[game_id][0]
+        ourSnek = game[game_id][1]
+        allSnakes = game[game_id][2]
+    else: 
+        # TODO: confirm this works 
+        pass 
 
 
     log('time', 'Start Move', theBoard.getStartTime())
@@ -132,21 +136,21 @@ def handle_move():
     # print(str(data))
     # return
     
-    # Update board (theBoard)
+    # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
     theBoard.updateBoards(data)
     
-    # Update items / objects (theItems)
+    # Update items and objects (theItems)
     foods = data['board']['food']
     theItems = []
     for f in foods:
       it = item("food", f) 
       theItems.append(it)
 
-    # Update snake (ourSnek) 
-    ourSnek.setAll(data['you'])
+    # Update snake (ourSnek) and save last path 
     ourSnek.savePath()
-
+    ourSnek.setAll(data['you'])
+    
     # Update enemy snakes 
     snakes = data['board']['snakes']
     for sndata in snakes: 
@@ -155,33 +159,29 @@ def handle_move():
           allSnakes[identity].setEnemy(sndata)
           # print (str(allSnakes[identity].showStats()))
 
-
-    # Update enemy snakes 
+    # Update predict & threat matrix  
     theBoard.predictSnakeMoves(allSnakes, theItems)
     theBoard.updatePredict(allSnakes)
+    theBoard.updateThreat(allSnakes)
     
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
     
-    # Check interrupts     
+    # Check strategy interrupts     
     checkInterrupts(theBoard, allSnakes)
     
     # Progress state machine, set route
     stateMachine(theBoard, ourSnek, theItems)
     
+    # Strategy Complete 
     log('time', 'Strategy complete', theBoard.getStartTime())
 
-    # Strategy Complete 
-
     # Translate target to move 
-    move = translatePath(theBoard, ourSnek)
-    
+    move = translatePath(theBoard, ourSnek)    
     move = ourSnek.getDirection()
     shout = ourSnek.setShout(turn)
-
     log('time', 'Path complete', theBoard.getStartTime())
-
-    # log("strategy", ourSnek.showStats())
+    # log('snake-showstats', 'SNAKE', str(ourSnek.showStats()))
     print("SNAKE")
     ourSnek.showStats()
     log("move", move)

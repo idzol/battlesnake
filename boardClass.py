@@ -1,6 +1,8 @@
 from typing import List, Dict
 
 import math
+import operator
+
 import random as rand
 import numpy as np
 # import pandas as pd
@@ -176,10 +178,6 @@ class board():
         bs = self.updateBoardSnakes(data)
         bi = self.updateBoardItems(data)
 
-        # Update meta-boards
-        # updateDistance
-        # updateThreat(data
-
         # Combine boards
 
         # Solid -- Normalise solid to 99, +1 in dijkstra()
@@ -187,7 +185,14 @@ class board():
 
         self.combine = by + bs + bi  # Array of all layers (snakes, walls, items)
 
-        di = self.updateDijkstra(fn.XYToLoc(data['you']['head']))
+        self.threat = np.zeros([height, width], np.intc)
+        self.dijkstra = np.zeros([height, width], np.intc)
+        # self.updateGradient() -- only update when rqd for routing
+
+
+        # Update meta-boards
+        # bt = self.updateThreat(data, snakes) -- needs snakes 
+        # di = self.updateDijkstra(fn.XYToLoc(data['you']['head']))
         # gr = self.updateGradient() -- only update when rqd for routing
 
         return True
@@ -285,10 +290,52 @@ class board():
                 d = fn.distanceToPoint(head, [j, i])
                 self.distance[i, j] = d
 
-    # assign a "threat" value based on distance to enemy snake and size
-    def updateThreat(self, data):
-        # data -> snake, enemy
-        pass
+    def updateThreat(self, snakes):
+    # Assign "threat" value based on prediction model, distance to enemy snake and size etc.. 
+
+        w = self.width
+        h = self.height
+        s = np.zeros([h, w], np.intc)
+
+        full = CONST.routesolid
+
+        # log("predict-update")
+        you_len = 10
+
+        # Get our head
+        for identity in snakes:
+            sn = snakes[identity]
+            if (sn.getType() == "us"):
+                you_len = sn.getLength()
+
+        # Head on collisions 
+        for identity in snakes:
+            if (sn.getType() != "us"):
+                # Death zone (+) around larger snakes
+                length = sn.getLength()
+                head = sn.getHead()
+                
+                print("SNAKE LENGTH")
+                print(str(length),str(you_len))
+                if length >= you_len:
+                    ay = head[0]
+                    ax = head[1]
+                    ay1 = max(0, ay - 1)
+                    ay2 = min(h, ay + 2)
+                    ax1 = max(0, ax - 1)
+                    ax2 = min(w, ax + 2)
+
+                    # print("AVOID HEAD")
+                    # print(ay,ax,ay1,ay2,ax1,ax2)
+                    s[ay1:ay2, ax] = s[ay1:ay2, ax] + full / 4
+                    s[ay, ax1:ax2] = s[ay, ax1:ax2] + full / 4
+                    
+                    # Update threat matrix (used for routing)
+                    self.threat = s
+                    
+        # TODO: Threat predict matrix for future turns ...
+        log('map','THREAT',self.threat)
+        
 
     def updateDijkstra(self, data_you):
 
@@ -304,8 +351,10 @@ class board():
         # Solids weighted @ 100
         # Food / hazards weighted @ 1
         # TODO: include hazards (self.items)
-        self.dijkstra = self.solid + ones
+        self.dijkstra = self.solid + self.threat + ones
         self.dijkstra[ay, ax] = 0
+
+        log('map','DIJKSTRA', self.dijkstra)
 
         return copy.copy(self.dijkstra)
 
@@ -401,9 +450,9 @@ class board():
             else:
                 # Assume strategy is food
                 start = sn.getHead()
-                it = self.getClosestItem(items, start, "food")  # ??
-                finish = it.getLocation()
-                rt = self.route(start, finish)
+                its = self.findClosestItem(items, start)  # ??
+                finish = its.pop(0).getLocation()
+                rt, weight = self.route(start, finish)
                 # Limit depth to X
 
                 # TODO: Assume strategy is kill (len > X)
@@ -420,7 +469,6 @@ class board():
         full = CONST.routesolid
 
         # log("predict-update")
-        you_len = 10
         you_head = [-1, -1]
 
         # Get our head
@@ -428,32 +476,7 @@ class board():
             sn = snakes[identity]
             if (sn.getType() == "us"):
                 you_head = sn.getHead()
-                you_len = sn.getLength()
-
-        # Update death zone for
-        for identity in snakes:
-            if (sn.getType() != "us"):
-                # Death zone (+) around larger snakes
-                length = sn.getLength()
-                head = sn.getHead()
                 
-                print("SNAKE LENGTH")
-                print(str(length),str(you_len))
-                if length > you_len:
-                    ay = head[0]
-                    ax = head[1]
-                    ay1 = max(0, ay - 1)
-                    ay2 = min(h, ay + 2)
-                    ax1 = max(0, ax - 1)
-                    ax2 = min(w, ax + 2)
-
-                    # print("AVOID HEAD")
-                    # print(ay,ax,ay1,ay2,ax1,ax2)
-                    self.solid[ay1:ay2, ax] = full/2
-                    self.solid[ay, ax1:ax2] = full/2
-
-                # DEPRECATE:  Use predict matrix rather than solid ...
-
         # Iterate through next t turns
         for identity in snakes:
             sn = snakes[identity]
@@ -468,8 +491,6 @@ class board():
 
             print("PREDICT ROUTE", str(rt))
             
-            length = len(body) + 1
-            # length = sn.getLength()
             body.insert(0, head)
 
             # Ignore dead or invalid snakes
@@ -568,10 +589,24 @@ class board():
         # return coll
         pass
 
-    def route(self, a, b, threshold=CONST.routeThreshold):
+    # TODO: Fuzzy Routing, ie. get close to an object)
+    # def fuzzyroute(a, blist): 
+        # log('time', 'Before Complex Route', self.getStartTime())
+        # r = self.route_complex(a, b)
+        # r, w = self.route_complex(a, b)
+        # weight = w
+        # print('WEIGHT 3')
+        # print(str(Weight))
+        # return []
 
-        t = threshold
+
+    def route(self, a, b):
+        
+        self.updateDijkstra(a)
+
+        t = CONST.routeThreshold
         r = []
+        weight = -1
 
         # TODO: if (not len(a) or not len(b)):
         #   no valid route requested.
@@ -580,7 +615,7 @@ class board():
         log('map', 'SOLID', self.solid)
         # IF start / finish not defined ..
         if (not len(a) or not len(b)):
-            return r
+            return r, weight 
 
         # try simple, medium, complex route
         while 1:
@@ -589,9 +624,9 @@ class board():
             if (a[0] == b[0]) or (a[1] == b[1]):
                 weight = self.dijkstraSum(a, b)
                 if (weight < t):
-                    # log('route-weight', 'basic', weight)
-                    print('WEIGHT 1')
-                    print(str(weight))
+                    log('route-basic', weight)
+                    # print('WEIGHT 1')
+                    # print(str(weight))
                     r = [b]
                     break
 
@@ -608,19 +643,21 @@ class board():
 
             if (c1sum <= c2sum) and (c1sum < t):
                 r = [c1, b]
+                weight = c1sum
                 break
 
             elif (c2sum <= c1sum) and (c2sum < t):
                 r = [c2, b]
+                weight = c2sum
                 break
 
-            print('WEIGHT 2')
-            print(str(c1sum), str(c2sum))
+            # print('WEIGHT 2')
+            # print(str(c1sum), str(c2sum))
 
             # (3) Complex route
             log('time', 'Before Complex Route', self.getStartTime())
 
-            r = self.route_complex(a, b)
+            r, weight = self.route_complex(a, b)
             # r, w = self.route_complex(a, b)
             # weight = w
             # print('WEIGHT 3')
@@ -636,11 +673,12 @@ class board():
         # fn.printMap(self.dijkstra)
         log('map', 'COMBINE', self.combine)
         
-        return r
+        return r, weight
+
 
     def route_complex(self, a, b):
-        # Return path, point. [] if no path or error
-
+        # TODO def route_complex(self, a, b, c, response='path'|'weight'):
+        # Returns path or point. [] if no path or error
         h = self.height
         w = self.width
 
@@ -664,7 +702,7 @@ class board():
 
         if (self.gradient[a[0], a[1]] > CONST.routeThreshold):
             # no path
-            return []
+            return [], -1
 
         else:
             # Recurse until destination reached or path exceeds num points
@@ -672,9 +710,11 @@ class board():
             pathlength = 1
             anew = copy.copy(a)
 
+            weight = 0
             while 1:
                 # find lowest gradient route & add to path
-                r = self.route_complex_step(anew, b)
+                r, gradient = self.route_complex_step(anew, b)
+                weight = weight + gradient 
 
                 # No path found / error
                 if (not len(r)):
@@ -695,7 +735,8 @@ class board():
         log('map','GRADIENT',self.gradient)
 
         log('route-complex-path', str(path))
-        return path
+        return path, weight
+
 
     def route_complex_step(self, a, b):
         # Return next point. [] if no path or error
@@ -721,7 +762,8 @@ class board():
                     gmin = g1
                     c = a1
 
-        return c
+        return c, gmin
+
 
     def getEdges():
         # Return all border / edge cells of the map
@@ -799,7 +841,8 @@ class board():
 
     def dijkstraSum(self, a, b, t=CONST.pathThreshold):
         # Sum dijkstra map between two points
-
+        
+        self.updateDijkstra(a)
         # fn.printMap(self.dijkstra)
         try:
             if (a[0] == b[0] and a[1] != b[1]):
@@ -866,6 +909,51 @@ class board():
                 pmask[p[0], p[1]] = 1
 
         return pmask
+
+
+    def validateRoute(self, path):
+        # Take a route & check if valid (against predict)
+        # s = self.solid
+        # for p in path: 
+        #   if s[p[0],p[1]] ...
+        
+        # Reroute.  Try to use path X  
+        # route(a, b, x)
+        return 
+    
+
+    def invertPoint(self, start):
+        w = self.width
+        h = self.height
+
+        y = h - start[0]
+        x = w - start[1] 
+
+        target = [y, x]
+        return target 
+        
+
+
+    def findClosestNESW(self, start):
+        # TODO: Lowest threat or highest control
+        # TODO: Where are other snakes (getQuadrant/SideBy)  
+        w = self.width
+        h = self.height
+
+        cardinals = [[0,int(w/2)],
+                      [int(h/2),0],
+                      [int(h/2), w],
+                      [h, int(w/2)]]
+        
+        pt = []
+        dist_min = h * w
+        for c in cardinals: 
+            dist =  fn.distanceToPoint(start, c)
+            if (dist < dist_min):
+                dist_min = dist
+                pt = c 
+
+        return pt 
 
     def findDirectionWith(self, t=CONST.legend['empty']):
         # TODO: Update to allow array
@@ -958,23 +1046,24 @@ class board():
         # break into quadrants
         # return
 
-    def getClosestItem(self, its, loc, t):
+    def findClosestItem(self, items, start):
+        
+        itemsort = []
+        itemlist = []
+        
+        # if (types == "food"):
+        for it in items:
+            b = it.getLocation()
+            d = fn.distanceToPoint(start, b)
+            itemlist.append({'dist':d, 'item':it})
+      
+        # Return sorted list by distance
+        itemlist.sort(key=operator.itemgetter('dist'))
+        for i in itemlist: 
+          itemsort.append(i['item'])
+          
+        return itemsort
 
-        lowest = 100
-        name = ""
-
-        if (t == "food"):
-            for it in its:
-                # print (it)
-
-                itp = it.getLocation()
-                d = fn.distanceToPoint(itp, loc)
-                if (d < lowest):
-                    lowest = d
-                    name = it
-                    # TODO: if two of same dist, returns top left. do we want to change / randomise this?
-
-        return it
 
     def getItemByName(self, items, name):
 
@@ -984,13 +1073,28 @@ class board():
 
         return {}
 
-    def getEmptySquare(p): 
+    def getEmptyAdjacent(self, head): 
         w = self.width
-        h = self.height
-       
-        
-    
-        return 
+        h = self.height  
+        s = self.solid
+
+        # Get up / down / left / right 
+        directions = [[head[0] + 1, head[1]],
+                [head[0] - 1, head[1]], 
+                [head[0], head[1] + 1],
+                [head[0], head[1] - 1]]
+
+        # Iterate directions 
+        for d in directions:
+            # Check in bounds & not solid 
+            if (0 <= d[0] < h) \
+                and (0 <= d[1] < w) \
+                and not (s[d[0], d[1]]):
+
+                return d
+
+        # Final failure. Return last point 
+        return d
 
 
     def randomPoint(self):
@@ -1013,6 +1117,7 @@ class board():
     def leastWeightLine(self, a, points):
         # Find path with smallest dijkstra value
         # paths = [[5, 0], [5, 10], [10, 5], [0, 5]]
+        self.updateDijkstra(a)
 
         # Set arbitrarily large value
         best = CONST.routeThreshold
