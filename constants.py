@@ -29,8 +29,8 @@ maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
 
-routesolid = 100
-routesemisolid = 50
+routesolid = 50
+routesemisolid = 25
 routeresistance = 1
 
 pathThreshold = 20

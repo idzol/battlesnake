@@ -12,6 +12,9 @@ import copy as copy
 class snake:
 
     def __init__(self, data=""):
+
+        depth = CONST.maxPredictTurns
+        self.predict = [None] * (depth + 1)
         self.strategy = ["Eat",""]
         self.strategyinfo = {}
         self.strategylast = []
@@ -103,6 +106,13 @@ class snake:
     def getBody(self):
         r = self.body
         return r[:]
+
+    def setPredict(self, p):
+        self.predict = copy.copy(p)
+        
+    def getPredict(self):
+        p = copy.copy(self.predict)
+        return p
 
     def getLocation(self, p):
         if(p == "head"):
