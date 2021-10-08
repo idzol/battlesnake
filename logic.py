@@ -27,9 +27,18 @@ from itemClass import item
     # .. 
     
 # Changes strategy (state machine) based on external influence 
-def checkInterrupts(bo:board, sn: snake):
+def checkInterrupts(bo:board, snakes):
 
     # global strategy
+    identity = bo.getIdentity()
+
+    # print("IDENTITY")
+    # print(str(identity))
+    # print("SNAKES")  
+    # print(str(snakes))
+
+    sn = snakes[identity]
+
     health = sn.getHealth() 
     aggro = sn.getAggro()
     threat = sn.getThreat()
@@ -37,7 +46,7 @@ def checkInterrupts(bo:board, sn: snake):
     interrupt = False
 
     # Kill interrupt 
-    if (killPath(bo, sn)): 
+    if (killPath(bo, snakes)): 
         strategy = ["Kill","Collide"]
         interrupt = True 
 
@@ -288,8 +297,31 @@ def getItemByName(its, name):
 
 # STUBS -- strategy functions to be built 
 
-def killPath(bo, sn):
-    # if larger than enemy 
+# If largest .. 
+#   stalk centre (board control)
+# 
+
+def largestSnake(bo, snakes):
+    # if larger than enemy
+    you = bo.getYou()
+    you_len = snakes[you].getLength() 
+
+    largest = True 
+    for identity in snakes:
+      sn = snakes[identity]
+      if sn.getType() != "us":
+        enemy_len = sn.getLength()
+        if you_len >= (enemy_len + CONST.strategyLargerBy):
+          pass 
+        else:
+          largest = False 
+          
+    return largest 
+
+
+def killPath(bo, snakes):
+    # if larger than enemy
+    # if range to enemy head < 3 
     # & dijkstra predict enemy == distance to enemy head
     # find path based on snake predic matrix (eg. 1, 2, 3 length)
     return False
@@ -355,10 +387,10 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         a1[1] = ax + CONST.directionMap[d][1]
         
         # No collision & in bounds 
-        # print("TRACK-DIRN", str(a), str(a1), d)
+        print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
             if (bo.solid[a1[0], a1[1]] < CONST.routeThreshold):
-              # print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
+              print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         
         # Rotate direction & try again 
@@ -370,7 +402,7 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
     return a1
   
-def gotoCentre(bo, sn, proximity=2):
+def findCentre(bo, sn, proximity=2):
     w = bo.getWidth()
     h = bo.getHeight()
 
@@ -379,7 +411,6 @@ def gotoCentre(bo, sn, proximity=2):
     c = [cx, cy]
 
     # if centre occupied 
-    # if 
     return []
 
     # if within proximity of centre 

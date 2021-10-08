@@ -19,6 +19,8 @@ class board():
     # Import map values
     legend = CONST.legend
 
+    identity = ""   # Identity of your snake 
+
     # board matrices
     land = []
     mask = []
@@ -89,6 +91,13 @@ class board():
     def getWidth(self):
         return self.width
 
+    def setIdentity(self, i):
+        self.identity = copy.copy(i)
+
+    def getIdentity(self):
+        i = copy.copy(self.identity)
+        return i 
+
     def getHeight(self):
         return self.height
 
@@ -119,26 +128,26 @@ class board():
         except:
             return []
 
+    def getYou(self):
+        return copy.copy(self.you)
+        
     def getSolid(self):
-        return self.solid
+        return copy.copy(self.solid)
 
     def getCombine(self):
-        return self.combine
+        return copy.copy(self.combine)
 
     def getThreat(self):
-        return self.threat
-
-    def getYou(self):
-        return self.you
+        return copy.copy(self.threat)
 
     def getSnakes(self):
-        return self.snakes
+        return copy.copy(self.snakes)
 
     def getItems(self):
-        return self.items
+        return copy.copy(self.items)
 
     def getDijkstra(self):
-        return self.dijkstra
+        return copy.copy(self.dijkstra)
 
     def setMaxDepth(self, d):
         self.maxdepth = d
@@ -427,8 +436,10 @@ class board():
                 # Death zone (+) around larger snakes
                 length = sn.getLength()
                 head = sn.getHead()
-
-                if length >= you_len:
+                
+                print("SNAKE LENGTH")
+                print(str(length),str(you_len))
+                if length > you_len:
                     ay = head[0]
                     ax = head[1]
                     ay1 = max(0, ay - 1)
@@ -531,12 +542,13 @@ class board():
                 psnake = snakes[identity].getPredict()
                 p[t] = p[t] + psnake[t]
 
-        for pmap in p:
+        # for pmap in p:
             # print("PREDICT")
-            log('map', 'PREDICT', pmap)
+            # log('map', 'PREDICT', pmap)
 
-        log('map', 'SOLID', self.solid)
+        # log('map', 'SOLID', self.solid)
         # TODO:  Move this to before it is used, rather than after predict is updated
+        
         self.updateDijkstra(you_head)
         self.predict = p
         return p
@@ -621,8 +633,8 @@ class board():
 
         log('route-return', r)
         # fn.printMap(self.dijkstra)
-        fn.printMap(self.combine)
-
+        log('map', 'COMBINE', self.combine)
+        
         return r
 
     def route_complex(self, a, b):
@@ -679,7 +691,8 @@ class board():
                 anew = copy.copy(path[-1])
                 pathlength = pathlength + 1
 
-        fn.printMap(self.gradient)
+        log('map','GRADIENT',self.gradient)
+
         log('route-complex-path', str(path))
         return path
 

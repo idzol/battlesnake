@@ -73,10 +73,11 @@ def handle_start():
     # Initialise our snake (ourSnek)
     allSnakes = {}
 
-    # TODO: Combine ourSnek.__init with data)
+    # TODO: Combine ourSnek.__init with data & use reset instead . 
     # ourSnek.reset() -- clear counters, eg. adjust strategy keep win state 
     ourSnek.__init__()
     identity = data['you']['id']
+    theBoard.setIdentity(identity)
     ourSnek.setId(identity)
     ourSnek.setType("us")
     allSnakes[copy.copy(identity)] = ourSnek
@@ -148,7 +149,7 @@ def handle_move():
     log('time', 'Init complete', theBoard.getStartTime())
     
     # Check interrupts     
-    checkInterrupts(theBoard, ourSnek)
+    checkInterrupts(theBoard, allSnakes)
     
     # Progress state machine & return target
     stateMachine(theBoard, ourSnek, theItems)
