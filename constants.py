@@ -4,8 +4,8 @@ timePanic = 200
 
 # Log level 
 logFile = "games.log"
-logLevelConsole = 6
-logLevelPrint = 6
+logLevelConsole = 5
+logLevelPrint = 5
 
 # Snake variables
 healthHigh = 100
@@ -28,6 +28,10 @@ maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
+
+routesolid = 100
+routesemisolid = 50
+routeresistance = 1
 
 pathThreshold = 20
 routeThreshold = 50

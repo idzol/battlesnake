@@ -171,6 +171,21 @@ def printMap(m):
     except: 
       print("ERROR: Could not print map")
 
+
+def XYToLoc(pt):
+
+    if(isinstance(pt, dict)):
+      px = pt['x']
+      py = pt['y']
+      return [py, px]
+      
+    elif(isinstance(pt, list)):
+      return pt
+
+    else:
+      return [-1,-1]
+
+
 def raiseError(e):
     # error_status = True 
     # error_text = e

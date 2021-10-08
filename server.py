@@ -6,6 +6,7 @@ from logger import log
 
 from flask import Flask
 from flask import request
+import copy as copy
 
 # move classes to class/snake, class/board... 
 from snakeClass import snake
@@ -25,7 +26,7 @@ global allSnakes
 
 theBoard = board()
 theItems = []          # array of item() class
-allSnakes = []       # array of snake() class
+allSnakes = {}       # dict of snake() class. id:snake
 ourSnek = snake()
 clock = {}           # time - dict
 
@@ -52,7 +53,13 @@ def handle_start():
 
     # clock['start'] = time.time()
     data = request.get_json()
-
+    
+    # TODO:  Move to logger (6)
+    # log('game-data')
+    # 'game-data':[6, "GAME"]
+    # print(str(data))
+    # return
+    
     # print(f"START {data['game']['id']}")
     log("start", data['game']['id'])
     
@@ -64,23 +71,27 @@ def handle_start():
     theItems = []
 
     # Initialise our snake (ourSnek)
-    allSnakes = []
+    allSnakes = {}
 
     # TODO: Combine ourSnek.__init with data)
     # ourSnek.reset() -- clear counters, eg. adjust strategy keep win state 
     ourSnek.__init__()
-    ourSnek.id = data['you']['id']
+    identity = data['you']['id']
+    ourSnek.setId(identity)
     ourSnek.setType("us")
-    allSnakes.append(ourSnek)
-    
+    allSnakes[copy.copy(identity)] = ourSnek
+
     # initialise other snakes (otherSneks)
     snakes = data['board']['snakes']
     for sndata in snakes: 
-        if sndata['id'] != data['you']['id']:
+        if sndata['id'] != ourSnek.getId():
           sn = snake() 
+          identity = sndata['id']
+          sn.setId(identity)
           sn.setType("enemy")
-          allSnakes.append(sn)
-    
+          sn.setEnemy(sndata)
+          allSnakes[copy.copy(identity)] = copy.deepcopy(sn)
+
       # TODO: check if this creates a deep copy, or pointer to same snake (multiple enemies represented as one snake)  
 
     # initalise / reset other vars
@@ -103,6 +114,9 @@ def handle_move():
     log('time', 'Start Move', theBoard.getStartTime())
     turn = data['turn']
     
+    # print(str(data))
+    # return
+    
     # Update board (theBoard)
     theBoard.resetCounters()
     theBoard.updateBoards(data)
@@ -115,12 +129,21 @@ def handle_move():
       theItems.append(it)
 
     # Update snake (ourSnek) 
-    ourSnek.setAll(data)
+    ourSnek.setAll(data['you'])
 
     # Update enemy snakes 
-    theBoard.updatePredict(allSnakes)
-    theBoard.predictSnakeMoves(allSnakes, theItems)
+    snakes = data['board']['snakes']
+    for sndata in snakes: 
+        identity = sndata['id']
+        if identity != ourSnek.id:
+          allSnakes[identity].setEnemy(sndata)
+          # print (str(allSnakes[identity].showStats()))
 
+
+    # Update enemy snakes 
+    theBoard.predictSnakeMoves(allSnakes, theItems)
+    theBoard.updatePredict(allSnakes)
+    
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
     

@@ -65,8 +65,16 @@ class snake:
         self.direction = copy.copy(d)
         
     def getDirection(self):
-        return self.direction
-  
+        d = copy.copy(self.direction)
+        return d
+        
+    def setId(self, i):
+        self.identity = copy.copy(i)
+        
+    def getId(self):
+        i = copy.copy(self.identity)
+        return i
+        
     def setLength(self, l):
           self.length = copy.copy(l)  
           # TODO:  Check if correct (body + head)
@@ -109,8 +117,8 @@ class snake:
     # TODO:  Include list / array option    
     def setAll(self, data):
 
-        health = data['you']['health'] 
-
+        health = data['health'] 
+        
         self.setLocation(data)
         self.setHealth(health)
         
@@ -123,10 +131,17 @@ class snake:
         self.setAggro(aggro)
         
 
+    def setEnemy(self, data):
+        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
+       
+        self.setLocation(data)
+        # self.setHealth(health)
+        
+        
     def setLocation(self, data):
         try:
-          head = data['you']['head']
-          body = data['you']['body']
+          head = data['head']
+          body = data['body']
           b = []
 
           self.head = [head['y'],head['x']]

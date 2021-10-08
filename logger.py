@@ -29,8 +29,8 @@ messages = {
     'updateboardsnakes-warn':[3, "WARN", "Enemy snake head not defined. %s"],
 
     'predict-update':[3, "INFO", "%s"],
-    'predict-new':[3,"PREDICT POINT", "%s: %s: %s"],
-    'predict-erase':[3,"PREDICT ERASE", "%s: %s: %s"],
+    'predict-new':[6,"PREDICT POINT", "%s: %s: %s"],
+    'predict-erase':[6,"PREDICT ERASE", "%s: %s: %s"],
     
     # Routing 
     'route-fromto':[6,"FROM TO", " %s %s"],

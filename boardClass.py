@@ -175,29 +175,16 @@ class board():
 
         # Combine boards
 
-        # TODO:  Normalise solid to 100 
-        self.solid = by + bs           # Array of all solids (snakes, walls)
+        # Solid -- Normalise solid to 99, +1 in dijkstra()
+        self.solid = CONST.routesolid * np.ceil(by/(by+1) + bs/(bs+1))
         
         self.combine = by + bs + bi    # Array of all layers (snakes, walls, items)
          
-        di = self.updateDijkstra(data['you']['head'])
+        di = self.updateDijkstra(fn.XYToLoc(data['you']['head']))
         # gr = self.updateGradient() -- only update when rqd for routing
         
         return True
 
-
-    def XYToLoc(self, pt):
-
-        if(isinstance(pt, dict)):
-          px = pt['x']
-          py = pt['y']
-          return [py, px]
-          
-        elif(isinstance(pt, list)):
-          return pt
-
-        else:
-          return [-1,-1]
 
     def updateBoardYou(self, data):
         # Array of snek (101-head, 100-body)
@@ -254,7 +241,7 @@ class board():
                 except Exception as e:
                   log('updateboardsnakes-warn', str(e))
                   
-        return self.snakes 
+        return self.snakes
 
   
     def updateBoardItems(self, data):
@@ -278,7 +265,7 @@ class board():
             # self.items[h-py-1, px] = self.legend['hazard']
             self.items[py, px] = self.legend['hazard']
 
-        return self.items
+        return copy.copy(self.items)
  
  
     def updateDistance(self, data):
@@ -288,7 +275,7 @@ class board():
         self.distance = np.zeros((h, w), np.intc) 
         
         # Distances from snake head 
-        head = self.XYtoLoc(data['you']['head'])
+        head = fn.XYtoLoc(data['you']['head'])
 
         for i in range(0,w):
             for j in range(0,h):
@@ -305,19 +292,20 @@ class board():
         
         w = self.width 
         h = self.height
-        ay = data_you['y']
-        ax = data_you['x']
+        
+        ay = data_you[0]
+        ax = data_you[1]
 
         # Default resistance = 1
-        ones = np.ones((w, h), np.intc)
+        ones = CONST.routeresistance * np.ones((w, h), np.intc)
 
-        # Solids weighted @ 100 
+        # Solids weighted @ 100   
         # Food / hazards weighted @ 1 
         # TODO: include hazards (self.items)
-        self.dijkstra = 100 * self.solid + ones
+        self.dijkstra = self.solid + ones
         self.dijkstra[ay, ax] = 0
 
-        return self.dijkstra
+        return copy.copy(self.dijkstra)
 
   
     # Give every item unique index .. 
@@ -393,7 +381,6 @@ class board():
         print(str(dists))
         
         return dists
-
         # eg. 
         # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
         # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
@@ -403,11 +390,13 @@ class board():
     # Go through snakes and estimate most likely path 
     def predictSnakeMoves(self, snakes, items):
         
-        for sn in snakes:
-            
+        for identity in snakes:
+            # Iterate through dict (id:snake)
+            sn = snakes[identity]
             if(sn.getType() == "us"):
               # Path loaded after route()
-              # sn.setRoute()
+              # Use previous route or update afterwards?  
+              # sn.get/setRoute()
               pass 
 
             else: 
@@ -422,8 +411,8 @@ class board():
               # TODO: Assume strategy is board control / loop etc (eg. circular)
 
               sn.setRoute(rt)
-    
 
+    
     def updatePredict(self, snakes):
       
       w = self.width
@@ -433,8 +422,9 @@ class board():
       p = self.predict
       
       depth = self.maxPredictTurns
-      enemy = CONST.legend['enemy-body']
-      you = CONST.legend['you-body']
+      full = CONST.routesolid
+      # enemy = CONST.legend['enemy-body']
+      # you = CONST.legend['you-body']
 
       p = [None] * (depth + 1)
       for t in range(0, depth):
@@ -443,30 +433,70 @@ class board():
       p[0] = p[0] + self.solid
 
       # log("predict-update")
+      you_len = 3
+      you_head = [-1, -1] 
+      for identity in snakes:
+        # print ("SNAKE ID GET")
+        # print (str(identity))
+        # print (str(snakes[identity].getType()))
+  
+        sn = snakes[identity]
+        if (sn.getType()=="us"):
+          you_head = sn.getHead()
+          you_len = sn.getLength()
+
+        else:
+          pass 
 
       # Iterate through next t turns 
       for t in range(0, depth):
 
-        for sn in snakes:
+        for identity in snakes:
+          sn = snakes[identity]
 
           # Get head, body & predicted route
           name = sn.getType() 
           head = sn.getHead() 
           body = sn.getBody()
+          rt = sn.getRoute()
+          # TODO:  Check to convert route to points (if not already). 
+          rt = fn.getPointsInRoute(rt)
+
+          length = len(body) + 1
+          # length = sn.getLength()
           body.insert(0, head)
 
-          rt = sn.getRoute()
-          # Convert route to points (if not already)
-          # rtarray = fn.getPointsInRoute(rt)
-          
+          # TODO:  Ignore dead snakes 
+          if (head == [-1, -1]):  
+            break 
+
+          # Death zone (+) around larger snakes
+          if (length >= you_len and name != "us"):
+            ay = head[0]
+            ax = head[1]
+            ay1 = max(0, ay-1)
+            ay2 = min(h, ay+2)
+            ax1 = max(0, ax-1)
+            ax2 = min(w, ax+2)
+
+            # print("AVOID HEAD")
+            # print(ay,ax,ay1,ay2,ax1,ax2)
+            self.solid[ay1:ay2, ax] = CONST.routesolid
+            self.solid[ay, ax1:ax2] = CONST.routesolid
+
           try:
+            # TODO:  Maybe change logic to painting each snake and the combining later 
+            # update body 
+            # update head 
+            # snakert[i] = 
+            # p[t] = p[t] + snakert[i]
+
             if (name == "us"): 
-              # TODO: update with different val
-              val_predict = you
-              val_certain = you
+              val_predict = full
+              val_certain = full
             else: 
-              val_predict = int(enemy *  (depth - t) / depth)
-              val_certain = enemy
+              val_predict = int(full *  (depth - t) / depth)
+              val_certain = full
 
             # Get next move for snake
             try: 
@@ -477,8 +507,9 @@ class board():
               body.insert(0, r1)
               log('predict-new',str(t), str(rt), str(r1))
 
-            except:
+            except Exception as e:
               # end of route 
+              print (str(e))
               pass 
 
             # Erase tail (last point in body)
@@ -486,20 +517,26 @@ class board():
               b1 = body.pop(-1)
               p[t][b1[0], b1[1]] = p[t][b1[0], b1[1]] - val_certain
               log('predict-erase',str(t), str(body), str(b1))
-              
-            except:
+ 
+            except Exception as e:
+              # end of route 
+              print (str(e))
               # end of body / end of route 
               pass 
 
           except Exception as e:
             print(str(e))
 
-          p[t+1] = p[t]
+        p[t+1] = copy.copy(p[t])
             
       for pmap in p:
         # print("PREDICT")
         log('map', 'PREDICT', pmap)
 
+
+      log('map', 'SOLID', self.solid)
+      # TODO:  Move this to before it is used, rather than after predict is updated
+      self.updateDijkstra(you_head)
       self.predict = p
       return p 
 
@@ -529,7 +566,7 @@ class board():
         #   no valid route requested.  
         #   try / except 
         log('route-fromto', a, b)
-    
+        log('map', 'SOLID', self.solid)
         # IF start / finish not defined .. 
         if(not len(a) or not len(b)): 
             return r
