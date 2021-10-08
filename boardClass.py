@@ -466,6 +466,8 @@ class board():
             # TODO:  Check to convert route to points (if not already).
             rt = fn.getPointsInRoute(rt)
 
+            print("PREDICT ROUTE", str(rt))
+            
             length = len(body) + 1
             # length = sn.getLength()
             body.insert(0, head)
@@ -498,19 +500,19 @@ class board():
                     val_certain = full
 
                 try:
-                    # Get next move from route
-                    r1 = rt.pop(0)
-                    # Update the prediction board
-                    # p - predict matrix
-                    # t - turn
-                    # r1 - point
-                    # val - gradient / path weight
-                    snakemap[t][r1[0],
-                                r1[1]] = p[t][r1[0], r1[1]] + val_predict
-                    # Add route to head of body
-                    body.insert(0, r1)
-                    log('predict-new', str(t), str(rt), str(r1))
-
+                    if (name != "us"):
+                        # Get next move from route
+                        r1 = rt.pop(0)
+                        # Update the prediction board
+                        # p - predict matrix
+                        # t - turn
+                        # r1 - point
+                        # val - gradient / path weight
+                        snakemap[t][r1[0], r1[1]] = p[t][r1[0], r1[1]] + val_predict
+                        # Add route to head of body
+                        body.insert(0, r1)
+                        log('predict-new', str(t), str(rt), str(r1))
+                      
                 except Exception as e:
                     # end of route
                     print(str(e))
@@ -521,8 +523,7 @@ class board():
                     # Remove tail
                     b1 = body.pop(-1)
                     # Update the prediction board
-                    snakemap[t][b1[0],
-                                b1[1]] = snakemap[t][b1[0],
+                    snakemap[t][b1[0], b1[1]] = snakemap[t][b1[0],
                                                      b1[1]] - val_certain
                     log('predict-erase', str(t), str(body), str(b1))
 
@@ -982,6 +983,15 @@ class board():
                 return it
 
         return {}
+
+    def getEmptySquare(p): 
+        w = self.width
+        h = self.height
+       
+        
+    
+        return 
+
 
     def randomPoint(self):
         x = int(self.width * rand.random())

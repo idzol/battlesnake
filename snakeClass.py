@@ -25,6 +25,7 @@ class snake:
         self.body = []  
         self.target = []  
         self.route = []  
+        self.routeHistory = []
         
         self.threat = 50
         self.aggro = 50   # out of 100 
@@ -33,6 +34,7 @@ class snake:
         self.length = 3
 
         self.id = ""    # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
+        self.name = ""  # idzol, brensch .. 
         self.type = ""  # us, team, friendly, enemy 
 
         # TODO: Randomise, only used for some strats 
@@ -64,6 +66,13 @@ class snake:
           self.body = copy.copy(p)
           self.setLength(len(p) + 1)
 
+    def savePath(self):
+        h = self.getHead()
+        rth = self.routeHistory
+        rth.insert(0, h)
+        self.routeHistory = rth
+        # print("PATH HISTORY", str(rth))
+
     def setDirection(self, d):
         self.direction = copy.copy(d)
         
@@ -77,6 +86,12 @@ class snake:
     def getId(self):
         i = copy.copy(self.identity)
         return i
+
+    def setName(self, n):
+        self.name = copy.copy(n)
+        
+    def getName(self):
+        return copy.copy(self.name)
         
     def setLength(self, l):
           self.length = copy.copy(l)  
@@ -88,13 +103,6 @@ class snake:
     def getType(self):
         t = copy.copy(self.type)
         return t
-
-    def setPath(self, p):
-        self.path = copy.copy(p)
-     
-    def getPath(self):
-        p = copy.copy(self.path)
-        return p 
 
     def getLength(self):
         return copy.copy(self.length)

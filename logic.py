@@ -29,16 +29,9 @@ from itemClass import item
 # Changes strategy (state machine) based on external influence 
 def checkInterrupts(bo:board, snakes):
 
-    # global strategy
-    identity = bo.getIdentity()
-
-    # print("IDENTITY")
-    # print(str(identity))
-    # print("SNAKES")  
-    # print(str(snakes))
-
-    sn = snakes[identity]
-
+    # Return your snake 
+    you = bo.getIdentity()
+    sn = snakes[you]
     health = sn.getHealth() 
     aggro = sn.getAggro()
     threat = sn.getThreat()
@@ -46,9 +39,13 @@ def checkInterrupts(bo:board, snakes):
     interrupt = False
 
     # Kill interrupt 
-    if (killPath(bo, snakes)): 
-        strategy = ["Kill","Collide"]
+    if (killPath(bo, snakes)):     
+        strategy = ['Kill', 'Collide']
         interrupt = True 
+
+    elif (largestSnake(bo, snakes) and health > CONST.healthMed):
+        strategy = ['Control', 'Centre']
+        strategyinfo['default'] = ['Idle', 'Centre']
 
     # Collision & enemy alrger
     elif (threatPath(bo,sn)): 
@@ -92,13 +89,17 @@ def stateMachine(bo:board, sn: snake, its: list):
 
     strategy, strategyinfo = sn.getStrategy()
     start = sn.getHead()
-    defaultstrategy = ["Idle", "FindWall"]
-
+    if 'default' in strategyinfo:
+      defaultstrategy = strategyinfo['default']
+    else:
+      defaultstrategy = ['Idle', '']
+  
     # Progress state machine
     target = []
     route = [] 
     
-    # print("STATE MACHINE", str(strategy), str(strategyinfo))
+    # log('state-machine-start', str(strategy), str(strategyinfo))
+    
     i = 0
     while not len(target):
       # ConserveMoves 
@@ -117,7 +118,39 @@ def stateMachine(bo:board, sn: snake, its: list):
   #             strategy[1] = "Block"
   #             move = blockPath()
   #             pass 
-              
+
+      if(strategy[0]=="Control"):
+          pass 
+          if (strategy[1]=="Centre"): 
+            pass 
+            # patrol('top') 
+            # if reacehd bottom or weight > threshold
+            
+            # patrol('bottom')
+            # if reacehd bottom or weight > threshold
+            # strategy-info('control-line') = path (last w moves) 
+
+            # patrol ('loop')
+            # loop back to top via food 
+
+            # OTHER: sync with other snake, stay two moves ahead.. 
+          
+          # def patrol('top'):
+          #   find enemy snake 
+          #   push in enemy snake direction (eg. right) 
+          #.  check if safe to do so 
+          #.  loop around to lef 
+          #    push (right)
+          #    one square for each len > w 
+
+          # if not front line 
+          #  find food (eg. left
+          #  loop back to start (eg. top to bottom)
+
+          # if area control lost 
+          #  snake crosses area control line 
+          #  strategy = defaultstrategy 
+
 
       if(strategy[0]=="Defend"):
           # d = bo.findDirectionWith(CONST.empty)
@@ -172,8 +205,9 @@ def stateMachine(bo:board, sn: snake, its: list):
         if(strategy[1]==""):
           strategy[1]=="FindWall"
           
-        # Find centre 
-        # if(strategy[1]=="FindCentre"):   
+
+        if(strategy[1]=="FindCentre"): 
+            pass 
         #     target = bo.findCentre(start)
         #     log('strategy-findcentre', target)
 
@@ -258,28 +292,24 @@ def translatePath(bo: board, sn: snake) -> str:
     start = sn.getHead()
     finish = sn.getTarget()
     
-    log("path-target", str(finish))
-
-    log('time', 'Before Route', bo.getStartTime())
-   
-    # TODO: Optimise -- Only reroute if there is a change to strategy or path == null .. pop next path off route to optimise time 
+    
     # if (change to strategy): 
-    path = bo.route(start, finish) 
-
-    sn.setPath(path)
+    # path = bo.route(start, finish)   
+    path = sn.getRoute()
     if len(path):
       p = path.pop(0)
-  
+
     else: 
       # No next move - cant route to destination
-      # TODO: Move route selection up to strategy ..  change strategy if none found 
-      p = finish
-
-    log('time', 'After Route', bo.getStartTime())
+      # TODO: Random point
+      p = bo.getEmptySpace(start) 
     
     # Translate routepoint to direction
     move = fn.getDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
+    
+    print("ROUTE OUTPUT")
+    print(str(start), str(finish), str(path), str(p), str(move))
     
     sn.setDirection(move)    
     # return move
@@ -294,16 +324,12 @@ def getItemByName(its, name):
   return {}
 
 
-
 # STUBS -- strategy functions to be built 
 
-# If largest .. 
-#   stalk centre (board control)
-# 
 
 def largestSnake(bo, snakes):
     # if larger than enemy
-    you = bo.getYou()
+    you = bo.getIdentity()
     you_len = snakes[you].getLength() 
 
     largest = True 
@@ -320,11 +346,28 @@ def largestSnake(bo, snakes):
 
 
 def killPath(bo, snakes):
+
+    killRadius = 2
+
+    you = bo.getIdentity()
+    you_len = snakes[you].getLength() 
+    you_head = snakes[you].getHead() 
+ 
+    for identity in snakes:
+      sn = snakes[identity]
+      if sn.getType() != "us":
+        enemy_len = sn.getLength()
+        enemy_head = sn.getHead()
+        dist = fn.distanceToPoint(you_head, enemy_head)
+        if (you_len > enemy_len) and dist < killRadius:
+          return sn
+          # log('strategy-trigger', "killPath", you_len, enemy_len, dist)
+
     # if larger than enemy
     # if range to enemy head < 3 
     # & dijkstra predict enemy == distance to enemy head
     # find path based on snake predic matrix (eg. 1, 2, 3 length)
-    return False
+    return None
 
 def threatPath(bo, sn, dist=2):
     # if enemy larger 

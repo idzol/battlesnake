@@ -1,3 +1,9 @@
+## CLEANUP
+# log("path-target", str(finish))
+# log('time', 'Before Route', bo.getStartTime())
+# log('time', 'After Route', bo.getStartTime())
+
+
 import numpy as np
 
 import time as time 
@@ -45,6 +51,7 @@ messages = {
     'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
 
     # Strategy 
+    'strategy-update':[5,"STRAT", "%s\n%s"],
     'strategy-iterate':[5,"STRAT", "Updated - %s"],
     'strategy-eat':[6,"EAT", " %s %s %s %s"],
     'strategy-attack':[6,"ATTACK", " %s %s %s %s"],

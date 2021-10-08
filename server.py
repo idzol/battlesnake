@@ -24,6 +24,8 @@ global ourSnek
 global codeTime
 global allSnakes
 
+
+game = {}  
 theBoard = board()
 theItems = []          # array of item() class
 allSnakes = {}       # dict of snake() class. id:snake
@@ -53,6 +55,7 @@ def handle_start():
 
     # clock['start'] = time.time()
     data = request.get_json()
+    game_id = data['game']['id']
     
     # TODO:  Move to logger (6)
     # log('game-data')
@@ -98,6 +101,9 @@ def handle_start():
     # initalise / reset other vars
     # log("start-complete", data['game']['id'])
     
+    # Save game data
+    game[game_id] = [theBoard, ourSnek, allSnakes]
+
     return "ok" 
 
 
@@ -111,7 +117,15 @@ def handle_move():
 
     # Start clock
     theBoard.setStartTime()
+
+    # Load game data (support for multi games)
     data = request.get_json()
+    game_id = data['game']['id']
+    theBoard = game[game_id][0]
+    ourSnek = game[game_id][1]
+    allsnakes = game[game_id][2]
+
+
     log('time', 'Start Move', theBoard.getStartTime())
     turn = data['turn']
     
@@ -131,12 +145,13 @@ def handle_move():
 
     # Update snake (ourSnek) 
     ourSnek.setAll(data['you'])
+    ourSnek.savePath()
 
     # Update enemy snakes 
     snakes = data['board']['snakes']
     for sndata in snakes: 
         identity = sndata['id']
-        if identity != ourSnek.id:
+        if identity != ourSnek.getId():
           allSnakes[identity].setEnemy(sndata)
           # print (str(allSnakes[identity].showStats()))
 
@@ -151,7 +166,7 @@ def handle_move():
     # Check interrupts     
     checkInterrupts(theBoard, allSnakes)
     
-    # Progress state machine & return target
+    # Progress state machine, set route
     stateMachine(theBoard, ourSnek, theItems)
     
     log('time', 'Strategy complete', theBoard.getStartTime())
@@ -172,9 +187,12 @@ def handle_move():
     log("move", move)
     log("shout", shout)
 
+    # Save game data
+    game[game_id] = [theBoard, ourSnek, allSnakes]
+
     log('time', 'Move complete', theBoard.getStartTime())    
     return {"move": move, "shout":shout}
-
+    
 
 @app.post("/end")
 def end():
@@ -184,7 +202,17 @@ def end():
     global codeTime
   
     data = request.get_json()
-
+    
+    # Delete game data (TODO:  Dump to log)
+    game_id = data['game']['id']
+    game[game_id] = None
+    
+    # print(str(data))
+    # if 
+    # data['you']['health'] = 0 
+    # data['you']['head'] = out of bounds ..  
+    # else win ? 
+    
     log("end", data['game']['id'])
 
     return "ok"
