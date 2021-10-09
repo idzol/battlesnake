@@ -570,7 +570,7 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         # No collision & in bounds 
         print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
-            if (bo.solid[a1[0], a1[1]] < CONST.routeThreshold):
+            if (bo.solid[a1[0], a1[1]] < CONST.pointThreshold):
               print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         

@@ -120,6 +120,8 @@ def handle_move():
 
     # Load game data (support for multi games)
     data = request.get_json()
+    # print(str(data))
+    
     game_id = data['game']['id']
     if game_id in game: 
         theBoard = game[game_id][0]
@@ -129,12 +131,8 @@ def handle_move():
         # TODO: confirm this works 
         pass 
 
-
     log('time', 'Start Move', theBoard.getStartTime())
     turn = data['turn']
-    
-    # print(str(data))
-    # return
     
     # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
@@ -160,9 +158,10 @@ def handle_move():
           # print (str(allSnakes[identity].showStats()))
 
     # Update predict & threat matrix  
+    hazards = data['board']['hazards']
     theBoard.predictSnakeMoves(allSnakes, theItems)
     theBoard.updatePredict(allSnakes)
-    theBoard.updateThreat(allSnakes)
+    theBoard.updateThreat(allSnakes, hazards)
     
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
