@@ -152,6 +152,7 @@ References
 * [Python Alias](https://askubuntu.com/questions/320996/how-to-make-python-program-command-execute-python-3)
 * [PIP v21]( https://stackoverflow.com/questions/10919569/install-a-module-using-pip-for-specific-python-version)
 * [Flask](https://flask.palletsprojects.com/en/2.0.x/tutorial/deploy/)
+* [Gunicorn](https://stackoverflow.com/questions/48514047/flask-app-not-running-after-closing-putty)
 
 ---
 ## Running server (prod)
