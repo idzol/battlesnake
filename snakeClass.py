@@ -6,7 +6,7 @@ import random as rand
 import constants as CONST
 import copy as copy 
 
-# from functions import selectDestination
+import functions as fn 
 
 
 class snake:
@@ -24,7 +24,8 @@ class snake:
         self.head = [] 
         self.body = []  
         self.target = []  
-        self.route = []  
+        self.route = []     # Vector notation
+        self.path = []      # Point notation
         self.routeHistory = []
         
         self.threat = 50
@@ -38,7 +39,8 @@ class snake:
         self.type = ""  # us, team, friendly, enemy 
 
         # TODO: Randomise, only used for some strats 
-        self.direction = "right"
+        self.move = "right" # .. 
+        self.direction = "right" # direction of travel 
         self.shout = ""
         self.setLocation(data)
 
@@ -48,6 +50,9 @@ class snake:
         health = data['health'] 
         length = data['length'] 
         
+        # Save current location to history 
+        self.savePath()
+        # Set new location 
         self.setLocation(data)
         self.setHealth(health)
         self.setLength(length)
@@ -64,7 +69,11 @@ class snake:
     def setEnemy(self, data):
         # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
         length = data['length'] 
-        
+
+        # Save current location to history 
+        self.savePath()
+    
+        # self.routeHistory(self.getHead)
         self.setLocation(data)
         self.setLength(length)
         # self.setHealth(health)
@@ -81,6 +90,29 @@ class snake:
         else:       
           self.head = copy.copy(p)
 
+        
+    def setPath(self, rt):        
+        # Translate route to path
+        # Note: may return blank [] for unknown locations  
+        a = self.getHead()
+        blist = copy.copy(rt)
+        # Insert first point (head)
+        pts = [a]
+        # Iterate through vector 
+        for b in blist:
+          # Iterate through list 
+          p = fn.getPointsInLine(a, b)
+          pts.append(p.pop(0))
+          a = copy.copy(b)
+        
+        # print("SNAKE PATH", str(self.getType()), str(pts))
+        self.path = copy.copy(pts)
+                
+
+    def getPath(self):        
+        return copy.copy(self.path)
+        
+        
     def setBody(self, p):
         if (not isinstance(p, list)):
           print("ERROR: setBody(self, p) - list expected of format [[y1, x1], [y2, x2],..]") 
@@ -88,20 +120,38 @@ class snake:
           self.body = copy.copy(p)
           self.setLength(len(p) + 1)
 
+
     def savePath(self):
+        # Save current location to route history (list)
         h = self.getHead()
         rth = self.routeHistory
         rth.insert(0, h)
         self.routeHistory = rth
-        # print("PATH HISTORY", str(rth))
 
-    def setDirection(self, d):
-        self.direction = copy.copy(d)
-        
+
     def getDirection(self):
+        # Compare last two points to get direction   
+        h = self.routeHistory
+        if(len(h) > 1):
+          # Check at least two points 
+          a = h[1]
+          b = h[0]
+          self.direction = fn.translateDirection(a, b)
+
+        else:
+          # Use default path (ie. right)
+          pass 
+
         d = copy.copy(self.direction)
         return d
+
+    def setMove(self, m):
+        self.move = copy.copy(m)
         
+    def getMove(self):
+        m = copy.copy(self.move)
+        return m
+
     def setId(self, i):
         self.identity = copy.copy(i)
         

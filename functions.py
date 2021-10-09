@@ -8,7 +8,7 @@ import numpy as np
 import constants as CONST 
 
 # move = getMove(pHead, route.pop(0)) 
-def getDirection(a, b): 
+def translateDirection(a, b): 
     
     move = ""
 
@@ -76,20 +76,10 @@ def distanceToPoint(a, b):
 def getPointsInLine(a, b):
     # a = [0, 0], b = [2, 0]
     # a = [2, 0], b = [2, 2]
-    
-    # print("LINE POINTS")
-    # print(str(a) + str(b))
-    
-    # TODO:  
-    # Confirm a & b are list [a, b]
-    # Confirm ax, bx are int
-    # Paths inverted somewhere .. 
-  
     ax = a[0]
     ay = a[1]
     bx = b[0]
     by = b[1]
-
     line = []
 
     # Point (not a line)
