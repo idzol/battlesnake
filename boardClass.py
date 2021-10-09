@@ -362,8 +362,8 @@ class board():
                     # Use original / last head 
                     pass 
 
-                  print("SNAKE LENGTH")
-                  print(str(length),str(you_len))
+                  # print("SNAKE LENGTH")
+                  # print(str(length),str(you_len))
                   if length >= you_len:
                       ay = head[0]
                       ax = head[1]
@@ -561,7 +561,7 @@ class board():
             vector.insert(0, head)
             rt = fn.getPointsInRoute(vector)
 
-            print("PREDICT ROUTE", str(name), str(rt))
+            # print("PREDICT ROUTE", str(name), str(rt))
             
             body.insert(0, head)
 
@@ -944,7 +944,7 @@ class board():
           if(turn > tmax): 
             turn = tmax 
           
-          print("DIJKSTRA PREDICT LEN", len(self.dijkstra), turn)
+          # print("DIJKSTRA PREDICT LEN", len(self.dijkstra), turn)
           dt = self.dijkstra[turn]
           turn = turn + 1 
 
