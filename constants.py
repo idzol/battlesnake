@@ -30,11 +30,11 @@ maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
 
-routesolid = 50
-routeresistance = 1
-
-pathThreshold = 20
-routeThreshold = 50
+routeThreshold = 50   # Ignore route if larger 
+pointThreshold = 10   # Ignore point if larger
+routeSolid = 50
+routeHazard = 15 
+routeCell = 1
 
 # Movement directions 
 counterclockwise = "ccw"

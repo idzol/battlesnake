@@ -120,6 +120,8 @@ def handle_move():
 
     # Load game data (support for multi games)
     data = request.get_json()
+    # print(str(data))
+    
     game_id = data['game']['id']
     if game_id in game: 
         theBoard = game[game_id][0]
@@ -129,16 +131,11 @@ def handle_move():
         # TODO: confirm this works 
         pass 
 
-
     log('time', 'Start Move', theBoard.getStartTime())
     turn = data['turn']
     
-    # print(str(data))
-    # return
-    
     # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
-    theBoard.updateBoards(data)
     
     # Update items and objects (theItems)
     foods = data['board']['food']
@@ -148,7 +145,6 @@ def handle_move():
       theItems.append(it)
 
     # Update snake (ourSnek) and save last path 
-    ourSnek.savePath()
     ourSnek.setAll(data['you'])
     
     # Update enemy snakes 
@@ -160,17 +156,20 @@ def handle_move():
           # print (str(allSnakes[identity].showStats()))
 
     # Update predict & threat matrix  
+    hazards = data['board']['hazards']
+    theBoard.updateBoards(data)
+    # TODO:  predictMoves requires updateDijkstra, and vice versa (recursive).  Currently running with blank matrix from updateBoards
     theBoard.predictSnakeMoves(allSnakes, theItems)
     theBoard.updatePredict(allSnakes)
-    theBoard.updateThreat(allSnakes)
-    
+    theBoard.updateThreat(allSnakes, hazards)
+    theBoard.updateDijkstra(ourSnek.getHead())
+
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
     
     # Iterate future snake
     # youFuture = youHead 
     # while(weight < threshold): 
-    # 
 
     # Check strategy interrupts     
     checkInterrupts(theBoard, allSnakes)
@@ -183,7 +182,7 @@ def handle_move():
 
     # Translate target to move 
     move = translatePath(theBoard, ourSnek)    
-    move = ourSnek.getDirection()
+    move = ourSnek.getMove()
     shout = ourSnek.setShout(turn)
     log('time', 'Path complete', theBoard.getStartTime())
     # log('snake-showstats', 'SNAKE', str(ourSnek.showStats()))

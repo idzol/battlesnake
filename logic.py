@@ -88,6 +88,8 @@ def checkInterrupts(bo:board, snakes):
 # Returns target (next move) based on inputs 
 def stateMachine(bo:board, sn: snake, its: list): 
 
+    depth = CONST.maxPredictTurns
+
     strategy, strategyinfo = sn.getStrategy()
     start = sn.getHead()
     if 'default' in strategyinfo:
@@ -265,10 +267,15 @@ def stateMachine(bo:board, sn: snake, its: list):
             # Iterate through items 
             while (len(itsort)):
                 target = itsort.pop(0).getLocation()
-                t = bo.getThreat()
-                threat = t[target[0], target[1]]
+                # Get threat map 
+                tmap = bo.getThreat()
+                # Adjust for future location 
+                turn = fn.distanceToPoint(start, target)
+                turn = min(turn, depth - 1)
+                threat = tmap[turn][target[0], target[1]]
+                # Calculate route & weight 
                 route, weight = bo.route(start, target)
-                # Look for item with low threat 
+                # Look for item with low threat & low route complexity 
                 if weight < CONST.routeThreshold and threat < aggro:
                     break 
 
@@ -386,13 +393,13 @@ def translatePath(bo: board, sn: snake) -> str:
       p = bo.getEmptyAdjacent(start) 
     
     # Translate routepoint to direction
-    move = fn.getDirection(start, p)
+    move = fn.translateDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
     
     print("ROUTE OUTPUT")
     print(str(start), str(finish), str(path), str(p), str(move))
     
-    sn.setDirection(move)    
+    sn.setMove(move)    
     # return move
     
 
@@ -430,7 +437,7 @@ def pathThreat(board, start, path, maxthreat=CONST.aggroLow):
     # TODO:  search whole route (currently first vector only) 
 
     if(len(path)):
-      t = board.getThreat()
+      tmap = board.getThreat()
       # First vector 
       p0 = path.pop(0)
       # Translate to points 
@@ -438,7 +445,7 @@ def pathThreat(board, start, path, maxthreat=CONST.aggroLow):
       # Iterate points 
       for pt in points:
         # Threat exceeds aggro .. 
-        if (t[pt[0], pt[1]] > maxthreat):
+        if (tmap[0][pt[0], pt[1]] > maxthreat):
           return True
     
     return False
@@ -570,7 +577,7 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         # No collision & in bounds 
         print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
-            if (bo.solid[a1[0], a1[1]] < CONST.routeThreshold):
+            if (bo.solid[a1[0], a1[1]] < CONST.pointThreshold):
               print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         
