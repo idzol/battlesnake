@@ -167,6 +167,11 @@ def handle_move():
     # Initialisation complete 
     log('time', 'Init complete', theBoard.getStartTime())
     
+    # Iterate future snake
+    # youFuture = youHead 
+    # while(weight < threshold): 
+    # 
+
     # Check strategy interrupts     
     checkInterrupts(theBoard, allSnakes)
     

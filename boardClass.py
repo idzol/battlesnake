@@ -308,6 +308,12 @@ class board():
             if (sn.getType() == "us"):
                 you_len = sn.getLength()
 
+        # Stay away from four corners unless rqd 
+        s[0, 0] = full / 4
+        s[0, w] = full / 4
+        s[h, 0] = full / 4
+        s[h, w] = full / 4
+      
         # Head on collisions 
         for identity in snakes:
             if (sn.getType() != "us"):

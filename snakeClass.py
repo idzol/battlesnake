@@ -33,7 +33,7 @@ class snake:
         self.health = 100 
         self.length = 3
 
-        self.id = ""    # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
+        self.identity = ""  # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
         self.name = ""  # idzol, brensch .. 
         self.type = ""  # us, team, friendly, enemy 
 

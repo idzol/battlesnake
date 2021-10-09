@@ -504,6 +504,45 @@ def checkOpenPath(bo, a, b):
   return True 
 
 
+def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
+    
+    w = bo.getWidth()
+    h = bo.getHeight()
+    a = sn.getHead() # [0,0] 
+    d = sn.getDirection()  # left, right, up, down
+    
+    # Coordinates - start [ay, ax]
+    ax = a[1]
+    ay = a[0]
+    a1 = [0] * 2
+
+    r = rotation    # cw, ccw
+    p = proximity   # 0, 1, 2..
+
+    # TODO:  Update for proximity (ie. X squares away from)
+    # TODO:  Switch from one square collision detect to using route 
+    # TODO:  translatePath -- consolidate bo.getEmptyAdjacent(start)  -> trackWall() 
+     
+    # a = current point 
+    # d = direction
+    # next corner 
+    # if east & up .. 
+    #   corner north east 
+    # if east & down 
+    #   corner south east 
+    # .. 
+    # target corner - proximity 
+
+        
+    # Rotate direction & try again 
+    if(r == CONST.counterclockwise): 
+        d = CONST.ccwMap[d] 
+    else:
+        d = CONST.cwMap[d]
+  
+    # log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
+    return a
+
 def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     
     w = bo.getWidth()
