@@ -21,7 +21,7 @@ class item:
     def __init__(self, t, p):
       
         if(not isinstance(p, dict)):
-          log('exception', "itemClass init", "ERROR: item(t,p) expects location as dict")
+          log('exception', 'itemClass init', 'item(t,p) expects location as dict')
           name = t + "@-1"
         else: 
           name = t + "@" + "x" + str(p['x']) + "y" + str(p['y']) 

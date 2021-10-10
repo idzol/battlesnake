@@ -144,21 +144,49 @@ def handle_move():
       it = item("food", f) 
       theItems.append(it)
 
+    # TODO: occasionally lose data object.   Understand why key would be new or disappear .. KeyError: 'gs_7cRRxhPVW6PgR3kRkcpWXSrG'. Two games hitting server resets board  (??). 
+    
     # Update snake (ourSnek) and save last path 
-    ourSnek.setAll(data['you'])
+    try:        
+        ourSnek.setAll(data['you'])
+
+    except Exception as e: 
+        # TODO: as per above
+        log('exception','handle_move',str(e))
+        ourSnek.__init__()
+        identity = data['you']['id']
+        theBoard.setIdentity(identity)
+        ourSnek.setId(identity)
+        ourSnek.setType("us")
+        allSnakes[copy.copy(identity)] = ourSnek
+        ourSnek.setAll(data['you'])
     
     # Update enemy snakes 
     snakes = data['board']['snakes']
     for sndata in snakes: 
         identity = sndata['id']
         if identity != ourSnek.getId():
-          allSnakes[identity].setEnemy(sndata)
+          try:
+            allSnakes[identity].setEnemy(sndata)
+          
+          except Exception as e: 
+            # TODO: as per above
+            log('exception','handle_move',str(e))
+            sn = snake() 
+            # Create new snake 
+            identity = sndata['id']
+            sn.setId(identity)
+            sn.setType("enemy")
+            sn.setEnemy(sndata)
+            allSnakes[copy.copy(identity)] = copy.deepcopy(sn)
+            allSnakes[identity].setEnemy(sndata)
+          
+
           # print (str(allSnakes[identity].showStats()))
 
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
     theBoard.updateBoards(data)
-    # TODO:  predictMoves requires updateDijkstra, and vice versa (recursive).  Currently running with blank matrix from updateBoards
     theBoard.predictSnakeMoves(allSnakes, theItems)
     theBoard.updatePredict(allSnakes)
     theBoard.updateThreat(allSnakes, hazards)

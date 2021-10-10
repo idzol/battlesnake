@@ -43,12 +43,12 @@ messages = {
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"], 
     'route-basic':[6,"ROUTE SIMPLE"," %s"],
-    'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s = %d"],
+    'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s path:%s = %d"],
     'route-findclosestwall':[6,"WALLPATH"," %s %s"],
-    'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],
-    'route-gradient':[3,"PATH", " Gradient %s"],
-    'route-complex-step':[3,"ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[3,"ROUTE COMPLEX", "path: %s"],
+    'route-leastline-dsum':[6,"LDSUM"," %s %s-%s = %d"],
+    'route-gradient':[6,"PATH", " Gradient %s"],
+    'route-complex-step':[6,"ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
 
     # Strategy 
     'interrupt':[5,"INTERRUPT"," %s"],
@@ -64,14 +64,15 @@ messages = {
 
     # Map 
     'map':[2, "%s"],
+    'map-predict':[6, "%s"],
     'map-debug':[6, "%s"],
+
 
     # Snake
     'snake-showstats':[2, "SNAKE", """
   Health: %d
   Hunger: %d
   Aggro: %d
-  Threat: %d
   Head: %s
   Target: %s
   Route: %s
@@ -111,7 +112,7 @@ def log(src, *vars):
         output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
 
     # Map function
-    elif(src == 'map' or src == 'map-debug'):   
+    elif(src.startswith('map')):
         try: 
           m = vars[1]
           h = len(m)
@@ -125,7 +126,7 @@ def log(src, *vars):
           output = str(vars[0]) + "\n" + str(md)
             
         except Exception as e:       
-          print(e)
+          log('exception', 'log', str(vars[0]) + str(e))
   
     # General print function 
     else:          

@@ -2,6 +2,7 @@
 import random as rand
 import numpy as np
 
+from logger import log
 # from typing import Dict
 # import pandas as pd
 
@@ -31,8 +32,8 @@ def translateDirection(a, b):
       if (by > ay): 
           move = "up" 
 
-    except: 
-      pass 
+    except Exception as e:
+        log('exception', 'translateDirection' + str(a) + ':' + str(b), str(e)) 
             
     if (move == ""): 
         # Should never happen 
@@ -67,7 +68,8 @@ def distanceToPoint(a, b):
       d = dx + dy
       return d
 
-    except: 
+    except Exception as e:
+      log('exception', distanceToPoint, str(e))  
       return -1
 
 
@@ -160,8 +162,8 @@ def printMap(m):
 
       print(md)
     
-    except: 
-      print("ERROR: Could not print map")
+    except Exception as e:
+      log('exception', 'printMap', str(e))
 
 
 def XYToLoc(pt):

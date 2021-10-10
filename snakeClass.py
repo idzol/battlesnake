@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-import logger as log 
+from logger import log
 
 import random as rand
 import constants as CONST
@@ -28,7 +28,6 @@ class snake:
         self.path = []      # Point notation
         self.routeHistory = []
         
-        self.threat = 50
         self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
         self.health = 100 
@@ -42,7 +41,7 @@ class snake:
         self.move = "right" # .. 
         self.direction = "right" # direction of travel 
         self.shout = ""
-        self.setLocation(data)
+        # self.setLocation(data)
 
 
     def setAll(self, data):
@@ -57,12 +56,10 @@ class snake:
         self.setHealth(health)
         self.setLength(length)
 
-        aggro = 50
+        aggro = CONST.aggroLow
         hunger = 100 - health
-        threat = 50
-
+        
         self.setHunger(hunger)
-        self.setThreat(threat) 
         self.setAggro(aggro)
         
 
@@ -81,7 +78,7 @@ class snake:
 
     def showStats(self):
 
-        log.log('snake-showstats', self.health, self.hunger, self.aggro, self.threat, self.head, self.target, self.route, self.strategy, self.direction)
+        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, self.strategy, self.direction)
         
 
     def setHead(self, p):
@@ -104,7 +101,8 @@ class snake:
           try:
             p = fn.getPointsInLine(a, b)
             pts.append(p.pop(0))
-          except:
+          except Exception as e:
+            log('exception', 'setPath', str(e))
             # TODO: handle blank return from functions, eg. [] ..  
             pass
 
@@ -217,14 +215,15 @@ class snake:
           body = data['body']
           b = []
 
-          self.head = [head['y'],head['x']]
+          self.head = [head['y'], head['x']]
 
           for pt in body:
             b.append([pt['y'],pt['x']])
           
           self.body = b
 
-        except: 
+        except Exception as e:
+          log('exception', 'setLocation', str(e))
           self.head = [-1,-1] 
           self.body = [-1,-1]
      
@@ -235,13 +234,6 @@ class snake:
     def getRoute(self):
         r = self.route
         return r[:]
-
-    def getThreat(self):
-        t = copy.copy(self.threat)
-        return t
-
-    def setThreat(self, t):
-        self.threat = copy.copy(t)
 
     def getHealth(self):
         return self.health

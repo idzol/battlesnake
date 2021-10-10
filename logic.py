@@ -36,7 +36,6 @@ def checkInterrupts(bo:board, snakes):
     sn = snakes[you]
     health = sn.getHealth() 
     aggro = sn.getAggro()
-    threat = sn.getThreat()
     path = sn.getRoute()
     strategy, strategyinfo = sn.getStrategy() 
     interrupt = False
@@ -75,10 +74,9 @@ def checkInterrupts(bo:board, snakes):
     elif (aggro > CONST.aggroHigh):
         strategy = ["Attack","Stalk"]
         interrupt = True 
-        
-    elif (threat > CONST.threatHigh):
-        strategy = ["Defend",""] 
-        interrupt = True 
+
+    # Defend interrupt 
+    # aggro < threat .. 
         
     if (interrupt):
         log('interrupt', str(strategy))
