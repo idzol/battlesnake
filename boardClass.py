@@ -328,8 +328,7 @@ class board():
     # Assign "threat" value based on prediction model, distance to enemy snake and size etc..
         w = self.width
         h = self.height
-        print("THREAT 1")          
-
+ 
         full = CONST.routeSolid
         depth = CONST.maxPredictTurns
         
@@ -362,6 +361,7 @@ class board():
         
         # Head on collisions 
         for identity in snakes:
+            sn = snakes[identity]
             if (sn.getType() != "us"):
               
                 # s = np.zeros([h, w], np.intc)
@@ -370,6 +370,8 @@ class board():
                 head = sn.getHead()
                 lasthead = copy.copy(head)
                 path = sn.getPath()
+                print("THREAT SNAKES", sn.getType(), path, head, length)
+        
         
                 for t in range(0, depth - 1): 
                 
