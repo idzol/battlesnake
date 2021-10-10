@@ -345,7 +345,10 @@ class board():
       
         # Update hazard board 
         for hz in hazards: 
-            threatmap[:][hz['y'], hz['x']] = CONST.routeHazard 
+            try:
+              threatmap[:][hz['y'], hz['x']] = CONST.routeHazard 
+            except Exception as e: 
+              log('exception', 'updateThreat', str(e))
 
         # Head on collisions 
         for identity in snakes:
@@ -962,19 +965,21 @@ class board():
         result = 0 
         # Iterate through path
         for p in path: 
+            if self.inBounds(p):
+              # Check which prediction matrix to use 
+              if(turn > tmax): 
+                turn = tmax 
+              
+              # print("DIJKSTRA PREDICT LEN", len(self.dijkstra), turn)
+              dt = self.dijkstra[turn]
+              turn = turn + 1 
 
-          # Check which prediction matrix to use 
-          if(turn > tmax): 
-            turn = tmax 
-          
-          # print("DIJKSTRA PREDICT LEN", len(self.dijkstra), turn)
-          dt = self.dijkstra[turn]
-          turn = turn + 1 
+              # Add dijkstra value 
+              result = result + dt[p[0], p[1]]
+              
+        else:
+          pass 
 
-          # Add dijkstra value 
-          result = result + dt[p[0], p[1]]
-          
-          
         # log('map', 'DIJSUM', str(dt))
         return result
 
