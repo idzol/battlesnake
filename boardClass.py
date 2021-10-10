@@ -2,6 +2,7 @@ from typing import List, Dict
 
 import math
 import operator
+from operator import add
 
 import random as rand
 import numpy as np
@@ -45,7 +46,8 @@ class board():
 
     # gradients = {}  # List of previous gradients for future calc
                     # 'cell':[turn,gradient]
-
+   
+    enclosed = {}   # Dict of enclosed space volume by direction 
 
     recursion_route = 0
     turn = 0
@@ -172,6 +174,14 @@ class board():
         self.turn = t
 
     def updateBoards(self, data):
+        # Enclosed - xx
+        # Solid - xx 
+        # Combine - Array of all layers (snakes, walls, items)
+        
+        # Snake Head  
+        hy = data['you']['head']['y']
+        hx = data['you']['head']['x']
+        head = [hy, hx]
 
         # Update game parameters
         width = int(data['board']['width'])
@@ -181,21 +191,18 @@ class board():
 
         # Update boards
         by = self.updateBoardYou(data)
-
         bs = self.updateBoardSnakes(data)
         bi = self.updateBoardItems(data)
 
-        # Combine boards
-
-        # Solid -- Normalise solid to 99, +1 in dijkstra()
-        self.solid = CONST.routeSolid * np.ceil(by / (by + 1) + bs / (bs + 1))
-
-        self.combine = by + bs + bi  # Array of all layers (snakes, walls, items)
-
-        # Clear boards 
-        # TODO: Check if we need to do this 
+        # Combined boards
+        rs = CONST.routeSolid
+        self.solid = rs * np.ceil(by / (by + 1) + bs / (bs + 1))
+        self.combine = by + bs + bi  
         
+        # Meta Boards 
         depth = CONST.maxPredictTurns
+        en = self.enclosedSpace(head)
+        
         threat = []
         dijkstra = []
         for t in range(0, depth):
@@ -206,12 +213,14 @@ class board():
         self.threat = threat
         self.dijkstra = dijkstra
 
-        # Update meta-boards
+        # Other meta-boards
         # bt = self.updateThreat(data, snakes) -- needs snakes 
         # di = self.updateDijkstra(fn.XYToLoc(data['you']['head']))
         # gr = self.updateGradient() -- only update when rqd for routing
 
+        # TODO: Clear boards .. 
         return True
+
 
     def updateBoardYou(self, data):
         # Array of snek (101-head, 100-body)
@@ -612,7 +621,7 @@ class board():
                       
                 except Exception as e:
                     # end of route
-                    print(str(e))
+                    log('exception','updatePredict#1', str(e))
                     pass
 
                 # Erase tail (last point in body)
@@ -626,7 +635,7 @@ class board():
 
                 except Exception as e:
                     # end of body
-                    print(str(e))
+                    log('exception','updatePredict#2', str(e))
                     pass
 
             # Update predict matrix for snake 
@@ -673,8 +682,9 @@ class board():
         # return []
 
 
-    def route(self, a, b):
-        
+    def route(self, a, b, length=0):
+        # TODO: Split into routeBasic, routeVector, routeComplex... 
+
         t = CONST.routeThreshold
         r = []
         weight = -1
@@ -684,7 +694,7 @@ class board():
         #   try / except
         log('route-fromto', a, b)
         log('map', 'SOLID', self.solid)
-        # IF start / finish not defined ..
+        # If start / finish not defined, return blank
         if (not len(a) or not len(b)):
             return r, weight 
 
@@ -695,18 +705,21 @@ class board():
             if (a[0] == b[0]) or (a[1] == b[1]):
                 # Get points in line & measure route 
                 path = fn.getPointsInLine(a, b)
+                move = fn.translateDirection(a, b)              
                 weight = self.dijkstraPath(path)
-                # If weight less than threshold, path foudn
-                if (weight < t):
+                # If weight less than threshold, and not deadend 
+                if (weight < t and length < self.enclosed[move]):
+                    # Return path 
                     log('route-basic', weight)
                     r = [b]
                     break
 
             # (2) Simple dog leg (a->c->b)
+            # TODO: Split into function.  Inverted c1 & c2 to fix -- work out why?  Optimise code 
+
             log('time', 'Before Medium Route', self.getStartTime())
             c2 = [b[0], a[1]]
             c1 = [a[0], b[1]]
-            # TODO: Inverted c1 & c2 to fix.  Work out why?
             
             # Calculate all the individual legs 
             path = fn.getPointsInLine(a, c1)            
@@ -730,14 +743,20 @@ class board():
 
             # See if path exists & less than threshold 
             if (c1sum <= c2sum) and (c1sum < t):
-                r = [c1, b]
-                weight = c1sum
-                break
+                # CHeck not dead end 
+                move = fn.translateDirection(a, c1)             
+                if (length < self.enclosed[move]):
+                  r = [c1, b]
+                  weight = c1sum
+                  break
 
             elif (c2sum <= c1sum) and (c2sum < t):
-                r = [c2, b]
-                weight = c2sum
-                break
+                # Check not dead end 
+                move = fn.translateDirection(a, c2)             
+                if (length < self.enclosed[move]):
+                  r = [c2, b]
+                  weight = c2sum
+                  break
 
             # print('WEIGHT 2')
             # print(str(c1sum), str(c2sum))
@@ -745,7 +764,7 @@ class board():
             # (3) Complex route
             log('time', 'Before Complex Route', self.getStartTime())
 
-            r, weight = self.route_complex(a, b)
+            r, weight = self.route_complex(a, b, length)
             # r, w = self.route_complex(a, b)
             # weight = w
             # print('WEIGHT 3')
@@ -764,7 +783,7 @@ class board():
         return r, weight
 
 
-    def route_complex(self, a, b):
+    def route_complex(self, a, b, length=0):
         # Returns path or point. [] if no path or error
         # TODO def route_complex(self, a, b, c, response='path'|'weight'):
         
@@ -802,20 +821,24 @@ class board():
                 # find lowest gradient route & add to path
                 r, grad = self.route_complex_step(bnew, a)
                
-                # No path found / error
-                if (not len(r)):
+                # No path found / error or dead end 
+                # If deadend.. abandon route 
+                move = fn.translateDirection(a, r)  
+                if (not len(r) or length > self.enclosed[move]):
                     path = []
+                    weight = CONST.routeThreshold
                     break
 
-                # Otherwise append path
-                path.insert(0, r)
+                # Otherwise insert to path
+                # path.insert(0, r)
+                path.append(r)
 
                 # Break once reaching destination or at board limit
-                if (path[-1] == b) or (pathlength > h * w):
+                if (r == b) or (pathlength > h * w):
                     break
 
                 # Last step becomes first step for next iteration
-                anew = copy.copy(path[-1])
+                bnew = copy.copy(r)
                 pathlength = pathlength + 1
 
         log('map','GRADIENT',self.gradient)
@@ -829,8 +852,8 @@ class board():
 
         log('route-complex-step', a, b)
         # set up directions to check for
-        directions = [[a[0] + 1, a[1]], [a[0] - 1, a[1]], [a[0], a[1] + 1],
-                      [a[0], a[1] - 1]]
+        # TODO: Replace with CONST.directions, directionMap
+        directions = [[a[0] + 1, a[1]], [a[0] - 1, a[1]], [a[0], a[1] + 1], [a[0], a[1] - 1]]
 
         # Define walls
         gmin = CONST.routeThreshold
@@ -1367,146 +1390,69 @@ class board():
         return copy.copy(allowed)
 
 
-# === DEPRECATED ===
 
-# def findBestPath(self, a, b):
-#     if (isinstance(a, dict) or isinstance(b, dict)):
-#       log('findbestpath-usage')
-#       # print("ERROR: findBestPath(self, a, b) - dict received when list array expected")
-#       return -1
+    def enclosedSpace(self, start): 
+        # Return volume of enclosed spaces in each direction 
+        w = self.width
+        h = self.height
+     
+        sy = start[0]
+        sx = start[1]
+        
+        enclosed = {} 
+        
+        # Check enclosed space in four directions from start 
+        for d in CONST.directions:
+            
+            encl = np.zeros([h, w], np.intc)
+            encl[sy, sx] = 1
+        
+            dirn = list( map(add, start, CONST.directionMap[d]) )
+            # print(str(dirn))
+            
+            if (self.inBounds(dirn)):
+                # print("ENCLOSED", str(encl), str(dirn))
+                self.enclosedSpace_step(encl, dirn) 
+                                  
+            enclosed[d] = copy.copy(encl)
+            
+        enclsum = {}
+        for d in CONST.directions: 
+            # Return array of total spaces by direction (eg. up:10
+            enclsum[d] = sum(sum(enclosed[d])) - 1
+            # print(d, str(enclosed[d]))
+        
+        self.enclosed = copy.copy(enclsum)
+        log('enclosed-sum', str(enclsum))
+        return enclsum 
 
-#     paths = [[a]]
-#     # paths = [ [ [0, 0], .. ], .. ]
 
-#     # Get next point in path until reaching destination (recursive)
-#     for d in range(0, self.maxdepth):
-#         newpaths = []
+    def enclosedSpace_step(self, encl, dirn): 
+        # Iterate through closed space to check volume 
 
-#         for p in paths:
-#             # p = [ [0, 0], .. ]
-#             newpaths = newpaths + self.definePaths(p, b)
-#             # TODO:  Minidijkstra
-#             # newpaths = self.removeHighWeightPath(newpaths)
+        dy = int(dirn[0])
+        dx = int(dirn[1])
+        s = self.solid
 
-#         paths = paths + newpaths
-#         # print(paths)
-#     log('time', 'Define Paths', self.getStartTime())
-
-#     bestpath = self.leastWeightPath(paths, b)
-#     log('time', 'Least Weight Path', self.getStartTime())
-
-#     print("COMBINE-MAP")
-#     fn.printMap(self.combine)
-
-#     print("BEST-PATH")
-#     print(str(bestpath))
-#     return bestpath
-
-# def definePaths(self, a, b):
-
-#     paths = []
-#     # a = [ [0, 1] ] or [ [0, 0], [1, 0] ]
-#     try:
-#         # Check if we've reached destination
-#         if (a[-1] == b):
-#             pass
-
-#         else:
-#             # Get next possible move
-#             print("TEST", str(a))
-
-#             if(len(a) > 1):
-#               points = self.findPossiblePathPoints(a[-1], a[-2])
-#             else:
-#               points = self.findPossiblePathPoints(a[-1])
-
-#             # log('paths', points)
-#             for point in points:
-#                 paths.append(a + [point])
-
-#     except:
-#         pass
-
-#     # print("Next Path")
-#     # print(str(paths))
-#     return paths
-
-# def findPossiblePathPoints(self, a1, a2=[-1,-1]):
-#     w = self.width
-#     h = self.height
-
-#     ax = a1[1]
-#     ay = a1[0]
-#     ax2 = a2[1]
-#     ay2 = a2[0]
-
-#     nodes = []
-
-#     # Make sure we don't search X twice in a row
-#     # get paths
-#     if (ax != ax2):
-#       for wx in range(0, w):
-#           if wx != ax:
-#               # nodes.append([{'x':wx, 'y':ay}])
-#               nodes.append([ay, wx])
-
-#     # Make sure we don't search Y twice in a row
-#     if (ay != ay2):
-#       for hy in range(0, h):
-#           if hy != ay:
-#               nodes.append([hy, ax])
-
-#     print("TEST4", str(nodes))
-#     # Eliminate any immediate collisions to improve performance
-#     for n in nodes:
-#       # if (self.solid[n[1],n[0]] != 0):
-#       # print("TEST5", str(nodes))
-#       if(self.dijkstraSum(a1, n) > 10):
-#         nodes.remove(n)
-
-#     print("TEST5", str(nodes))
-#     # log('findbestpath-debug', str(a2), str(a1), str(nodes))
-#     return nodes
-
-# def removeHighWeightPath(self, paths):
-
-#     dijmax = 1000
-#     pathlow = []
-#     pathhigh = []
-
-#     for path in paths:
-
-#         # Translate vectors into points
-#         pts = []
-#         va = []
-
-#         for vb in path:
-
-#             # Skip first point (need two points for line)
-#             if (len(va)):
-#                 # Add points in line
-#                 # print(str(va)+str(vb))
-#                 pts = pts + fn.getPointsInLine(va, vb)
-
-#             va = vb
-
-#         # calculate path weight
-#         pmask = self.drawMask(pts)
-#         dij = self.dijkstra
-#         pdij = dij * pmask
-#         dijtotal = sum(map(sum,pdij))
-
-#         # save best path
-#         if (dijtotal > dijmax):
-#             pass
-#             # Ignore path
-#             # pathhigh.append(path)
-#         else:
-#             pathlow.append(path)
-
-#     # print("PATH-HIGH")
-#     # print(str(pathhigh))
-#     # print("PATH-LOW")
-#     # print(str(pathlow))
-
-#     return pathlow
+        # If the point is not a wall 
+        # # print("ENCLOSED-STEP", str(dx), str(dy))
+        
+        if(not s[dy, dx]): 
+            # Add to enclosure 
+            encl[dy, dx] = 1
+    
+            for d in CONST.directions:
+                
+                dnext = list( map(add, dirn, CONST.directionMap[d]) )
+                dny = dnext[0]
+                dnx = dnext[1]
+                # If point is in map & not already visited 
+                if (self.inBounds(dnext) and not encl[dny, dnx]):
+                    # Recursive  
+                    self.enclosedSpace_step(encl, dnext)
+        
+        else:
+            pass
+            
+        
+        return 

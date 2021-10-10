@@ -8,6 +8,8 @@ import numpy as np
 import constants as CONST 
 
 # move = getMove(pHead, route.pop(0)) 
+# def pointsToDirection(a, b)
+
 def translateDirection(a, b): 
     
     move = ""

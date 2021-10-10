@@ -13,7 +13,7 @@ from snakeClass import snake
 from boardClass import board
 from itemClass import item
 
-from logic import checkInterrupts, stateMachine,translatePath
+from logic import checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -181,7 +181,7 @@ def handle_move():
     log('time', 'Strategy complete', theBoard.getStartTime())
 
     # Translate target to move 
-    move = translatePath(theBoard, ourSnek)    
+    move = makeMove(theBoard, ourSnek)    
     move = ourSnek.getMove()
     shout = ourSnek.setShout(turn)
     log('time', 'Path complete', theBoard.getStartTime())

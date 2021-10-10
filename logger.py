@@ -35,6 +35,8 @@ messages = {
     'predict-new':[6,"PREDICT POINT", "%s: %s: %s"],
     'predict-erase':[6,"PREDICT ERASE", "%s: %s: %s"],
     
+    'enclosed-sum':[6,"ENCLOSED SUM", "%s"],
+
     # Routing 
     'route-fromto':[6,"FROM TO", " %s %s"],
     'route-return':[6,"ROUTE", " %s"],
@@ -81,6 +83,9 @@ messages = {
     
     # Items 
     'itemclass-typewarning':[4, "WARN","item(t,p) expects location as dict"],
+    
+    # Exceptions 
+    'exception':[2, "WARN","%s: %s"],
     
 
 }
