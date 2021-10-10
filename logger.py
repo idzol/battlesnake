@@ -38,17 +38,17 @@ messages = {
     'enclosed-sum':[6,"ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route-fromto':[6,"FROM TO", " %s %s"],
-    'route-return':[6,"ROUTE", " %s"],
+    'route-fromto':[3,"FROM TO", " %s %s"],
+    'route-return':[3,"ROUTE", " %s"],
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"], 
     'route-basic':[6,"ROUTE SIMPLE"," %s"],
     'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s = %d"],
     'route-findclosestwall':[6,"WALLPATH"," %s %s"],
     'route-leastline-dsum':[6,"DSUM"," %s %s-%s = %d"],
-    'route-gradient':[6,"PATH", " Gradient %s"],
-    'route-complex-step':[6,"ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
+    'route-gradient':[3,"PATH", " Gradient %s"],
+    'route-complex-step':[3,"ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[3,"ROUTE COMPLEX", "path: %s"],
 
     # Strategy 
     'interrupt':[5,"INTERRUPT"," %s"],
