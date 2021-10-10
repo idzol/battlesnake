@@ -101,10 +101,15 @@ class snake:
         # Iterate through vector 
         for b in blist:
           # Iterate through list 
-          p = fn.getPointsInLine(a, b)
-          pts.append(p.pop(0))
+          try:
+            p = fn.getPointsInLine(a, b)
+            pts.append(p.pop(0))
+          except:
+            # TODO: handle blank return from functions, eg. [] ..  
+            pass
+
           a = copy.copy(b)
-        
+
         # print("SNAKE PATH", str(self.getType()), str(pts))
         self.path = copy.copy(pts)
                 

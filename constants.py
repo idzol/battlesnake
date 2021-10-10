@@ -54,6 +54,8 @@ cwMap = {
   'left':'up'
 }
 
+directions = ["up","right","down","left"]
+
 up = "up"
 down = "down"
 left = "left"

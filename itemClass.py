@@ -5,6 +5,8 @@
 # import random as rand
 import copy as copy
 
+import logger as log 
+
 import constants as CONST
 
 # import itemClass as item
@@ -19,8 +21,7 @@ class item:
     def __init__(self, t, p):
       
         if(not isinstance(p, dict)):
-          # QQ 
-          print("ERROR: item(t,p) expects location as dict")
+          log('exception', "itemClass init", "ERROR: item(t,p) expects location as dict")
           name = t + "@-1"
         else: 
           name = t + "@" + "x" + str(p['x']) + "y" + str(p['y']) 

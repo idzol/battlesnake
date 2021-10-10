@@ -3,6 +3,8 @@ import random as rand
 # from typing import Dict
 # import numpy as np
 # import pandas as pd
+from operator import add
+
 import time as time 
 import copy as copy 
 
@@ -92,6 +94,8 @@ def stateMachine(bo:board, sn: snake, its: list):
 
     strategy, strategyinfo = sn.getStrategy()
     start = sn.getHead()
+    length = sn.getLength()
+
     if 'default' in strategyinfo:
       defaultstrategy = strategyinfo['default']
     else:
@@ -142,12 +146,12 @@ def stateMachine(bo:board, sn: snake, its: list):
             if ('control-path' in strategyinfo):
               # retrace previous path 
               target = strategyinfo['control-path'].pop(0)
-              route, weight = bo.route(start, target)
+              route, weight = bo.route(start, target, length)
               
             else: 
             # Get closest cardinal points (n,e,s,w)            
               target = bo.findClosestNESW(start)
-              route, weight = bo.route(start, target)
+              route, weight = bo.route(start, target, length)
               strategyinfo['control-a'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith(CONST.legend['enemy-body'])
             
@@ -168,7 +172,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             
             else: 
               target = bo.invertPoint(strategyinfo['control-a'])
-              route, weight = bo.route(start, target)
+              route, weight = bo.route(start, target, length)
               strategyinfo['control-b'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith
               
@@ -182,7 +186,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             if (strategy[1]=="Point-C"): 
               target = strategyinfo['control-a'] 
               # Find food on the way 
-              route, weight = bo.route(start, target)
+              route, weight = bo.route(start, target, length)
               
               # TODO: findFoodInArea
               # TODO: route(a, b, x) to capture food 
@@ -274,7 +278,7 @@ def stateMachine(bo:board, sn: snake, its: list):
                 turn = min(turn, depth - 1)
                 threat = tmap[turn][target[0], target[1]]
                 # Calculate route & weight 
-                route, weight = bo.route(start, target)
+                route, weight = bo.route(start, target, length)
                 # Look for item with low threat & low route complexity 
                 if weight < CONST.routeThreshold and threat < aggro:
                     break 
@@ -302,7 +306,7 @@ def stateMachine(bo:board, sn: snake, its: list):
         # Find nearest wall 
         if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
-            route, weight = bo.route(start, target)
+            route, weight = bo.route(start, target, length)
             log('strategy-findwall', target)
 
         # Track wall - clockwise or counterclockwise 
@@ -310,7 +314,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             r = strategyinfo['rotation']
             p = strategyinfo['proximity']
             target = trackWall(bo, sn, r, p)
-            route, weight = bo.route(start, target)
+            route, weight = bo.route(start, target, length)
 
       # Optimum use of space 
       if(strategy[0]=="Survive"):   
@@ -371,7 +375,7 @@ def stateMachine(bo:board, sn: snake, its: list):
 # TODO:  Consider combining state machine (target) and 
 
 # Check snake target,  return next move 
-def translatePath(bo: board, sn: snake) -> str:
+def makeMove(bo: board, sn: snake) -> str:
     """
     data: https://docs.battlesnake.com/references/api/sample-move-request
     return: "up", "down", "left" or "right"
@@ -384,14 +388,20 @@ def translatePath(bo: board, sn: snake) -> str:
     # if (change to strategy): 
     # path = bo.route(start, finish)   
     path = sn.getRoute()
+    p = []
     if len(path):
       p = path.pop(0)
 
-    else: 
-      # No next move - cant route to destination
-      # TODO: Random point
-      p = bo.getEmptyAdjacent(start) 
-    
+    if (not len(p) or not bo.inBounds(p)):
+      # Final check that move is valid  
+      # TODO: Report on this condition -- solve through stateMachine  
+      # p = bo.getEmptyAdjacent(start) 
+      # log('move-desparate', bo.dump, sn.dump)
+
+      enclosed = bo.enclosed 
+      dirn = max(enclosed, key=enclosed.get)
+      p = list( map(add, start, CONST.directionMap[dirn]) )
+  
     # Translate routepoint to direction
     move = fn.translateDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
@@ -528,7 +538,7 @@ def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
 
     # TODO:  Update for proximity (ie. X squares away from)
     # TODO:  Switch from one square collision detect to using route 
-    # TODO:  translatePath -- consolidate bo.getEmptyAdjacent(start)  -> trackWall() 
+    # TODO:  makeMove -- consolidate bo.getEmptyAdjacent(start)  -> trackWall() 
      
     # a = current point 
     # d = direction
@@ -551,7 +561,7 @@ def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
     return a
 
 def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
-    
+    # DEPRECATE:  Replace with route / fuzzyRoute logic which incorporates normal routing engine  
     w = bo.getWidth()
     h = bo.getHeight()
     a = sn.getHead() # [0,0] 
@@ -565,7 +575,6 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     r = rotation    # cw, ccw
     p = proximity   # 0, 1, 2..
 
-    
     # TODO:  Update for proximity (ie. X squares away from)
     # Check path in current direction
     
@@ -577,7 +586,13 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         # No collision & in bounds 
         # print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
-            if (bo.solid[a1[0], a1[1]] < CONST.pointThreshold):
+            bs = bo.solid[a1[0], a1[1]] 
+            bt = bo.threat[0][a1[0], a1[1]] 
+            pt = CONST.pointThreshold
+            ag = sn.getAggro()
+
+            # Check solid and threat level acceptable  
+            if (bs < pt and bt < ag):
               # print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         
