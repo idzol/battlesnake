@@ -29,7 +29,7 @@ class snake:
         self.routeHistory = []
         
         self.threat = 50
-        self.aggro = 20   # out of 100 
+        self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
         self.health = 100 
         self.length = 3
