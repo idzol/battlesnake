@@ -18,8 +18,8 @@ import constants as CONST
 global messages
 messages = {
     # Time 
-    'time':[6, "TIME"],
-    'timer-hurry':[6, "INFO", "Move time reached CONST.timePanic"],
+    'time':[3, "TIME"],
+    'timer-hurry':[3, "INFO", "Move time reached CONST.timePanic"],
 
     # Server 
     'healthcheck':[3,"INFO", "Healthcheck - OK"],
@@ -38,8 +38,8 @@ messages = {
     'enclosed-sum':[6,"ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route-fromto':[3,"FROM TO", " %s %s"],
-    'route-return':[3,"ROUTE", " %s"],
+    'route-fromto':[6,"FROM TO", " %s %s"],
+    'route-return':[6,"ROUTE", " %s %s"],
     'paths':[6,"PATH", " %s"],
     'path-target':[6,"TARGET", " %s"], 
     'route-basic':[6,"ROUTE SIMPLE"," %s"],

@@ -13,11 +13,14 @@ import constants as CONST
 
 def translateDirection(a, b): 
     
-    move = ""
-
     # X - left, right [0][X]
     # Y - up, down.   [Y][0] 
+    move = ""
+    
     try: 
+      if (not len(a) or not len(b)): 
+        return move
+
       ay = a[0]
       ax = a[1]
       by = b[0]
@@ -34,17 +37,17 @@ def translateDirection(a, b):
 
     except Exception as e:
         log('exception', 'translateDirection' + str(a) + ':' + str(b), str(e)) 
-            
-    if (move == ""): 
-        # Should never happen 
-        moves = ["right", "left", "up", "down"]
-        move = rand.choice(moves)
+          
+        move = ""
+        #     # Should never happen 
+        #     moves = ["right", "left", "up", "down"]
+        #     move = rand.choice(moves)
     
     return move
 
   
 def comparePoints(a, b, t="array"): 
-
+    # DEPRECATE:  all points standardised as array / list 
     if(a['x'] == b['x'] and a['y'] == b['y']):
         return True
     else:
@@ -147,8 +150,8 @@ def getPointsInRoute(rt, a=[]):
     return pts
 
 
-# Invert coordinate system 
 def printMap(m):
+    # Invert coordinate system 
     # Iterate through map array backwards
     try: 
       h = len(m)
@@ -186,7 +189,8 @@ def raiseError(e):
     print("ERROR: " + str(e))
     return True
 
-# == DEPRECATE == 
+
+# == DEPRECATE / DELETE == 
 
 # Rotate a direction
 # def rotateMove(a, d=CONST.clockwise): 

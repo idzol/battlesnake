@@ -12,9 +12,16 @@ import constants as CONST
 # import itemClass as item
 class item:
 
+# == INIT ==
+
+# TODO:  Make this an class of all food & simplify array searches .. 
+#   getClosestItem -> getClosestFood
+#   getDistanceToFood (enemy snakes <-> food)
+#   etc.. 
+
     name = ""
     itemType = "" 
-    types = ["food", "hazard"]
+    types = ["food"]
     location = [] 
     distances = {}
     
@@ -30,22 +37,6 @@ class item:
         self.setLocation(p) 
         self.setName(name)
 
-    # # TODO:  is this complete?  
-    # def getDistances(self, things): 
-            
-    #     d = []
-    #     for t in things: 
-    #         d.append(self.getDistance(t))
-            
-    #     return d 
-    
-    # # TODO:  is this complete? 
-    # def getDistance(self, thing): 
-        
-    #     n = thing['name']
-    #     d = thing.getLocation[dist]
-
-    #     return {n:d}
             
     def getName(self):
         n = self.name
@@ -79,5 +70,23 @@ class item:
         else:
           return False
 
-                           
+
+# == DEPRECATE ==
+
+    # # TODO:  is this complete?  
+    # def getDistances(self, things): 
+            
+    #     d = []
+    #     for t in things: 
+    #         d.append(self.getDistance(t))
+            
+    #     return d 
+    
+    # # TODO:  is this complete? 
+    # def getDistance(self, thing): 
+        
+    #     n = thing['name']
+    #     d = thing.getLocation[dist]
+
+    #     return {n:d}                   
   

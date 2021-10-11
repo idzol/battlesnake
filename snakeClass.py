@@ -48,31 +48,39 @@ class snake:
 
         health = data['health'] 
         length = data['length'] 
-        
+        name = data['name']
+
+        self.setName(name)
         # Save current location to history 
         self.savePath()
         # Set new location 
         self.setLocation(data)
+        
+        # Set attributes
         self.setHealth(health)
         self.setLength(length)
-
+        
+        # Set meta 
         aggro = CONST.aggroLow
         hunger = 100 - health
-        
         self.setHunger(hunger)
         self.setAggro(aggro)
         
 
     def setEnemy(self, data):
         # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
-        length = data['length'] 
+        name = data['name']
 
+        self.setName(name)
+        self.setType("enemy")
+        self.setId(data['id'])
+            
         # Save current location to history 
         self.savePath()
     
         # self.routeHistory(self.getHead)
         self.setLocation(data)
-        self.setLength(length)
+        self.setLength(data['length'])
         # self.setHealth(health)
 
 
@@ -178,6 +186,13 @@ class snake:
     def getType(self):
         t = copy.copy(self.type)
         return t
+
+    def setName(self, n):
+        self.name = copy.copy(n)
+        
+    def getName(self):
+        n = copy.copy(self.name)
+        return n
 
     def getLength(self):
         return copy.copy(self.length)

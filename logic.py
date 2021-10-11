@@ -171,6 +171,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             else: 
               target = bo.invertPoint(strategyinfo['control-a'])
               route, weight = bo.route(start, target, length)
+              
               strategyinfo['control-b'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith
               
@@ -201,9 +202,10 @@ def stateMachine(bo:board, sn: snake, its: list):
 
               # Save control path for next patrol 
               strategyinfo['control-path'] = cpath 
-            
- 
-              pass 
+              
+              if not len(route):
+                # TODO:
+                pass 
           
             
             # patrol('bottom')
@@ -306,6 +308,9 @@ def stateMachine(bo:board, sn: snake, its: list):
             target = bo.findClosestWall(start)
             route, weight = bo.route(start, target, length)
             log('strategy-findwall', target)
+            if (not len(route)): 
+                # TODO: fix ..  
+                pass
 
         # Track wall - clockwise or counterclockwise 
         if(strategy[1]=="CrawlWall"): 
@@ -313,6 +318,9 @@ def stateMachine(bo:board, sn: snake, its: list):
             p = strategyinfo['proximity']
             target = trackWall(bo, sn, r, p)
             route, weight = bo.route(start, target, length)
+            if (not len(route)): 
+                # TODO: fix ..  
+                pass
 
       # Optimum use of space 
       if(strategy[0]=="Survive"):   
@@ -393,10 +401,21 @@ def makeMove(bo: board, sn: snake) -> str:
     if (not len(p) or not bo.inBounds(p)):
       # Final check that move is valid  
       # TODO: Report on this condition -- solve through stateMachine  
-      # p = bo.getEmptyAdjacent(start) 
       # log('move-desparate', bo.dump, sn.dump)
 
-      enclosed = bo.enclosed 
+      # Tempoary logic to (a) avoid enclosed spaces and (b) avoid head to head collisions 
+
+      enclosed = copy.copy(bo.enclosed)
+      gradient = copy.copy(bo.gradient)
+
+      for d in CONST.directions:
+          a = list( map(add, start, CONST.directionMap[d]) )
+          if (not bo.inBounds(a) or gradient[a[0], a[1] > CONST.routeThreshold / 2]): 
+            try: 
+              enclosed.pop(d, None)
+            except:
+              pass 
+              
       dirn = max(enclosed, key=enclosed.get)
       p = list( map(add, start, CONST.directionMap[dirn]) )
   
@@ -411,17 +430,7 @@ def makeMove(bo: board, sn: snake) -> str:
     # return move
     
 
-def getItemByName(its, name):
-
-  for it in its: 
-      if it.getName() == name:
-        return it 
-
-  return {}
-
-
-# STUBS -- strategy functions to be built 
-
+# == HELPERS == 
 
 def largestSnake(bo, snakes):
     # if larger than enemy
@@ -615,10 +624,7 @@ def findCentre(bo, sn, proximity=2):
     return []
 
     # if within proximity of centre 
-    return c
-
-
-    return 
+    # return c
 
 
 def numMovesAvailable(bo, sn):
@@ -628,5 +634,13 @@ def numMovesAvailable(bo, sn):
     #   recursive   
     return 100
 
-# TODO:  predict boardcontrol, ie. snake doing loop
-#   if len > enemy,  target enemy head .. 
+
+# == DEPRECATE / DELETE == 
+
+def getItemByName(its, name):
+  # DEPRECATE / DELETE:  belongs in functions?  duplicate in board.  
+  for it in its: 
+      if it.getName() == name:
+        return it 
+
+  return {}
