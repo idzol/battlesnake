@@ -21,7 +21,7 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy variables 
-strategyDepth = 3
+strategyDepth = 30
 strategyLargerBy = 3 
 
 # Routing variables 
@@ -30,11 +30,15 @@ maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
 
-routeThreshold = 50   # Ignore route if larger 
+# TODO: .. 
+routeThreshold = 499   # Ignore route if larger 
 pointThreshold = 10   # Ignore point if larger
 routeSolid = 500
 routeHazard = 15 
 routeCell = 1
+
+# Strategy 
+defaultstrategy = ['Eat', '']
 
 # Movement directions 
 counterclockwise = "ccw"

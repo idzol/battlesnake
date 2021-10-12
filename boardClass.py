@@ -1398,6 +1398,8 @@ class board():
 
     def enclosedSpace(self, start): 
         # Return volume of enclosed spaces in each direction 
+        # TODO:  If < lenght AND tail < dist... 
+        
         w = self.width
         h = self.height
      
@@ -1420,7 +1422,8 @@ class board():
                 self.enclosedSpace_step(encl, dirn) 
                                   
             enclosed[d] = copy.copy(encl)
-            
+        
+
         enclsum = {}
         for d in CONST.directions: 
             # Return array of total spaces by direction (eg. up:10

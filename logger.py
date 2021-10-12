@@ -35,7 +35,7 @@ messages = {
     'predict-new':[6,"->PREDICT POINT", "%s: %s: %s"],
     'predict-erase':[6,"->PREDICT ERASE", "%s: %s: %s"],
     
-    'enclosed':[3,"->ENCLOSED", "%s %s"],
+    'enclosed':[6,"->ENCLOSED", "%s %s"],
     'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
@@ -60,7 +60,7 @@ messages = {
     'strategy-iterate':[5,"->STRAT", "Updated - %s"],
     'strategy-eat':[6,"->EAT", " %s %s %s %s"],
     'strategy-attack':[6,"->ATTACK", " %s %s %s %s"],
-    'strategy-kill':[6,"->KILL", " %s %s %s %s"],
+    'strategy-killpath':[6,"->KILL", " head:%s length:%s target:%s"],
     'strategy-defend':[6,"->DEFEND", " %s %s %s %s"],
     'strategy-control':[6,"->CONTROL", " %s %s %s"],
     'strategy-survive':[6,"->SURVIVE", " %s %s %s %s"],

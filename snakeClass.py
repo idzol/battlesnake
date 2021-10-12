@@ -15,9 +15,10 @@ class snake:
 
         depth = CONST.maxPredictTurns
         self.predict = [None] * (depth + 1)
-        self.strategy = ["Eat",""]
+        
+        self.interruptlist = []
         self.strategyinfo = {}
-        self.strategylast = []
+        self.strategylist = [["Eat",""]]
         
         self.interrupt = False
 
@@ -87,7 +88,7 @@ class snake:
 
     def showStats(self):
 
-        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, self.strategy, self.direction)
+        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, str(self.strategylist), self.direction)
         
 
     def setHead(self, p):
@@ -286,15 +287,21 @@ class snake:
         else:
             return False 
 
-    # review strategy and update 
+    def getInterrupt(self):
+        return copy.copy(self.interruptlist)
+
+    def setInterrupt(self, i): 
+        self.interrupt = copy.copy(i)
+
     def setStrategy(self, s, sinfo):
-      self.strategy = copy.copy(s)
+    # review strategy and update 
+      self.strategylist = copy.copy(s)
       self.strategyinfo = copy.copy(sinfo)
 
 
-    # review strategy and update 
     def getStrategy(self):
-      s = copy.copy(self.strategy)
+    # review strategy and update 
+      s = copy.copy(self.strategylist)
       sinfo = copy.copy(self.strategyinfo)
       return (s, sinfo)
 
