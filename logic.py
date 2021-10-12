@@ -45,6 +45,36 @@ def checkInterrupts(bo:board, snakes):
         strategy = ['Kill', 'Collide']
         interrupt = True 
 
+      # HEAD ON COLLISION 
+      # Larger & Distance 1 from prediction 
+      # Larger / Smaller & +1 ahead of enemy prediction  
+      # (Note: make sure all routes have next route)
+
+      # WALL OF DOOM 
+      # patrol A - B - C ...
+      # simple mode 
+      # if dist > 2 to body, +1 each turn  
+
+      # PREDICTION 
+      # One path - certainty 100% 
+      
+      # GENERAL 
+      # [intent] - moves that reduce # enemy paths
+      
+      # SURVIVE 
+      # [intent] - paths that have most options 
+      # pathTree() -> path branches by length
+
+      # TRAPS 
+      # Crawl Wall 
+      # [10,9],  wall 
+      # [0,1] -> [1,w] -> [h, w-1] -> [h-1, 0]
+     
+      # STALK 
+      # Stay within 2 - 8 squares 
+      # Find food 
+      # Stay within 2... 
+
     elif (largestSnake(bo, snakes) and health > CONST.healthMed):
         strategy = ['Control', '']
         strategyinfo['default'] = ['Idle', 'Centre']
@@ -93,37 +123,31 @@ def stateMachine(bo:board, sn: snake, its: list):
     strategy, strategyinfo = sn.getStrategy()
     start = sn.getHead()
     length = sn.getLength()
+    aggro = sn.getAggro()
+    tail = sn.getTail()
 
     if 'default' in strategyinfo:
       defaultstrategy = strategyinfo['default']
     else:
-      defaultstrategy = ['Idle', '']
+      defaultstrategy = ['Taunt', '']
 
-    # Return your snake 
-    # health = sn.getHealth() 
-    aggro = sn.getAggro()
-    
-
-    # Progress state machine
+    # OUtputs of state machine 
     target = []
     route = [] 
     
-    # log('state-machine-start', str(strategy), str(strategyinfo))
+    log('strategy', 'START', str(strategy), str(strategyinfo))
     
+    # Progress state machine
     i = 0
     while not len(target):
       # ConserveMoves 
       # start = copy.copy(sn.getHead())
       
       if(strategy[0]=="Kill"):
-
           if (strategy[1] == "Collide"):
               target = headOnCollision(bo, sn) 
-              
-              # No kill path no longer exists 
-              if(not len(target)): 
-                  strategy = ["Attack","Stalk"]
-              
+              strategyinfo['next'] = defaultstrategy
+
   #         if(numMovesAvailable(enemy) < enemy.getLength()):
   #             strategy[1] = "Block"
   #             move = blockPath()
@@ -147,21 +171,21 @@ def stateMachine(bo:board, sn: snake, its: list):
               route, weight = bo.route(start, target, length)
               
             else: 
-            # Get closest cardinal points (n,e,s,w)            
+              # Get closest cardinal points (n,e,s,w)         
               target = bo.findClosestNESW(start)
               route, weight = bo.route(start, target, length)
               strategyinfo['control-a'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith(CONST.legend['enemy-body'])
             
-            # If no route to target ..
-            if(not len(route)):
-              strategy[1] = "Point-B" 
+              strategyinfo['next'] = ['Control', 'Point-B']
                
+            log('strategy-control', "A", str(target), '')
+
           if (strategy[1]=="Point-B"): 
 
             if 'control-b' in strategyinfo:
               if start == strategyinfo['control-b']:
-                strategy[1] = "Point-C"
+                strategy[1] = 'Point-C'
 
             if ('control-path' in strategyinfo):
                 # retrace previous path 
@@ -175,13 +199,12 @@ def stateMachine(bo:board, sn: snake, its: list):
               strategyinfo['control-b'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith
               
-              # If no route to target or reached target ..
-              if(not len(route)):
-                strategy[1] = "Point-C" 
-              
               strategyinfo['control-a'] = target
+              strategyinfo['next'] = ['Control', 'Point-C']
             
-            
+              log('strategy-control', "B", str(target), '')
+
+
             if (strategy[1]=="Point-C"): 
               target = strategyinfo['control-a'] 
               # Find food on the way 
@@ -203,11 +226,8 @@ def stateMachine(bo:board, sn: snake, its: list):
               # Save control path for next patrol 
               strategyinfo['control-path'] = cpath 
               
-              if not len(route):
-                # TODO:
-                pass 
-          
-            
+              log('strategy-control', "C", str(target), cpath)
+
             # patrol('bottom')
             # if reacehd bottom or weight > threshold
             # strategy-info('control-line') = path (last w moves) 
@@ -259,11 +279,9 @@ def stateMachine(bo:board, sn: snake, its: list):
 
           # No food -- change strategy
           if(not len(its)):
-            strategy = defaultstrategy
-          
-          else: 
-            # TODO: Can also eliminate food here.  Boolean allowed (board & items).  Further note -- routing better as it accomodates future path 
+            strategyinfo['next'] = defaultstrategy
 
+          else: 
             # Get closest item 
             itsort = bo.findClosestItem(its, start)
             # Get route to target  
@@ -298,56 +316,49 @@ def stateMachine(bo:board, sn: snake, its: list):
           strategy[1]=="FindWall"
           
 
-        if(strategy[1]=="FindCentre"): 
-            pass 
-        #     target = bo.findCentre(start)
-        #     log('strategy-findcentre', target)
-
+        if(strategy[1]=="Centre"): 
+            target = bo.findCentre(start)
+            strategyinfo['next'] = defaultstrategy
+            log('strategy-findcentre', target)
+            
+            
         # Find nearest wall 
         if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
-            route, weight = bo.route(start, target, length)
+            strategyinfo['next'] = ['Idle', 'TrackWall']
             log('strategy-findwall', target)
-            if (not len(route)): 
-                # TODO: fix ..  
-                pass
-
+            
         # Track wall - clockwise or counterclockwise 
-        if(strategy[1]=="CrawlWall"): 
-            r = strategyinfo['rotation']
-            p = strategyinfo['proximity']
-            target = trackWall(bo, sn, r, p)
-            route, weight = bo.route(start, target, length)
-            if (not len(route)): 
-                # TODO: fix ..  
-                pass
+        if(strategy[1]=="TrackWall"): 
 
-      # Optimum use of space 
-      if(strategy[0]=="Survive"):   
-          # find dijkstras way out .. 
-          # .. otherwise slinky pattern until death
-          pass 
-      
-      # NO TARGET -- previous strategy complete (or could not be completed)
-      if(len(target) == 0): 
-          print("NO PATH")
-          
-          # State transition - Move to crawl wall 
-          if (strategy[1] == "FindWall"): 
-            strategy[1] = "CrawlWall"                
-            # TODO: Move to high/low threat based on aggro 
             rotation = int(2 * rand.random())
             if (rotation):
                 rotation = CONST.clockwise 
             else: 
                 rotation = CONST.counterclockwise 
 
-            strategyinfo['rotation'] = rotation
-            strategyinfo['proximity'] = 2
-          
-          else:
-            strategy = ["Idle","FindWall"]
+            proximity = 2
+            target = trackWall(bo, sn, rotation, proximity)
+            strategyinfo['next'] = ['Idle', 'Centre']
+            log('strategy-trackwall', target)
+            
+      # Optimum use of space 
+      if(strategy[0]=="Survive"):   
+          # find dijkstras way out .. 
+          # .. otherwise slinky pattern until death
+          pass 
+      
+      
+      if(strategy[0]=="Taunt"):
+          target = sn.getTail()
+          strategyinfo['next'] = ['Eat', '']
+          log('strategy-taunt', target)
+            
 
+      # Check route.  If no target / no route  -- previous strategy complete or could not be completed).  Find new strategy 
+      route, weight = bo.route(start, target, length)
+      if(not len(route)): 
+          
           # Check if time exceeds limit 
           st = bo.getStartTime()
           diff = 1000 * (time.time() - st)
@@ -358,7 +369,7 @@ def stateMachine(bo:board, sn: snake, its: list):
           log('time','Strategy updated', st)
           log('strategy-iterate', str(strategy))
 
-  
+
       if (i > CONST.strategyDepth or bo.hurry):
           # Exit loop
           target = [0, 0]
@@ -367,6 +378,7 @@ def stateMachine(bo:board, sn: snake, its: list):
           # target = random ... 
           # interrupt = True 
       
+      log('strategy', 'Try again: ' + str(i), str(strategy), str(strategyinfo))
       i = i + 1 
     
     # TODO: Tell debug where the target came from
@@ -406,11 +418,11 @@ def makeMove(bo: board, sn: snake) -> str:
       # Tempoary logic to (a) avoid enclosed spaces and (b) avoid head to head collisions 
 
       enclosed = copy.copy(bo.enclosed)
-      gradient = copy.copy(bo.gradient)
+      dijkstra = copy.copy(bo.dijkstra[0])
 
       for d in CONST.directions:
           a = list( map(add, start, CONST.directionMap[d]) )
-          if (not bo.inBounds(a) or gradient[a[0], a[1] > CONST.routeThreshold / 2]): 
+          if (not bo.inBounds(a) or dijkstra[a[0], a[1] > CONST.routeThreshold / 2]): 
             try: 
               enclosed.pop(d, None)
             except:
@@ -423,9 +435,8 @@ def makeMove(bo: board, sn: snake) -> str:
     move = fn.translateDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
     
-    print("ROUTE OUTPUT")
-    print(str(start), str(finish), str(path), str(p), str(move))
-    
+    log('make-move', str(start), str(finish), str(path), str(p), str(move))
+        
     sn.setMove(move)    
     # return move
     
@@ -569,6 +580,9 @@ def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
 
 def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     # DEPRECATE:  Replace with route / fuzzyRoute logic which incorporates normal routing engine  
+
+    # TODO:  Update for proximity (ie. X squares away from edge).  
+     
     w = bo.getWidth()
     h = bo.getHeight()
     a = sn.getHead() # [0,0] 
@@ -582,8 +596,6 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     r = rotation    # cw, ccw
     p = proximity   # 0, 1, 2..
 
-    # TODO:  Update for proximity (ie. X squares away from)
-    # Check path in current direction
     
     for i in range(0, 4):
         # Add one point in current direction 
@@ -591,15 +603,17 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
         a1[1] = ax + CONST.directionMap[d][1]
         
         # No collision & in bounds 
-        # print("TRACK-DIRN", str(a), str(a1), d)
         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
             bs = bo.solid[a1[0], a1[1]] 
             bt = bo.threat[0][a1[0], a1[1]] 
             pt = CONST.pointThreshold
             ag = sn.getAggro()
 
-            # Check solid and threat level acceptable  
-            if (bs < pt and bt < ag):
+            # Not solid, low threat, not enclosed
+            move = fn.translateDirection(a, a1)
+            length = sn.getLength()
+        
+            if (bs < pt and bt < ag and length < bo.enclosed[move]):
               # print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
               break
         

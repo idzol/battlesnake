@@ -226,9 +226,9 @@ def handle_move():
     # Save game data
     game[game_id] = [theBoard, ourSnek, allSnakes]
     
-    for key in allSnakes:
-        snk = allSnakes[key]
-        print("SNAKES", snk.getName(), snk.getHead(), snk.getLength())
+    # for key in allSnakes:
+    #     snk = allSnakes[key]
+    #     print("SNAKES", snk.getName(), snk.getHead(), snk.getLength())
 
     log('time', '== Move complete ==', theBoard.getStartTime())  
     

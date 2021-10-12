@@ -248,7 +248,7 @@ class board():
             self.you[py_head, px_head] = CONST.legend['you-head']
 
         except Exception as e:
-            print("INFO: Your snake head not defined. " + str(e))
+            log('exception', 'updateBoardsYou', 'INFO: Your snake head not defined. ' + str(e))
 
         return self.you
 
@@ -324,11 +324,11 @@ class board():
 
     def updateThreat(self, snakes, hazards):
     # Assign "threat" value based on prediction model, distance to enemy snake and size etc..
-        print("THREAT")
         w = self.width
         h = self.height
  
         full = CONST.routeSolid
+        shadow = CONST.routeSolid / 10
         depth = CONST.maxPredictTurns
         
         threatmap = [None] * depth
@@ -345,11 +345,11 @@ class board():
                 you_len = sn.getLength()
 
         # Optional: Stay away from four corners
-        if(False):
-            threatmap[:][0, 0] = full / 4
-            threatmap[:][0, w-1] = full / 4
-            threatmap[:][h-1, 0] = full / 4
-            threatmap[:][h-1, w-1] = full / 4
+        if(True):
+            threatmap[0][0, 0] = full / 2
+            threatmap[0][0, w-1] = full / 2
+            threatmap[0][h-1, 0] = full / 2
+            threatmap[0][h-1, w-1] = full / 2
       
         # Update hazard board 
         for hz in hazards: 
@@ -367,6 +367,7 @@ class board():
                 # Death zone (+) around larger snakes
                 length = sn.getLength()
                 head = sn.getHead()
+                body = sn.getBody()
                 lasthead = copy.copy(head)
                 path = sn.getPath()
                 
@@ -383,8 +384,20 @@ class board():
                     # Use original / last head 
                     pass 
 
-                  # print("THREAT SNAKE LENGTH", str(length),str(you_len))
-                  
+                  # Body generates shadow threat 
+                  print(str(body))
+                  if len(body): 
+                    for b in body: 
+                      ay = b[0]
+                      ax = b[1]
+                      ay1 = max(0, ay - 1)
+                      ay2 = min(h, ay + 2)
+                      ax1 = max(0, ax - 1)
+                      ax2 = min(w, ax + 2)
+                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + shadow
+                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
+
+                  # TODO:  Combine with above
                   if length >= you_len:
                       ay = head[0]
                       ax = head[1]
@@ -392,7 +405,10 @@ class board():
                       ay2 = min(h, ay + 2)
                       ax1 = max(0, ax - 1)
                       ax2 = min(w, ax + 2)
-
+                      
+                      # TODO: Review head vs path .. 
+                      # Path or straigh = full  
+                      # Others:  full / 2 
                       # Update threat matrix used for routing
                       threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + full
                       threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + full
@@ -404,7 +420,6 @@ class board():
   
 
     def updateDijkstra(self, data_you):
-        print('UPDATE DIJKSTRA')
         
         depth = CONST.maxPredictTurns
 
@@ -465,7 +480,7 @@ class board():
 
                 # TODO: Assume strategy is kill (len > X)
                 # TODO: Assume strategy is board control / loop etc (eg. circular)
-                print("SNAKE HEAD", str(start))
+                # print("SNAKE HEAD", str(start))
                 sn.setRoute(rt)
                 sn.setPath(rt)
               
@@ -704,10 +719,13 @@ class board():
         # Eliminate dead ends 
         for d in CONST.directions:
             a1 = list (map(add, a, CONST.directionMap[d]))
-            move = fn.translateDirection(a, a1)
-            if (length < self.enclosed[move]):
-                self.gradient[a[0], a[1]] = t 
-              
+            if(self.inBounds(a1)):
+              move = fn.translateDirection(a, a1)
+              if (length < self.enclosed[move]):
+                  self.gradient[a1[0], a1[1]] = t 
+
+            log('enclosed', str(self.enclosed), str(a1))
+                
         # try simple, medium, complex route
         while 1:
             # (1) Simple straight line (a->b)
@@ -734,9 +752,7 @@ class board():
               break 
 
         # Return sorted path/points or [] if no path
-        print(str(routetype))
-        log('route-return', route, weight) 
-       
+        log('route', routetype, route, weight)     
         return route, weight
 
     def route_basic(self, a, b):
@@ -751,10 +767,9 @@ class board():
           # If weight less than threshold, and not deadend 
           if (w < CONST.routeThreshold):
               # Return path 
-              log('route-basic', w)
               r = [b]
         
-        print("ROUTE BASIC r|w: ", str(r), str(w))
+        log("route", "BASIC", str(r), str(w))
         return r, w 
 
 
@@ -774,7 +789,7 @@ class board():
             r = c 
             log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
 
-        print("ROUTE CORNER r|w: ", str(r), str(w))
+        log("route", "CORNER", str(r), str(w))
         if (w < CONST.routeThreshold):
           return [r, b], w
         else: 
@@ -838,8 +853,8 @@ class board():
                       bnew = copy.copy(b)
                       pathlength = 0
 
-        print("ROUTE COMPLEX r|w: ", str(path), str(weight))
-        # log('route-complex-path', str(path))
+        log("route", "COMPLEX", str(path), str(weight))
+        
         return path, weight
 
 

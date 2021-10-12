@@ -23,6 +23,7 @@ class snake:
 
         self.head = [] 
         self.body = []  
+        self.tail = []  
         self.target = []  
         self.route = []     # Vector notation
         self.path = []      # Point notation
@@ -148,7 +149,7 @@ class snake:
           a = h[1]
           b = h[0]
           self.direction = fn.translateDirection(a, b)
-
+          
         else:
           # Use default path (ie. right)
           pass 
@@ -162,6 +163,14 @@ class snake:
     def getMove(self):
         m = copy.copy(self.move)
         return m
+      
+    def getTail(self):
+
+        if (len(self.body)):
+          self.tail = self.body[-1]
+          return copy.copy(self.tail)
+        else:
+          return []
 
     def setId(self, i):
         self.identity = copy.copy(i)

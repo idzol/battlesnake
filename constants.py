@@ -32,7 +32,7 @@ maxRecursion = 2000
 
 routeThreshold = 50   # Ignore route if larger 
 pointThreshold = 10   # Ignore point if larger
-routeSolid = 50
+routeSolid = 500
 routeHazard = 15 
 routeCell = 1
 
