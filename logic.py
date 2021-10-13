@@ -72,8 +72,9 @@ def checkInterrupts(bo:board, snakes):
         # Stay within 2... 
 
     if (largestSnake(bo, snakes) and health > CONST.healthMed):
-        interruptlist.append(['Control', ''])
-        strategyinfo['default'] = ['Idle', 'Centre']
+        # interruptlist.append(['Control', ''])
+        interruptlist.append(['Taunt', ''])
+        # interruptlist.append(['Idle', 'Centre'])
         
         # WALL OF DOOM 
         # patrol A - B - C ...
@@ -129,7 +130,7 @@ def stateMachine(bo:board, sn: snake, its: list):
     target = []
     route = [] 
     
-    log('strategy', 'START', str(strategylist), str(strategyinfo))
+    log('strategy', 'START', str(interruptlist), str(strategylist), str(strategyinfo))
     
     # Progress state machine
     i = 0
@@ -179,7 +180,7 @@ def stateMachine(bo:board, sn: snake, its: list):
             if ('control-path' in strategyinfo):
               # retrace previous path 
               target = strategyinfo['control-path'].pop(0)
-              route, weight = bo.route(start, target, length)
+              # route, weight = bo.route(start, target, length)
               
             else: 
               # Get closest cardinal points (n,e,s,w)         
@@ -201,11 +202,9 @@ def stateMachine(bo:board, sn: snake, its: list):
             if ('control-path' in strategyinfo):
                 # retrace previous path 
                 target = strategyinfo['control-path'].pop(-1)
-                route = strategyinfo['control-path']
-            
+
             else: 
               target = bo.invertPoint(strategyinfo['control-a'])
-              route, weight = bo.route(start, target, length)
               
               strategyinfo['control-b'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith
@@ -290,34 +289,20 @@ def stateMachine(bo:board, sn: snake, its: list):
 
           # No food -- change strategy
           if(not len(its)):
-            strategylist.append(defaultstrategy)
-
+            pass 
+            
           else: 
             # Get closest item 
             itsort = bo.findClosestItem(its, start)
             # Get route to target  
             
             # Iterate through items 
-            while (len(itsort)):
-                target = itsort.pop(0).getLocation()
-                # Get threat map 
-                tmap = bo.getThreat()
-                # Adjust for future location 
-                turn = fn.distanceToPoint(start, target)
-                turn = min(turn, depth - 1)
-                threat = tmap[turn][target[0], target[1]]
-                # Calculate route & weight 
-                route, weight = bo.route(start, target, length)
-                # Look for item with low threat & low route complexity 
-                if weight < CONST.routeThreshold and threat < aggro:
-                    break 
+            target = itsort.pop(0).getLocation()
 
-            # If no route to target change to default strategy 
-            if(not len(route)):
-                strategylist.append(defaultstrategy)
+            # Continue to eat until interrupted
+            strategylist.insert(0, ['Eat', ''])
 
-            # TODO: Introduce threat level to "allowed" or "gradient" (route)
-            # log('strategy-eat', str(a), str(iname), str(it), str(target))
+            log('strategy-eat', str(target))
           
       if(strategy[0]=='Idle'):
 
@@ -364,10 +349,14 @@ def stateMachine(bo:board, sn: snake, its: list):
           log('strategy-taunt', target)
             
 
-      # Check route.  If no target / no route  -- previous strategy complete or could not be completed).  Find new strategy 
+      # Check route.  If no target or no route , try next strategy
+      print("-> ROUTE", str(start), str(target), str(length)) 
       route, weight = bo.route(start, target, length)
+
+
+      # No route found 
       if(not len(route)): 
-          
+    
           # Check if time exceeds limit 
           st = bo.getStartTime()
           diff = 1000 * (time.time() - st)
@@ -386,7 +375,18 @@ def stateMachine(bo:board, sn: snake, its: list):
             
           log('strategy-iterate', str(strategy))
 
+      else:
+          # # Secondary facors (eg. aggro, threat, health)  
+          # tmap = bo.getThreat()
+          # # Adjust for future location 
+          # turn = fn.distanceToPoint(start, target)
+          # turn = min(turn, depth - 1)
+          # threat = tmap[turn][target[0], target[1]]
+          # if threat < aggro: 
+          #   break      
+          break
 
+      
       if (i > CONST.strategyDepth or bo.hurry):
           # Exit loop
           target = []

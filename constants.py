@@ -31,7 +31,7 @@ maxPredictTurns = 4
 maxRecursion = 2000
 
 # TODO: .. 
-routeThreshold = 499   # Ignore route if larger 
+routeThreshold = 500   # Ignore route if larger 
 pointThreshold = 10   # Ignore point if larger
 routeSolid = 500
 routeHazard = 15 

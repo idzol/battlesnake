@@ -1266,7 +1266,7 @@ class board():
 
 
     def calculateDistances(self, snakes, items):
-  # DEPRECATE: Not used? 
+    # DEPRECATE: Not used? 
   
         n = len(snakes) + len(items)
         dists = np.zeros((n, n), np.intc)

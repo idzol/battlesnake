@@ -55,10 +55,10 @@ messages = {
 
     # Strategy 
     'interrupt':[5,"->INTERRUPT"," %s"],
-    'strategy':[5,"->STRAT", "%s %s %s"],
+    'strategy':[5,"->STRAT", "%s interrupt:%s strategy:%s strategyinfo:%s"],
     'strategy-update':[5,"->STRAT", "%s\n%s"],
     'strategy-iterate':[5,"->STRAT", "Updated - %s"],
-    'strategy-eat':[6,"->EAT", " %s %s %s %s"],
+    'strategy-eat':[6,"->EAT", " %s"],
     'strategy-attack':[6,"->ATTACK", " %s %s %s %s"],
     'strategy-killpath':[6,"->KILL", " head:%s length:%s target:%s"],
     'strategy-defend':[6,"->DEFEND", " %s %s %s %s"],
