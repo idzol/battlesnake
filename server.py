@@ -184,7 +184,7 @@ def handle_move():
     log('time', 'updateThreat', theBoard.getStartTime())
     theBoard.updateThreat(allSnakes, hazards)
     log('time', 'updateDijkstra', theBoard.getStartTime())
-    theBoard.updateDijkstra(ourSnek.getHead())
+    theBoard.updateDijkstra(ourSnek)
     log('time', 'updateGradient', theBoard.getStartTime())
     theBoard.updateGradient(ourSnek.getHead()) 
     theBoard.updateGradientFix(ourSnek.getHead())
@@ -221,7 +221,7 @@ def handle_move():
     log("shout", shout)
 
     # Print maps to console 
-    theBoard.showMaps()
+    # theBoard.showMaps()
 
     # Save game data
     game[game_id] = [theBoard, ourSnek, allSnakes]

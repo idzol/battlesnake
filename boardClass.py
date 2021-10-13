@@ -385,7 +385,7 @@ class board():
                     pass 
 
                   # Body generates shadow threat 
-                  print(str(body))
+                  # print(str(body))
                   if len(body): 
                     for b in body: 
                       ay = b[0]
@@ -419,16 +419,17 @@ class board():
         # print(str(self.threat))
   
 
-    def updateDijkstra(self, data_you):
+    def updateDijkstra(self, sn):
         
         depth = CONST.maxPredictTurns
 
         w = self.width
         h = self.height
 
-        ay = data_you[0]
-        ax = data_you[1]
-        
+        head = sn.getHead()
+        tail = sn.getTail()
+        length = sn.getLength()
+
         # TODO: Check self.predict[0] is the same as self.solid 
         # TODO: determine if we need to zero start loc
         # TODO:  Make sure predict/threat[t] exist & are non-zero 
@@ -448,8 +449,12 @@ class board():
           
           # Dijkstra combines solids, foods, hazards (threats)
           dijksmap[t] = np.add(predict, threat) + 1
-          # Adjust head location to zero - not rqd for routin (alerady here)
-          dijksmap[0][ay, ax] = 0
+          # Adjust head & tail location to zero for routing 
+          dijksmap[0][head[0], head[1]] = 0
+          if(length > 3):
+              dijksmap[0][tail[0], tail[1]] = 0
+              
+          # dijksmap[0][tail[0], tail[1]] = 0
           # dijksmap[0][ay, ax] = threat[0][ay, ax]
  
         self.setDijkstra(dijksmap)
@@ -709,7 +714,7 @@ class board():
         routetype = ''   
          
         log('route-fromto', a, b)
-        log('time', 'Route', self.getStartTime())
+        # log('time', 'Route', self.getStartTime())
         
         # If start / finish not defined, return blank
         if (not len(a) or not len(b) or a == b):
@@ -741,7 +746,7 @@ class board():
               break 
 
             # (3) Complex route
-            log('time', 'Route Complex', self.getStartTime())
+            # log('time', 'Route Complex', self.getStartTime())
             route, weight = self.route_complex(a, b, length)
             if len(route): 
               routetype = 'route_complex'            
@@ -769,7 +774,7 @@ class board():
               # Return path 
               r = [b]
         
-        log("route", "BASIC", str(r), str(w))
+        # log("route", "BASIC", str(r), str(w))
         return r, w 
 
 
@@ -789,7 +794,7 @@ class board():
             r = c 
             log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
 
-        log("route", "CORNER", str(r), str(w))
+        # log("route", "CORNER", str(r), str(w))
         if (w < CONST.routeThreshold):
           return [r, b], w
         else: 
@@ -853,7 +858,7 @@ class board():
                       bnew = copy.copy(b)
                       pathlength = 0
 
-        log("route", "COMPLEX", str(path), str(weight))
+        # log("route", "COMPLEX", str(path), str(weight))
         
         return path, weight
 
@@ -1039,6 +1044,20 @@ class board():
         max_index = quads.index(max_value)
 
         return quad_dict[max_index]
+
+    # Return centrepoint 
+    def findCentre(self, head):
+        h = self.height
+        w = self.width
+
+        cy = math.floor((h + 1) / 2) - 1
+        cx = math.floor((w + 1) / 2) - 1
+        target = [cy, cx]
+        if (target == head):
+            return []
+        else:
+            return target
+            
 
     # Return quadrant with highest/lowest threat
     def findThreat(self):

@@ -21,7 +21,7 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy variables 
-strategyDepth = 30
+strategyDepth = 10
 strategyLargerBy = 3 
 
 # Routing variables 

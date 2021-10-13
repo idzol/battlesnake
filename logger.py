@@ -39,19 +39,19 @@ messages = {
     'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route':[3,"->ROUTE"," %s r:%s w:%s"],
-    'route-fromto':[6,"->FROM TO", " %s %s"],
-    'route-return':[6,"->ROUTE", " %s %s"],
-    'paths':[6,"->PATH", " %s"],
-    'path-target':[6,"->TARGET", " %s"], 
-    'route-dijkstra-sum':[6,"->DSUM"," %s-%s-%s path:%s = %d"],
-    'route-findclosestwall':[6,"->WALLPATH"," %s %s"],
-    'route-leastline-dsum':[6,"->LDSUM"," %s %s-%s = %d"],
-    'route-gradient':[6,"->PATH", " Gradient %s"],
-    'route-complex-step':[6,"->ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[6,"->ROUTE COMPLEX", "path: %s"],
-    
-    'make-move':[3,"->MAKE MOVE"," start:%s finish:%s path:%s point:%s move:%s"],
+    'route':[3,"-->ROUTE"," %s r:%s w:%s"],
+    'route-fromto':[6,"-->FROM TO", " %s %s"],
+    'route-return':[6,"-->ROUTE", " %s %s"],
+    'paths':[6,"-->PATH", " %s"],
+    'path-target':[6,"-->TARGET", " %s"], 
+    'route-dijkstra-sum':[6,"-->DSUM"," %s-%s-%s path:%s = %d"],
+    'route-findclosestwall':[6,"-->WALLPATH"," %s %s"],
+    'route-leastline-dsum':[6,"-->LDSUM"," %s %s-%s = %d"],
+    'route-gradient':[6,"-->PATH", " Gradient %s"],
+    'route-complex-step':[6,"-->ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[6,"-->ROUTE COMPLEX", "path: %s"],
+
+    'make-move':[3,"-->MAKE MOVE"," start:%s finish:%s path:%s point:%s move:%s"],
 
     # Strategy 
     'interrupt':[5,"->INTERRUPT"," %s"],
@@ -65,6 +65,7 @@ messages = {
     'strategy-control':[6,"->CONTROL", " %s %s %s"],
     'strategy-survive':[6,"->SURVIVE", " %s %s %s %s"],
     'strategy-taunt':[6,"->TAUNT", " %s"],
+    'strategy-findcentre':[6,"->FINDCENTRE", " Target %s"],
     'strategy-findwall':[6,"->FINDWALL", " Target %s"],
     'strategy-trackwall':[6,"->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
 
@@ -115,8 +116,11 @@ def log(src, *vars):
     if(src == 'time'):
         time.time()
         diff = 1000 * (time.time() - vars[1]) 
-        output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
-
+        try: 
+            output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
+        except Exception as e:       
+            log('exception', 'log', str(vars[0]) + str(e))
+  
     # Map function
     elif(src.startswith('map')):
         try: 
@@ -136,8 +140,11 @@ def log(src, *vars):
   
     # General print function 
     else:          
-        output = msg[1] + ": " + msg[2] % vars
-
+        try:
+          output = msg[1] + ": " + msg[2] % vars
+        except Exception as e:       
+          log('exception', 'log', str(vars[0]) + str(e))
+  
 
     # Print to console 
     if (llc >= msg[0]):

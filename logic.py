@@ -47,7 +47,7 @@ def checkInterrupts(bo:board, snakes):
         interruptlist.insert(0, ['Kill', 'Collide'])
         strategyinfo['killpath'] = t
 
-    if(t := enemyEnclosed(bo, snakes)):
+    if (t := enemyEnclosed(bo, snakes)):
         interruptlist.append(['Kill', 'Cutoff'])
         strategyinfo['killcut'] = t
 
@@ -73,8 +73,8 @@ def checkInterrupts(bo:board, snakes):
 
     if (largestSnake(bo, snakes) and health > CONST.healthMed):
         # interruptlist.append(['Control', ''])
-        interruptlist.append(['Taunt', ''])
-        # interruptlist.append(['Idle', 'Centre'])
+        # interruptlist.append(['Taunt', ''])
+        interruptlist.append(['Idle', 'Centre'])
         
         # WALL OF DOOM 
         # patrol A - B - C ...
@@ -88,20 +88,15 @@ def checkInterrupts(bo:board, snakes):
 
     # Survive interuupt 
     if (numMovesAvailable(bo, sn) < sn.getLength()):
-        interruptlist.append(["Taunt", ""])
+        interruptlist.append(['Taunt', ''])
         
-    # No threats, conserve space (Challenge mode) 
+    # No threats & high health
     if (health > CONST.healthHigh): 
-        # TODO:  Check for threats (ie enemy snakes)
-        interruptlist.append(["Idle","FindWall"])
+        interruptlist.append(["Idle", "FindWall"])
         
     # Health interrupt 
     if (health < CONST.healthLow): 
         interruptlist.append(["Eat",""])
-        
-    # Attack interrupt 
-    if (aggro > CONST.aggroHigh):
-        interruptlist.append(["Attack","Stalk"])
         
     # Interrupt triggered
     if (len(interruptlist)):     
@@ -119,7 +114,8 @@ def stateMachine(bo:board, sn: snake, its: list):
 
     strategylist, strategyinfo = sn.getStrategy()
     interruptlist = sn.getInterrupt() 
-    defaultstrategy = CONST.defaultstrategy 
+    defaultstrategy = ['Eat', '']
+    # CONST.defaultstrategy 
     
     start = sn.getHead()
     length = sn.getLength()
@@ -130,12 +126,13 @@ def stateMachine(bo:board, sn: snake, its: list):
     target = []
     route = [] 
     
-    log('strategy', 'START', str(interruptlist), str(strategylist), str(strategyinfo))
     
     # Progress state machine
     i = 0
+    strategy = ""
     while not len(route):
-      
+
+      log('strategy', str(strategy), str(interruptlist), str(strategylist), str(strategyinfo))
       # Get next strategy .. 
       if len(interruptlist):
         # interruptlist - delete every turn   
@@ -147,18 +144,21 @@ def stateMachine(bo:board, sn: snake, its: list):
 
       else:
         # strategyinfo - default strategy 
-        if 'default' in strategyinfo:
-          strategy = strategyinfo['default']
-        else:
-          strategy = ['Taunt', '']
+        # if 'default' in strategyinfo:
+        #   strategy = strategyinfo['default']
+        # else:
+        strategy = defaultstrategy
 
+      print ("STRATEGY: " +str(strategy))
+    
+      # Get closest item 
+      itsort = bo.findClosestItem(its, start) 
 
       if(strategy[0] == "Kill"):
           if (strategy[1] == "Collide"):
             # HEAD ON COLLISION 
             target = strategyinfo['kill']       
             # TODO:  Use prediction route, current direction or random? 
-            strategylist.append(defaultstrategy)
             log('strategy-killpath', 'killPath', str(start), start(length), str(target))
             
           # if (strategy[1] == "Cutoff"):
@@ -189,7 +189,7 @@ def stateMachine(bo:board, sn: snake, its: list):
               strategyinfo['control-a'] = target
               strategyinfo['enemy-direction'] = bo.findDirectionWith(CONST.legend['enemy-body'])
             
-              strategylist.insert(0, ['Control', 'Point-B'])
+              strategylist.append(['Control', 'Point-B'])
                
             log('strategy-control', 'A', str(target), '')
 
@@ -210,7 +210,7 @@ def stateMachine(bo:board, sn: snake, its: list):
               strategyinfo['enemy-direction'] = bo.findDirectionWith
               
               strategyinfo['control-a'] = target
-              strategylist.insert(0, ['Control', 'Point-C'])
+              strategylist.append(['Control', 'Point-C'])
             
               log('strategy-control', "B", str(target), '')
 
@@ -288,20 +288,15 @@ def stateMachine(bo:board, sn: snake, its: list):
       if(strategy[0]=="Eat"): 
 
           # No food -- change strategy
-          if(not len(its)):
+          if(not len(itsort)):
+            # strategylist.insert(0, ['Taunt', ''])
             pass 
             
           else: 
-            # Get closest item 
-            itsort = bo.findClosestItem(its, start)
             # Get route to target  
-            
-            # Iterate through items 
             target = itsort.pop(0).getLocation()
-
             # Continue to eat until interrupted
-            strategylist.insert(0, ['Eat', ''])
-
+            # strategylist.insert(0, ['Eat', ''])
             log('strategy-eat', str(target))
           
       if(strategy[0]=='Idle'):
@@ -313,16 +308,19 @@ def stateMachine(bo:board, sn: snake, its: list):
 
         if(strategy[1]=="Centre"): 
             target = bo.findCentre(start)
-            strategylist.insert(0, defaultstrategy)
+            if (not(target)):
+              strategylist.pop(0) 
+              strategylist.append(['Idle', 'FindWall'])
+
+            # strategylist.insert(0, defaultstrategy)
             log('strategy-findcentre', target)
-
-
-        # 
 
         # Find nearest wall 
         if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
-            strategyinfo['next'] = ['Idle', 'TrackWall']
+            if (not len(target)):
+              strategylist.pop(0) 
+              strategylist.append(['Idle', 'TrackWall'])
             log('strategy-findwall', target)
             
         # Track wall - clockwise or counterclockwise 
@@ -336,7 +334,7 @@ def stateMachine(bo:board, sn: snake, its: list):
 
             proximity = 2
             target = trackWall(bo, sn, rotation, proximity)
-            strategyinfo['next'] = ['Idle', 'Centre']
+            # strategylist.insert(0, ['Idle', 'Centre'])
             log('strategy-trackwall', target)
             
     
@@ -345,14 +343,13 @@ def stateMachine(bo:board, sn: snake, its: list):
           # find dijkstras way out .. 
           # .. otherwise slinky pattern until death
           target = sn.getTail()
-          strategyinfo['next'] = ['Eat', '']
+          # strategylist.insert(0,['Taunt', ''])
           log('strategy-taunt', target)
+          print("TAUNT", str(target))
             
 
       # Check route.  If no target or no route , try next strategy
-      print("-> ROUTE", str(start), str(target), str(length)) 
       route, weight = bo.route(start, target, length)
-
 
       # No route found 
       if(not len(route)): 
@@ -364,17 +361,7 @@ def stateMachine(bo:board, sn: snake, its: list):
               log('timer-hurry')
               bo.hurry = True   
           log('time','Strategy search', st)
-          
-          # Find new strategy 
-          if (len(strategylist) > 1):
-              # Try next 
-              strategy.pop(0) 
-          else:  
-              # Default strategy 
-              strategy = defaultstrategy 
-            
-          log('strategy-iterate', str(strategy))
-
+         
       else:
           # # Secondary facors (eg. aggro, threat, health)  
           # tmap = bo.getThreat()
@@ -395,10 +382,9 @@ def stateMachine(bo:board, sn: snake, its: list):
           # log('strategyInsert random walk 
           # target = random ... 
           # interrupt = True 
-      
-          
-      log('strategy', 'Try again: ' + str(i), str(strategy), str(strategyinfo))
+         
       i = i + 1 
+    
     
     sn.setStrategy(strategylist, strategyinfo)   
     sn.setRoute(route)
@@ -447,7 +433,7 @@ def makeMove(bo: board, sn: snake) -> str:
               
       dirn = max(enclosed, key=enclosed.get)
       p = list( map(add, start, CONST.directionMap[dirn]) )
-  
+       
     # Translate routepoint to direction
     move = fn.translateDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())

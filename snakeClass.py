@@ -291,7 +291,7 @@ class snake:
         return copy.copy(self.interruptlist)
 
     def setInterrupt(self, i): 
-        self.interrupt = copy.copy(i)
+        self.interruptlist = copy.copy(i)
 
     def setStrategy(self, s, sinfo):
     # review strategy and update 
