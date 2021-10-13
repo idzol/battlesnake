@@ -397,7 +397,7 @@ def stateMachine(bo:board, sn: snake, its: list):
           # interrupt = True 
       
           
-      log('strategy', 'Try again: ' + str(i), str(strategy), str(strategyinfo))
+      # log('strategy', 'Try again: ' + str(i), str(strategy), str(strategyinfo))
       i = i + 1 
     
     sn.setStrategy(strategylist, strategyinfo)   
