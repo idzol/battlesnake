@@ -18,8 +18,8 @@ import constants as CONST
 global messages
 messages = {
     # Time 
-    'time':[6, "TIME"],
-    'timer-hurry':[6, "INFO", "Move time reached CONST.timePanic"],
+    'time':[3, "TIME"],
+    'timer-hurry':[3, "TIME", "Move time reached CONST.timePanic"],
 
     # Server 
     'healthcheck':[3,"INFO", "Healthcheck - OK"],
@@ -31,36 +31,43 @@ messages = {
     # Board 
     'updateboardsnakes-warn':[6, "WARN", "Enemy snake head not defined. %s"],
 
-    'predict-update':[6, "INFO", "%s"],
-    'predict-new':[6,"PREDICT POINT", "%s: %s: %s"],
-    'predict-erase':[6,"PREDICT ERASE", "%s: %s: %s"],
+    'predict-update':[6, "->INFO", "%s"],
+    'predict-new':[6,"->PREDICT POINT", "%s: %s: %s"],
+    'predict-erase':[6,"->PREDICT ERASE", "%s: %s: %s"],
     
-    'enclosed-sum':[6,"ENCLOSED SUM", "%s"],
+    'enclosed':[6,"->ENCLOSED", "%s %s"],
+    'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route-fromto':[3,"FROM TO", " %s %s"],
-    'route-return':[3,"ROUTE", " %s"],
-    'paths':[6,"PATH", " %s"],
-    'path-target':[6,"TARGET", " %s"], 
-    'route-basic':[6,"ROUTE SIMPLE"," %s"],
-    'route-dijkstra-sum':[6,"DSUM"," %s-%s-%s path:%s = %d"],
-    'route-findclosestwall':[6,"WALLPATH"," %s %s"],
-    'route-leastline-dsum':[6,"LDSUM"," %s %s-%s = %d"],
-    'route-gradient':[6,"PATH", " Gradient %s"],
-    'route-complex-step':[6,"ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[6,"ROUTE COMPLEX", "path: %s"],
+    'route':[3,"-->ROUTE"," %s r:%s w:%s"],
+    'route-fromto':[6,"-->FROM TO", " %s %s"],
+    'route-return':[6,"-->ROUTE", " %s %s"],
+    'paths':[6,"-->PATH", " %s"],
+    'path-target':[6,"-->TARGET", " %s"], 
+    'route-dijkstra-sum':[6,"-->DSUM"," %s-%s-%s path:%s = %d"],
+    'route-findclosestwall':[6,"-->WALLPATH"," %s %s"],
+    'route-leastline-dsum':[6,"-->LDSUM"," %s %s-%s = %d"],
+    'route-gradient':[6,"-->PATH", " Gradient %s"],
+    'route-complex-step':[6,"-->ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[6,"-->ROUTE COMPLEX", "path: %s"],
+
+    'make-move':[3,"-->MAKE MOVE"," start:%s finish:%s path:%s point:%s move:%s"],
 
     # Strategy 
-    'interrupt':[5,"INTERRUPT"," %s"],
-    'strategy-update':[5,"STRAT", "%s\n%s"],
-    'strategy-iterate':[5,"STRAT", "Updated - %s"],
-    'strategy-eat':[6,"EAT", " %s %s %s %s"],
-    'strategy-attack':[6,"ATTACK", " %s %s %s %s"],
-    'strategy-kill':[6,"KILL", " %s %s %s %s"],
-    'strategy-defend':[6,"DEFEND", " %s %s %s %s"],
-    'strategy-survive':[6,"SURVIVE", " %s %s %s %s"],
-    'strategy-findwall':[6,"FINDWALL", " Target %s"],
-    'strategy-trackwall':[6,"TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
+    'interrupt':[5,"->INTERRUPT"," %s"],
+    'strategy':[5,"->STRAT", "%s interrupt:%s strategy:%s strategyinfo:%s"],
+    'strategy-update':[5,"->STRAT", "%s\n%s"],
+    'strategy-iterate':[5,"->STRAT", "Updated - %s"],
+    'strategy-eat':[6,"->EAT", " %s"],
+    'strategy-attack':[6,"->ATTACK", " %s %s %s %s"],
+    'strategy-killpath':[6,"->KILL", " head:%s length:%s target:%s"],
+    'strategy-defend':[6,"->DEFEND", " %s %s %s %s"],
+    'strategy-control':[6,"->CONTROL", " %s %s %s"],
+    'strategy-survive':[6,"->SURVIVE", " %s %s %s %s"],
+    'strategy-taunt':[6,"->TAUNT", " %s"],
+    'strategy-findcentre':[6,"->FINDCENTRE", " Target %s"],
+    'strategy-findwall':[6,"->FINDWALL", " Target %s"],
+    'strategy-trackwall':[6,"->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
 
     # Map 
     'map':[2, "%s"],
@@ -77,7 +84,7 @@ messages = {
   Target: %s
   Route: %s
   Strategy: %s
-  Direction: %s"""],
+  Last Move: %s"""],
   
     # Functions 
     # 'findbestpath-usage':[4,"WARN", "findBestPath(self, a, b) - dict received when list array expected"],
@@ -109,8 +116,11 @@ def log(src, *vars):
     if(src == 'time'):
         time.time()
         diff = 1000 * (time.time() - vars[1]) 
-        output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
-
+        try: 
+            output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
+        except Exception as e:       
+            log('exception', 'log', str(vars[0]) + str(e))
+  
     # Map function
     elif(src.startswith('map')):
         try: 
@@ -130,8 +140,11 @@ def log(src, *vars):
   
     # General print function 
     else:          
-        output = msg[1] + ": " + msg[2] % vars
-
+        try:
+          output = msg[1] + ": " + msg[2] % vars
+        except Exception as e:       
+          log('exception', 'log', str(vars[0]) + str(e))
+  
 
     # Print to console 
     if (llc >= msg[0]):

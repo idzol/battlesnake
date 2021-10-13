@@ -15,14 +15,16 @@ class snake:
 
         depth = CONST.maxPredictTurns
         self.predict = [None] * (depth + 1)
-        self.strategy = ["Eat",""]
+        
+        self.interruptlist = []
         self.strategyinfo = {}
-        self.strategylast = []
+        self.strategylist = [["Eat",""]]
         
         self.interrupt = False
 
         self.head = [] 
         self.body = []  
+        self.tail = []  
         self.target = []  
         self.route = []     # Vector notation
         self.path = []      # Point notation
@@ -48,37 +50,45 @@ class snake:
 
         health = data['health'] 
         length = data['length'] 
-        
+        name = data['name']
+
+        self.setName(name)
         # Save current location to history 
         self.savePath()
         # Set new location 
         self.setLocation(data)
+        
+        # Set attributes
         self.setHealth(health)
         self.setLength(length)
-
+        
+        # Set meta 
         aggro = CONST.aggroLow
         hunger = 100 - health
-        
         self.setHunger(hunger)
         self.setAggro(aggro)
         
 
     def setEnemy(self, data):
         # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
-        length = data['length'] 
+        name = data['name']
 
+        self.setName(name)
+        self.setType("enemy")
+        self.setId(data['id'])
+            
         # Save current location to history 
         self.savePath()
     
         # self.routeHistory(self.getHead)
         self.setLocation(data)
-        self.setLength(length)
+        self.setLength(data['length'])
         # self.setHealth(health)
 
 
     def showStats(self):
 
-        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, self.strategy, self.direction)
+        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, str(self.strategylist), self.direction)
         
 
     def setHead(self, p):
@@ -140,7 +150,7 @@ class snake:
           a = h[1]
           b = h[0]
           self.direction = fn.translateDirection(a, b)
-
+          
         else:
           # Use default path (ie. right)
           pass 
@@ -154,6 +164,14 @@ class snake:
     def getMove(self):
         m = copy.copy(self.move)
         return m
+      
+    def getTail(self):
+
+        if (len(self.body)):
+          self.tail = self.body[-1]
+          return copy.copy(self.tail)
+        else:
+          return []
 
     def setId(self, i):
         self.identity = copy.copy(i)
@@ -178,6 +196,13 @@ class snake:
     def getType(self):
         t = copy.copy(self.type)
         return t
+
+    def setName(self, n):
+        self.name = copy.copy(n)
+        
+    def getName(self):
+        n = copy.copy(self.name)
+        return n
 
     def getLength(self):
         return copy.copy(self.length)
@@ -262,15 +287,21 @@ class snake:
         else:
             return False 
 
-    # review strategy and update 
+    def getInterrupt(self):
+        return copy.copy(self.interruptlist)
+
+    def setInterrupt(self, i): 
+        self.interruptlist = copy.copy(i)
+
     def setStrategy(self, s, sinfo):
-      self.strategy = copy.copy(s)
+    # review strategy and update 
+      self.strategylist = copy.copy(s)
       self.strategyinfo = copy.copy(sinfo)
 
 
-    # review strategy and update 
     def getStrategy(self):
-      s = copy.copy(self.strategy)
+    # review strategy and update 
+      s = copy.copy(self.strategylist)
       sinfo = copy.copy(self.strategyinfo)
       return (s, sinfo)
 

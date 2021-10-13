@@ -131,7 +131,7 @@ def handle_move():
         # TODO: confirm this works 
         pass 
 
-    log('time', 'Start Move', theBoard.getStartTime())
+    log('time', '== Start Move ==', theBoard.getStartTime())
     turn = data['turn']
     
     # Update board (theBoard) and clear counters 
@@ -144,85 +144,94 @@ def handle_move():
       it = item("food", f) 
       theItems.append(it)
 
-    # TODO: occasionally lose data object.   Understand why key would be new or disappear .. KeyError: 'gs_7cRRxhPVW6PgR3kRkcpWXSrG'. Two games hitting server resets board  (??). 
-    
-    # Update snake (ourSnek) and save last path 
-    try:        
-        ourSnek.setAll(data['you'])
-
-    except Exception as e: 
-        # TODO: as per above
-        log('exception','handle_move',str(e))
-        ourSnek.__init__()
-        identity = data['you']['id']
-        theBoard.setIdentity(identity)
-        ourSnek.setId(identity)
-        ourSnek.setType("us")
-        allSnakes[copy.copy(identity)] = ourSnek
-        ourSnek.setAll(data['you'])
-    
-    # Update enemy snakes 
+    # Refresh enemy snakes. Remove dead sneks
     snakes = data['board']['snakes']
-    for sndata in snakes: 
-        identity = sndata['id']
-        if identity != ourSnek.getId():
-          try:
-            allSnakes[identity].setEnemy(sndata)
-          
-          except Exception as e: 
-            # TODO: as per above
-            log('exception','handle_move',str(e))
-            sn = snake() 
-            # Create new snake 
-            identity = sndata['id']
-            sn.setId(identity)
-            sn.setType("enemy")
-            sn.setEnemy(sndata)
-            allSnakes[copy.copy(identity)] = copy.deepcopy(sn)
-            allSnakes[identity].setEnemy(sndata)
-          
 
-          # print (str(allSnakes[identity].showStats()))
+    aliveSnakes = {}
+    for alive in snakes:
+      identity = alive['id']
+      if (identity == ourSnek.getId()):
+        # We are alive! 
+        ourSnek.setAll(data['you'])
+        aliveSnakes[identity] = ourSnek
+    
+      else:
+        try: 
+          # Enemy snake alive 
+          aliveSnakes[identity] = allSnakes[identity]
+          aliveSnakes[identity].setEnemy(alive)
+          
+        except Exception as e:
+          # Create new snake -- shouldn't happen .. 
+          log('exception','handle_move',str(e))
+          sn = snake() 
+          sn.setEnemy(alive)
+          aliveSnakes[identity] = copy.deepcopy(sn)
+    
+    allSnakes = aliveSnakes
+  
 
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
     theBoard.updateBoards(data)
+    log('time', 'predictSnakeMoves', theBoard.getStartTime())
+    
     theBoard.predictSnakeMoves(allSnakes, theItems)
+    
+    # Initialise routing gradient 
+    log('time', 'updatePredict', theBoard.getStartTime())
     theBoard.updatePredict(allSnakes)
+    log('time', 'updateThreat', theBoard.getStartTime())
     theBoard.updateThreat(allSnakes, hazards)
-    theBoard.updateDijkstra(ourSnek.getHead())
-
+    log('time', 'updateDijkstra', theBoard.getStartTime())
+    theBoard.updateDijkstra(ourSnek)
+    log('time', 'updateGradient', theBoard.getStartTime())
+    theBoard.updateGradient(ourSnek.getHead()) 
+    theBoard.updateGradientFix(ourSnek.getHead())
+    # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
+       
     # Initialisation complete 
-    log('time', 'Init complete', theBoard.getStartTime())
+    log('time', '== Init complete ==', theBoard.getStartTime())
     
     # Iterate future snake
     # youFuture = youHead 
     # while(weight < threshold): 
 
     # Check strategy interrupts     
+    log('time', 'checkInterrupts', theBoard.getStartTime())
     checkInterrupts(theBoard, allSnakes)
     
+    log('time', 'stateMachine', theBoard.getStartTime())
     # Progress state machine, set route
     stateMachine(theBoard, ourSnek, theItems)
     
     # Strategy Complete 
-    log('time', 'Strategy complete', theBoard.getStartTime())
+    log('time', '== Strategy complete ==', theBoard.getStartTime())
 
     # Translate target to move 
+    log('time', 'makeMove', theBoard.getStartTime())
     move = makeMove(theBoard, ourSnek)    
     move = ourSnek.getMove()
     shout = ourSnek.setShout(turn)
     log('time', 'Path complete', theBoard.getStartTime())
-    # log('snake-showstats', 'SNAKE', str(ourSnek.showStats()))
+   
     print("SNAKE")
     ourSnek.showStats()
     log("move", move)
     log("shout", shout)
 
+    # Print maps to console 
+    # theBoard.showMaps()
+
     # Save game data
     game[game_id] = [theBoard, ourSnek, allSnakes]
+    
+    # for key in allSnakes:
+    #     snk = allSnakes[key]
+    #     print("SNAKES", snk.getName(), snk.getHead(), snk.getLength())
 
-    log('time', 'Move complete', theBoard.getStartTime())    
+    log('time', '== Move complete ==', theBoard.getStartTime())  
+    
     return {"move": move, "shout":shout}
     
 

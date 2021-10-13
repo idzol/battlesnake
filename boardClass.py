@@ -19,13 +19,13 @@ import functions as fn
 
 class board():
 
-    # Import map values
-    legend = CONST.legend
+## == INIT == 
+
+    legend = CONST.legend     # Import map values
 
     identity = ""   # Identity of your snake 
 
-    # board matrices
-    land = []
+    land = []         # board matrices
     mask = []
 
     distance = []      # Array of distance
@@ -84,6 +84,9 @@ class board():
         self.recursion_route = 0
         # self.gradients = {}
 
+
+# == GETTER / SETTER == 
+
     def setDimensions(self, x, y):
         if isinstance(x, int) and isinstance(y, int):
             self.width = x
@@ -126,17 +129,6 @@ class board():
     # def getPoint(self, x, y):
     #     return self.land[x, y]
 
-    def getPoint(self, p: Dict[str, int], t="array"):
-        try:
-            if (t == "dict"):
-                return self.land[p["x"], p["y"]]
-
-            elif (t == "array"):
-                return self.land[p]
-
-        except:
-            return []
-
     def getYou(self):
         return copy.copy(self.you)
         
@@ -161,14 +153,9 @@ class board():
     def setDijkstra(self, d):
         self.dijkstra = copy.copy(d)
 
-
-    # DEPRECATE
-    # def setMaxDepth(self, d):
-    #     self.maxdepth = d
-
-    # DEPRECATE
-    # def getMaxDepth(self):
-    #     return self.maxdepth
+    # Return future predict matrix
+    def getPredictMatrix(self, t):
+        return self.predict[t]
 
     def getTurn(self):
         t = self.turn
@@ -176,6 +163,17 @@ class board():
 
     def setTurn(self, t):
         self.turn = t
+
+    # Start time of every move
+    def setStartTime(self):
+        self.startTime = time.time()
+
+    # Get start time of move -- used for logging
+    def getStartTime(self):
+        return self.startTime
+
+
+# == BOARDS == 
 
     def updateBoards(self, data):
         # Enclosed - xx
@@ -250,7 +248,7 @@ class board():
             self.you[py_head, px_head] = CONST.legend['you-head']
 
         except Exception as e:
-            print("INFO: Your snake head not defined. " + str(e))
+            log('exception', 'updateBoardsYou', 'INFO: Your snake head not defined. ' + str(e))
 
         return self.you
 
@@ -330,6 +328,7 @@ class board():
         h = self.height
  
         full = CONST.routeSolid
+        shadow = CONST.routeSolid / 10
         depth = CONST.maxPredictTurns
         
         threatmap = [None] * depth
@@ -346,11 +345,11 @@ class board():
                 you_len = sn.getLength()
 
         # Optional: Stay away from four corners
-        if(False):
-            threatmap[:][0, 0] = full / 4
-            threatmap[:][0, w-1] = full / 4
-            threatmap[:][h-1, 0] = full / 4
-            threatmap[:][h-1, w-1] = full / 4
+        if(True):
+            threatmap[0][0, 0] = full / 2
+            threatmap[0][0, w-1] = full / 2
+            threatmap[0][h-1, 0] = full / 2
+            threatmap[0][h-1, w-1] = full / 2
       
         # Update hazard board 
         for hz in hazards: 
@@ -368,11 +367,10 @@ class board():
                 # Death zone (+) around larger snakes
                 length = sn.getLength()
                 head = sn.getHead()
+                body = sn.getBody()
                 lasthead = copy.copy(head)
                 path = sn.getPath()
-                print("THREAT SNAKES", sn.getType(), path, head, length)
-        
-        
+                
                 for t in range(0, depth - 1): 
                 
                   if (len(path)):
@@ -386,9 +384,20 @@ class board():
                     # Use original / last head 
                     pass 
 
-                  # print("SNAKE LENGTH")
-                  # print(str(length),str(you_len))
-                  
+                  # Body generates shadow threat 
+                  # print(str(body))
+                  if len(body): 
+                    for b in body: 
+                      ay = b[0]
+                      ax = b[1]
+                      ay1 = max(0, ay - 1)
+                      ay2 = min(h, ay + 2)
+                      ax1 = max(0, ax - 1)
+                      ax2 = min(w, ax + 2)
+                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + shadow
+                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
+
+                  # TODO:  Combine with above
                   if length >= you_len:
                       ay = head[0]
                       ax = head[1]
@@ -396,28 +405,31 @@ class board():
                       ay2 = min(h, ay + 2)
                       ax1 = max(0, ax - 1)
                       ax2 = min(w, ax + 2)
-
+                      
+                      # TODO: Review head vs path .. 
+                      # Path or straigh = full  
+                      # Others:  full / 2 
                       # Update threat matrix used for routing
-                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + full / 2
-                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + full / 2 
+                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + full
+                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + full
                   
                   lasthead = head
         
         self.threat = copy.deepcopy(threatmap) 
-        log('map','THREAT', self.threat[0])
-        
+        # print(str(self.threat))
+  
 
-    def updateDijkstra(self, data_you):
-        print('UPDATE DIJKSTRA')
+    def updateDijkstra(self, sn):
         
         depth = CONST.maxPredictTurns
 
         w = self.width
         h = self.height
 
-        ay = data_you[0]
-        ax = data_you[1]
-        
+        head = sn.getHead()
+        tail = sn.getTail()
+        length = sn.getLength()
+
         # TODO: Check self.predict[0] is the same as self.solid 
         # TODO: determine if we need to zero start loc
         # TODO:  Make sure predict/threat[t] exist & are non-zero 
@@ -437,94 +449,16 @@ class board():
           
           # Dijkstra combines solids, foods, hazards (threats)
           dijksmap[t] = np.add(predict, threat) + 1
-          # Adjust head location to zero - not rqd for routin (alerady here)
-          dijksmap[0][ay, ax] = 0
+          # Adjust head & tail location to zero for routing 
+          dijksmap[0][head[0], head[1]] = 0
+          if(length > 3):
+              dijksmap[0][tail[0], tail[1]] = 0
+              
+          # dijksmap[0][tail[0], tail[1]] = 0
           # dijksmap[0][ay, ax] = threat[0][ay, ax]
-        
-          log('map-predict', 'SOLID', self.solid)
-          log('map-predict', 'PREDICT' + str(t), self.predict[t])
-          log('map-predict', 'THREAT' + str(t), self.threat[t])
-
-        
-        log('map','DIJKSTRA' + str(t), dijksmap[0])
+ 
         self.setDijkstra(dijksmap)
 
-    # Give every item unique index ..
-    def assignIndices(self, sn, it):
-
-        si = []
-        fi = []
-        hi = []
-        n = 1
-
-        labels = ['you:idzol']
-        # s1:crepes
-        # s2:..
-        # f1:food
-        # h1:hazard
-
-        for s in sn:
-            si.append(n)
-            name = s.getName()
-            labels.append("s" + n + ":" + str(name))
-            n = n + 1
-
-        fn = 1
-        hn = 1
-        for i in it:
-            t = i.getType()
-
-            if (t == "food"):
-                name = s.getLabel()
-                labels.append("f" + fn + ":food")
-                fn = fn + 1
-                fi.append(n)
-
-            elif (t == "hazard"):
-                name = s.getLabel()
-                labels.append("h" + fn + ":food")
-                hn = hn + 1
-                hi.append(n)
-
-            n = n + 1
-
-        self.youIndex = 0
-        self.snakeIndex = si  # [1, 2]
-        self.foodIndex = fi  # [3, 4, 5]
-        self.hazardIndex = hi  # [6, 7]
-        self.labels = labels
-
-        print(str(labels))
-        print(str(si))
-        print(str(fi))
-        print(str(hi))
-
-        return 1
-
-    def calculateDistances(self, snakes, items):
-
-        n = len(snakes) + len(items)
-        dists = np.zeros((n, n), np.intc)
-
-        things = snakes
-        things = things.append(items)
-
-        for t1 in range(0, things):
-            for t2 in range(0, things):
-                t1loc = things[t1].getLocation()
-                t2loc = things[t2].getLocation()
-                d = fn.calculateDistance(t1loc, t2loc)
-                dists[t1, t2] = d
-
-        self.distances = dists
-
-        print(str(dists))
-
-        return dists
-        # eg.
-        # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
-        # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
-        # [ 9, 3, 0, 4, 2 ]
 
     # Go through snakes and estimate most likely path
     def predictSnakeMoves(self, snakes, items):
@@ -544,12 +478,14 @@ class board():
                 its = self.findClosestItem(items, start)  # ??
                 finish = its.pop(0).getLocation()
                 
+                # TODO: Form gradient for each snake (currently using our routing matrix)
+                self.updateGradient(start)
                 rt, weight = self.route(start, finish)
                 # Limit depth to X
 
                 # TODO: Assume strategy is kill (len > X)
                 # TODO: Assume strategy is board control / loop etc (eg. circular)
-                print("SNAKE HEAD", str(start))
+                # print("SNAKE HEAD", str(start))
                 sn.setRoute(rt)
                 sn.setPath(rt)
               
@@ -585,6 +521,7 @@ class board():
             head = sn.getHead()
             body = sn.getBody()
             vector = sn.getRoute()
+            
             # TODO:  Check to convert route to points (if not already).
             vector.insert(0, head)
             rt = fn.getPointsInRoute(vector)
@@ -614,10 +551,12 @@ class board():
                 snakemap[t] = copy.copy(snakemap[t - 1])
                 # Prediction values for partial or full matches
                 if (name == "us"):
+                    # Certain 
                     val_predict = full
                     val_certain = full
                 else:
-                    val_predict = int(full * (depth - t) / depth)
+                    # Consider scaling factor on predictions 
+                    val_predict = full
                     val_certain = full
 
                 try:
@@ -668,26 +607,94 @@ class board():
             for identity in snakes:
                 psnake = snakes[identity].getPredict()
                 p[t] = p[t] + psnake[t]
-
-        for pmap in p:
-            log('map-debug', 'PREDICT', pmap)
-
+    
         self.predict = p
         return p
 
-    # Return future predict matrix
-    def getPredictMatrix(self, t):
-        return self.predict[t]
 
-    # TODO: work in progress
-    # Check for collision in x rounds time
-    def predictCollisionFuture(bo, route):
+    def updateGradient(self, a, turn=0):
+
+        # Max threshold 
+        rtmax = CONST.routeThreshold
+        h = self.height
+        w = self.width
+
+        if (not self.recursion_route): 
+            # Initialise gradient -- MOVED TO SERVER.PY
+            self.gradient = np.full([h, w], CONST.routeThreshold)
+            self.gradient[a[0], a[1]] = 0
+    
+        # Max number of turns / boards in prediction matrix 
+        tmax = CONST.maxPredictTurns - 1
+        if(turn > tmax): 
+          turn = tmax
+        
+        dijkstra = self.getDijkstra()
+        dt = dijkstra[turn]
+
+        # Exit if timer or recursion exceeded
+        rr = self.recursion_route
+        self.recursion_route = rr + 1
+        if (self.hurry or rr > CONST.maxRecursion):
+            return
+
+        if (rr > 0 and not (rr % 1000)):
+            st = self.getStartTime()
+            log('time', 'Gradient 1000', st)
+
+            # Timer exceeded
+            diff = 1000 * (time.time() - st)
+            if diff > CONST.timePanic:
+                log('timer-hurry')
+                self.hurry = True
+
+        # Iterate through four directions 
+        for d in CONST.directions:
+            
+            a1 = list (map(add, a, CONST.directionMap[d]))
+
+            # Check in bounds           
+            if (self.inBounds(a1)):
+            
+                g0 = self.gradient[a[0], a[1]]
+                g1 = self.gradient[a1[0], a1[1]]
+                d1 = max(dt[a1[0], a1[1]], 0)
+                
+                # Check path is less than route threshold and cheaper than last 
+
+                # If target is solid, always solid .. 
+                # if route_solid()
+                if ((d1 < rtmax) and (g0 + d1) < g1):
+
+                    # Update point
+                    self.gradient[a1[0], a1[1]] = g0 + d1
+                    
+                    # Recursion.  Check which prediction matrix to use based on number of turns (t)
+                    turn = turn + 1 
+                    self.updateGradient(a1, turn)
+
+
+    def updateGradientFix(self, a):
+    # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn (eg. loop around & think not there)
+        for d in CONST.directions:
+          a1 = list (map(add, a, CONST.directionMap[d]))
+          if (self.inBounds(a1)):
+            self.gradient[a1[0], a1[1]] = self.dijkstra[0][a1[0], a1[1]]
+
+
+    def predictCollisionFuture(bo, route): 
+    # DEPRECATE -- replaced by predict -> dijkstra
+        # TODO: work in progress
+        # Check for collision in x rounds time
         # for r in route:
         #   i = i + 1
         #   board = predict[i]
         #   checkCollision(board, r)
         # return coll
         pass
+
+
+# == ROUTING == 
 
     # TODO: Fuzzy Routing, ie. get close to an object)
     # def fuzzyroute(a, blist): 
@@ -699,163 +706,160 @@ class board():
         # print(str(Weight))
         # return []
 
-
     def route(self, a, b, length=0):
-        # TODO: Split into routeBasic, routeVector, routeComplex... 
-                
+        
         t = CONST.routeThreshold / 2
-        r = []
+        route = []
         weight = -1
-
-        # TODO: if (not len(a) or not len(b)):
-        #   no valid route requested.
-        #   try / except
+        routetype = ''   
+         
         log('route-fromto', a, b)
-        log('map', 'SOLID', self.solid)
+        # log('time', 'Route', self.getStartTime())
+        
         # If start / finish not defined, return blank
-        if (not len(a) or not len(b)):
-            return r, weight 
+        if (not len(a) or not len(b) or a == b):
+            routetype = 'route_error'
+            return route, weight 
 
+        # Eliminate dead ends 
+        for d in CONST.directions:
+            a1 = list (map(add, a, CONST.directionMap[d]))
+            if(self.inBounds(a1)):
+              move = fn.translateDirection(a, a1)
+              if (length < self.enclosed[move]):
+                  self.gradient[a1[0], a1[1]] = t 
+
+            log('enclosed', str(self.enclosed), str(a1))
+                
         # try simple, medium, complex route
         while 1:
             # (1) Simple straight line (a->b)
-            log('time', 'Before Basic Route', self.getStartTime())
-            if (a[0] == b[0]) or (a[1] == b[1]):
-                # Get points in line & measure route 
-                path = fn.getPointsInLine(a, b)
-                move = fn.translateDirection(a, b)              
-                weight = self.dijkstraPath(path)
-                # If weight less than threshold, and not deadend 
-                if (weight < t and length < self.enclosed[move]):
-                    # Return path 
-                    log('route-basic', weight)
-                    r = [b]
-                    break
+            route, weight = self.route_basic(a, b)   
+            if len(route):
+              routetype = 'route_basic'
+              break
 
             # (2) Simple dog leg (a->c->b)
-            # TODO: Split into function.  Inverted c1 & c2 to fix -- work out why?  Optimise code 
-
-            log('time', 'Before Medium Route', self.getStartTime())
-            c2 = [b[0], a[1]]
-            c1 = [a[0], b[1]]
-            
-            # Calculate path routes for two options all the individual legs 
-            path1 = []
-            path1 = fn.getPointsInLine(a, c1) + fn.getPointsInLine(c1, b)
-            c1sum = self.dijkstraPath(path1)
-                        
-            path2 = []
-            path2 = fn.getPointsInLine(a, c2) + fn.getPointsInLine(c2, b)
-            c2sum = self.dijkstraPath(path2)
-            
-            log('route-dijkstra-sum', str(a), str(c1), str(b), str(path1), c1sum)
-            log('route-dijkstra-sum', str(a), str(c2), str(b), str(path2), c2sum)
-
-            # See if path exists & less than threshold 
-            if (c1sum <= c2sum) and (c1sum < t):
-                # CHeck not dead end 
-                move = fn.translateDirection(a, c1)             
-                if (length < self.enclosed[move]):
-                  r = [c1, b]
-                  weight = c1sum
-                  break
-
-            elif (c2sum <= c1sum) and (c2sum < t):
-                # Check not dead end 
-                move = fn.translateDirection(a, c2)             
-                if (length < self.enclosed[move]):
-                  r = [c2, b]
-                  weight = c2sum
-                  break
-
-            # print('WEIGHT 2')
-            # print(str(c1sum), str(c2sum))
+            route, weight = self.route_corner(a, b) 
+            if len(route):
+              routetype = 'route_corner'
+              break 
 
             # (3) Complex route
-            log('time', 'Before Complex Route', self.getStartTime())
+            # log('time', 'Route Complex', self.getStartTime())
+            route, weight = self.route_complex(a, b, length)
+            if len(route): 
+              routetype = 'route_complex'            
+              break
+            
+            else: 
+              routetype = 'route_none'            
+              break 
 
-            r, weight = self.route_complex(a, b, length)
-            # r, w = self.route_complex(a, b)
-            # weight = w
-            # print('WEIGHT 3')
-            # print(str(Weight))
+        # Return sorted path/points or [] if no path
+        log('route', routetype, route, weight)     
+        return route, weight
 
-            break
-
-        # Return next path/point or [] if no path
-
-        # TODO:  Separate basic/medium/complex route into separate functions so they can be reused ..
-
-        log('route-return', r)
-        # fn.printMap(self.dijkstra)
-        log('map', 'COMBINE', self.combine)
+    def route_basic(self, a, b):
         
-        return r, weight
+        r = []
+        w = CONST.routeThreshold
+
+        if (a[0] == b[0]) or (a[1] == b[1]):
+          # Get points in line & measure route 
+          path = fn.getPointsInLine(a, b)
+          w = self.dijkstraPath(path)
+          # If weight less than threshold, and not deadend 
+          if (w < CONST.routeThreshold):
+              # Return path 
+              r = [b]
+        
+        # log("route", "BASIC", str(r), str(w))
+        return r, w 
+
+
+    def route_corner(self, a, b):
+
+        r = []
+        corners = [[a[0], b[1]], [b[0], a[1]]]
+        
+        # Calculate path routes for two options all the individual legs 
+        w = CONST.routeThreshold
+        for c in corners:
+          path = []
+          path = fn.getPointsInLine(a, c) + fn.getPointsInLine(c, b)
+          csum = self.dijkstraPath(path)
+          if csum < w: 
+            w = csum
+            r = c 
+            log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
+
+        # log("route", "CORNER", str(r), str(w))
+        if (w < CONST.routeThreshold):
+          return [r, b], w
+        else: 
+          return [], CONST.routeThreshold
 
 
     def route_complex(self, a, b, length=0):
         # Returns path or point. [] if no path or error
         # TODO def route_complex(self, a, b, c, response='path'|'weight'):
         # TODO: Optimise. Save previous dijkstra calcs to optimise.. eg. 
-        # TODO: Panic timer .. 
-        # if (time < timethreshold):
-        #   update gradient
-        # else:
-        #   use existing gradient
-  
+
         h = self.height
         w = self.width
         if (not self.inBounds(a) or not self.inBounds(b)): 
-          return [], -1
+          return [], CONST.routeThreshold
         
-        # Initialise gradient 
-        self.gradient = np.full([h, w], CONST.routeThreshold)
-        log('time', 'Before Gradient', self.getStartTime())
-        self.gradient[a[0], a[1]] = 0
-
-        self.updateGradient(a)
-        log('time', 'Updated Gradient', self.getStartTime())
-        # log('map', 'GRADIENT', str(self.gradient))
-
         # Gradient to destination 
         weight = self.gradient[b[0], b[1]]
         if (weight > CONST.routeThreshold):
             # no path
-            return [], -1
+            return [], CONST.routeThreshold
 
         else:
-            # Recurse until destination reached or path exceeds num points
+            # Recurse from destination (bnew/b) back to origin (a) until path reached or exceeds num points 
             path = []
             pathlength = 1
             bnew = copy.copy(b)
 
             while 1:
                 # find lowest gradient route & add to path
+                # print("ROUTE COMPLEX STEP FXN", str(bnew), str(a))
                 r, grad = self.route_complex_step(bnew, a)
                
                 # No path found / error or dead end 
-                # If deadend.. abandon route 
-                move = fn.translateDirection(a, r)  
+                # If deadend, abandon route 
+                move = fn.translateDirection(bnew, r)  
                 if (not len(r) or length > self.enclosed[move]):
                     path = []
                     weight = CONST.routeThreshold
                     break
 
-                # Otherwise insert to path
-                # path.insert(0, r)
-                path.append(r)
-
-                # Break once reaching destination or at board limit
-                if (r == b) or (pathlength > h * w):
+                # Break once reaching destination (a) or at board limit (h * w).  Do not add start (a)
+                if (r == a) or (pathlength > h * w):
                     break
 
-                # Last step becomes first step for next iteration
+                # Otherwise last step (r) becomes first step  (bnew) for next iteration 
                 bnew = copy.copy(r)
                 pathlength = pathlength + 1
 
-        log('map','GRADIENT',self.gradient)
+                # Update path 
+                path.insert(0, r)
 
-        log('route-complex-path', str(path))
+                # If in a loop - burn the path & start again
+                if (len(path) > 2):
+                    if (path[0] == path[2]):
+                      burn = path[1]
+                      # Burn 
+                      self.gradient[burn[0], burn[1]] = CONST.routeThreshold
+                      # Reset variables
+                      path = [] 
+                      bnew = copy.copy(b)
+                      pathlength = 0
+
+        # log("route", "COMPLEX", str(path), str(weight))
+        
         return path, weight
 
 
@@ -880,98 +884,13 @@ class board():
                     gmin = g1
                     c = a1
 
+                # End found -- terminate process 
+                if (a1 == b): 
+                    break 
+
         return c, gmin
 
 
-    def getEdges():
-        # Return all border / edge cells of the map
-        global h
-        global w
-
-        edges = []
-        edges = edges + fn.getPointsInLine([0,0], [0,w]) + \
-                    fn.getPointsInLine([w,0], [h,w]) + \
-                    fn.getPointsInLine([h,w], [h,0]) + \
-                    fn.getPointsInLine([h,0], [0,0])
-
-        return edges
-
-    def inBounds(self, a):
-        # Check a point (a = [y,x]) is in map bounds
-        
-        # Invalid point -- return false
-        if (not len(a)): 
-          return False 
-        
-        h = self.height
-        w = self.width
-        
-        try: 
-          if (0 <= a[0] < h) and (0 <= a[1] < w):
-              return True
-          else:
-              return False
-            
-        except Exception as e: 
-          log('exception', 'inBounds', str(e))
-          
-        return False
-
-
-    def updateGradient(self, b, turn=0):
-
-        # Max threshold 
-        rtmax = CONST.routeThreshold
-        h = self.height
-        w = self.width
-
-        # Route prediction matrix 
-        tmax = CONST.maxPredictTurns - 1
-        if(turn > tmax): 
-          turn = tmax
-        dijkstra = self.getDijkstra()
-        dt = dijkstra[turn]
-
-        # Exit if timer or recursion exceeded
-        rr = self.recursion_route
-        self.recursion_route = rr + 1
-        if (self.hurry or rr > CONST.maxRecursion):
-            return
-
-        if (rr > 0 and not (rr % 1000)):
-            st = self.getStartTime()
-            log('time', 'Gradient 1000', st)
-
-            # Timer exceeded
-            diff = 1000 * (time.time() - st)
-            if diff > CONST.timePanic:
-                log('timer-hurry')
-                self.hurry = True
-
-        # Iterate through four directions 
-        for d in CONST.directions:
-            
-            b1 = list (map(add, b, CONST.directionMap[d]))
-
-            # Check in bounds           
-            if (self.inBounds(b1)):
-            
-                g0 = self.gradient[b[0], b[1]]
-                g1 = self.gradient[b1[0], b1[1]]
-                d1 = max(dt[b1[0], b1[1]], 0)
-                
-                # Check path is less than route threshold and cheaper than last 
-                if ((d1 < rtmax) and (g0 + d1) < g1):
-
-                    # Update point
-                    self.gradient[b1[0], b1[1]] = g0 + d1
-
-                    # Recursion
-                    # Check which prediction matrix to use based on number of turns (t)
-                    turn = turn + 1 
-                    self.updateGradient(b1, turn)
-
-  
     def dijkstraPath(self, path, turn=0):
         # Sum dijkstra map between two points
         tmax = CONST.maxPredictTurns - 1
@@ -987,65 +906,16 @@ class board():
                 turn = tmax 
               
               # Add dijkstra value 
-              # result = result + int(dt[turn][p[0], p[1]])
               result = result + int(dt[0][p[0], p[1]])
-              
-              # log('map', 'DIJKSTRA DEBUG', dt[turn])
-              # print("DIJKSTRA PATH", turn, p, dt[turn][p[0], p[1]])
               turn = turn + 1 
               
         else:
           pass 
 
-        # log('map', 'DIJSUM', dt)
-        # print("DIJKSTRA FINISH", str(result))
         return result
 
 
-
-    # def dijkstraSum(self, a, b, turn=0):
-    #     # Sum dijkstra map between two points
-    #     # TODO:  Update to use predict[t] ... currently based off dijkstra[0] 
-        
-    #     maxpath = CONST.routeThreshold
-
-    #     # Check which prediction matrix to use 
-    #     tmax = CONST.maxPredictTurns
-    #     if(turn > tmax): 
-    #       turn = tmax
-    #     dt = self.dijkstra[turn]
-
-    #     # log('map', 'DIJSUM', dt)
-        
-    #     try:
-    #         # TODO: Simplify by sorting a, b for array search ..
-
-    #         # Check whether horizontal or vertical route
-    #         if (a[0] == b[0] and a[1] != b[1]):
-    #             # Get correct ordering for array sum 
-    #             if (a[1] < b[1]):
-    #                 result = sum(dt[a[0], a[1]:b[1] + 1])
-    #                 # print('RESULT1:', str(a), str(b), str(result))
-    #             else:
-    #                 result = sum(dt[a[0], b[1]:a[1] + 1])
-    #                 # print('RESULT2:', str(a), str(b), str(result))
-
-    #         elif (a[1] == b[1] and a[0] != b[0]):
-    #             if (a[0] < b[0]):
-    #                 result = sum(dt[a[0]:b[0] + 1, a[1]])
-    #                 # print('RESULT3:', str(a), str(b), str(result))
-    #             else:
-    #                 result = sum(dt[b[0]:a[0] + 1, a[1]])
-    #                 # print('RESULT4:', str(a), str(b), str(result))
-
-    #         else:
-    #             # Cannot be reached by 
-    #             result = maxpath + 1
-
-    #     except:
-    #         result = maxpath + 1
-
-    #     return result
+# == FINDERS == 
 
     def findClosestWall(self, start):
 
@@ -1071,46 +941,6 @@ class board():
 
         log('route-findclosestwall', str(walls), r)
         return r
-
-    def drawMask(self, pts, t="array"):
-        # Create as mask
-
-        w = self.width
-        h = self.height
-        # pmask = np.full((w, h), True)
-        pmask = np.zeros((w, h), np.intc)
-
-        for p in pts:
-            # px = p[0]
-            # py = p[1]
-            # pmap['x':px, 'y':py] = False
-            if (t == "array"):
-                pmask[p[0], p[1]] = 1
-
-        return pmask
-
-
-    def validateRoute(self, path):
-        # Take a route & check if valid (against predict)
-        # s = self.solid
-        # for p in path: 
-        #   if s[p[0],p[1]] ...
-        
-        # Reroute.  Try to use path X  
-        # route(a, b, x)
-        return 
-    
-
-    def invertPoint(self, start):
-        w = self.width
-        h = self.height
-
-        y = h - start[0]
-        x = w - start[1] 
-
-        target = [y, x]
-        return target 
-        
 
 
     def findClosestNESW(self, start):
@@ -1180,14 +1010,10 @@ class board():
 
         return side_dict[max_index]
 
-    # Return quadrant with highest/lowest space
-    # Used if cannot reach destination
-
-    # TODO:
-    # a = self.combine(:xmid, :ymid)
-    # Ref: Numpy subrange array
 
     def findQuadrantWith(self, t=CONST.legend['empty']):
+    # Return quadrant with highest/lowest space
+    # Used if cannot reach destination
         w = self.width
         h = self.height
         bd = self.combine
@@ -1219,6 +1045,20 @@ class board():
 
         return quad_dict[max_index]
 
+    # Return centrepoint 
+    def findCentre(self, head):
+        h = self.height
+        w = self.width
+
+        cy = math.floor((h + 1) / 2) - 1
+        cx = math.floor((w + 1) / 2) - 1
+        target = [cy, cx]
+        if (target == head):
+            return []
+        else:
+            return target
+            
+
     # Return quadrant with highest/lowest threat
     def findThreat(self):
         pass
@@ -1244,14 +1084,7 @@ class board():
         return itemsort
 
 
-    def getItemByName(self, items, name):
-
-        for it in items:
-            if it.getName() == name:
-                return it
-
-        return {}
-
+# == HELPERS == 
 
     def moveBy(self, a, diff): 
         # Move point (a) by diff
@@ -1271,6 +1104,80 @@ class board():
         return a
 
 
+    def inBounds(self, a):
+        # Check a point (a = [y,x]) is in map bounds
+        
+        # Invalid point -- return false
+        if (not len(a)): 
+          return False 
+        
+        h = self.height
+        w = self.width
+        
+        try: 
+          if (0 <= a[0] < h) and (0 <= a[1] < w):
+              return True
+          else:
+              return False
+            
+        except Exception as e: 
+          log('exception', 'inBounds', str(e))
+          
+        return False
+
+
+    def drawMask(self, pts, t="array"):
+        # Create as mask
+
+        w = self.width
+        h = self.height
+        # pmask = np.full((w, h), True)
+        pmask = np.zeros((w, h), np.intc)
+
+        for p in pts:
+            # px = p[0]
+            # py = p[1]
+            # pmap['x':px, 'y':py] = False
+            if (t == "array"):
+                pmask[p[0], p[1]] = 1
+
+        return pmask
+
+
+    def validateRoute(self, path):
+        # Take a route & check if valid (against predict)
+        # s = self.solid
+        # for p in path: 
+        #   if s[p[0],p[1]] ...
+        
+        # Reroute.  Try to use path X  
+        # route(a, b, x)
+        return 
+    
+
+    def invertPoint(self, start):
+        w = self.width
+        h = self.height
+
+        y = h - start[0]
+        x = w - start[1] 
+
+        target = [y, x]
+        return target 
+        
+
+    def getPoint(self, p: Dict[str, int], t="array"):
+        try:
+            if (t == "dict"):
+                return self.land[p["x"], p["y"]]
+
+            elif (t == "array"):
+                return self.land[p]
+
+        except:
+            return []
+
+          
     def getEmptyAdjacent(self, head): 
         w = self.width
         h = self.height  
@@ -1295,22 +1202,117 @@ class board():
         return d
 
 
+    def getEdges():
+        # Return all border / edge cells of the map
+        global h
+        global w
+
+        edges = []
+        edges = edges + fn.getPointsInLine([0,0], [0,w]) + \
+                    fn.getPointsInLine([w,0], [h,w]) + \
+                    fn.getPointsInLine([h,w], [h,0]) + \
+                    fn.getPointsInLine([h,0], [0,0])
+
+        return edges
+
+    def getItemByName(self, items, name):
+    # DEPRECATE / DELETE:  belongs in functions?  duplicate in logic.  
+        for it in items:
+            if it.getName() == name:
+                return it
+
+        return {}
+
+
     def randomPoint(self):
         x = int(self.width * rand.random())
         y = int(self.height * rand.random())
         return [y, x]
 
-    # Start time of every move
-    def setStartTime(self):
-        self.startTime = time.time()
 
-    # Get start time of move -- used for logging
-    def getStartTime(self):
-        return self.startTime
+    def assignIndices(self, sn, it):
+    # DEPRECATE: Not used? 
+    # Give every item unique index ..
+
+        si = []
+        fi = []
+        hi = []
+        n = 1
+
+        labels = ['you:idzol']
+        # s1:crepes
+        # s2:..
+        # f1:food
+        # h1:hazard
+
+        for s in sn:
+            si.append(n)
+            name = s.getName()
+            labels.append("s" + n + ":" + str(name))
+            n = n + 1
+
+        fn = 1
+        hn = 1
+        for i in it:
+            t = i.getType()
+
+            if (t == "food"):
+                name = s.getLabel()
+                labels.append("f" + fn + ":food")
+                fn = fn + 1
+                fi.append(n)
+
+            elif (t == "hazard"):
+                name = s.getLabel()
+                labels.append("h" + fn + ":food")
+                hn = hn + 1
+                hi.append(n)
+
+            n = n + 1
+
+        self.youIndex = 0
+        self.snakeIndex = si  # [1, 2]
+        self.foodIndex = fi  # [3, 4, 5]
+        self.hazardIndex = hi  # [6, 7]
+        self.labels = labels
+
+        print(str(labels))
+        print(str(si))
+        print(str(fi))
+        print(str(hi))
+
+        return 1
+
+
+    def calculateDistances(self, snakes, items):
+    # DEPRECATE: Not used? 
+  
+        n = len(snakes) + len(items)
+        dists = np.zeros((n, n), np.intc)
+
+        things = snakes
+        things = things.append(items)
+
+        for t1 in range(0, things):
+            for t2 in range(0, things):
+                t1loc = things[t1].getLocation()
+                t2loc = things[t2].getLocation()
+                d = fn.calculateDistance(t1loc, t2loc)
+                dists[t1, t2] = d
+
+        self.distances = dists
+
+        print(str(dists))
+
+        return dists
+        # eg.
+        # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
+        # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
+        # [ 9, 3, 0, 4, 2 ]
 
     # def leastweightPath(self, paths):
-    # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ...
-    # return path
+      # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ...
+      # return path
 
     def leastWeightLine(self, a, points):
         # Find path with smallest dijkstra value
@@ -1413,9 +1415,10 @@ class board():
         return copy.copy(allowed)
 
 
-
     def enclosedSpace(self, start): 
         # Return volume of enclosed spaces in each direction 
+        # TODO:  If < lenght AND tail < dist... 
+        
         w = self.width
         h = self.height
      
@@ -1438,7 +1441,8 @@ class board():
                 self.enclosedSpace_step(encl, dirn) 
                                   
             enclosed[d] = copy.copy(encl)
-            
+        
+
         enclsum = {}
         for d in CONST.directions: 
             # Return array of total spaces by direction (eg. up:10
@@ -1479,3 +1483,60 @@ class board():
             
         
         return 
+
+    def showMaps(self):
+
+        # Routing maps 
+        log('map', 'GRADIENT', self.gradient)
+        log('map', 'PREDICT', self.predict[0])    
+        log('map', 'THREAT', self.threat[0])
+        log('map', 'DIJKSTRA', self.dijkstra[0])
+        # Visual maps 
+        log('map', 'SOLID', self.solid)
+        log('map', 'COMBINE', self.combine)
+
+# == DELETE == 
+
+    # def dijkstraSum(self, a, b, turn=0):
+    #     # Sum dijkstra map between two points
+    #     # TODO:  Update to use predict[t] ... currently based off dijkstra[0] 
+        
+    #     maxpath = CONST.routeThreshold
+
+    #     # Check which prediction matrix to use 
+    #     tmax = CONST.maxPredictTurns
+    #     if(turn > tmax): 
+    #       turn = tmax
+    #     dt = self.dijkstra[turn]
+
+    #     # log('map', 'DIJSUM', dt)
+        
+    #     try:
+    #         # TODO: Simplify by sorting a, b for array search ..
+
+    #         # Check whether horizontal or vertical route
+    #         if (a[0] == b[0] and a[1] != b[1]):
+    #             # Get correct ordering for array sum 
+    #             if (a[1] < b[1]):
+    #                 result = sum(dt[a[0], a[1]:b[1] + 1])
+    #                 # print('RESULT1:', str(a), str(b), str(result))
+    #             else:
+    #                 result = sum(dt[a[0], b[1]:a[1] + 1])
+    #                 # print('RESULT2:', str(a), str(b), str(result))
+
+    #         elif (a[1] == b[1] and a[0] != b[0]):
+    #             if (a[0] < b[0]):
+    #                 result = sum(dt[a[0]:b[0] + 1, a[1]])
+    #                 # print('RESULT3:', str(a), str(b), str(result))
+    #             else:
+    #                 result = sum(dt[b[0]:a[0] + 1, a[1]])
+    #                 # print('RESULT4:', str(a), str(b), str(result))
+
+    #         else:
+    #             # Cannot be reached by 
+    #             result = maxpath + 1
+
+    #     except:
+    #         result = maxpath + 1
+
+    #     return result
