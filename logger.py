@@ -75,7 +75,7 @@ messages = {
     'map-debug':[6, "%s"],
 
     # Snake
-    'snake-showstats':[6, "SNAKE", """
+    'snake-showstats':[3, "SNAKE", """
   Health: %d
   Hunger: %d
   Aggro: %d

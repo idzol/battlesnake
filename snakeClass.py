@@ -54,10 +54,10 @@ class snake:
         name = data['name']
 
         self.setName(name)
-        # Save current location to history 
-        self.savePath()
         # Set new location 
         self.setLocation(data)
+        # Save location to history 
+        self.savePath()
         
         # Set attributes
         self.setHealth(health)
@@ -79,11 +79,11 @@ class snake:
         self.setType("enemy")
         self.setId(data['id'])
         
-        # Save current location to history 
+        # Set new location 
+        self.setLocation(data)
+        # Save location to history 
         self.savePath()
     
-        # self.routeHistory(self.getHead)
-        self.setLocation(data)
         self.setLength(data['length'])
         # self.setHealth(health)
 

@@ -385,7 +385,6 @@ class board():
                     pass 
 
                   # Body generates shadow threat 
-                  # print(str(body))
                   if len(body): 
                     for b in body: 
                       ay = b[0]
@@ -397,21 +396,43 @@ class board():
                       threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + shadow
                       threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
 
-                  # TODO:  Combine with above
+                  # Body close to wall generates high threat 
+                  # TODO: Update threat  
+                  edges = self.getEdges() 
+                  for e in edges:
+                      pass 
+                  
+
+                  # Head threat for larger snakes 
+                  # TODO: 3x3|1x5 close to edge, otherwise 1x3 
                   if length >= you_len:
                       ay = head[0]
                       ax = head[1]
+                      # 3x3 square
                       ay1 = max(0, ay - 1)
                       ay2 = min(h, ay + 2)
                       ax1 = max(0, ax - 1)
                       ax2 = min(w, ax + 2)
+                      # 1x5 cross  
+                      aymin = max(0, ay - 2)
+                      aymax = min(h, ay + 3)
+                      axmin = max(0, ax - 2)
+                      axmax = min(w, ax + 3)
                       
-                      # TODO: Review head vs path .. 
-                      # Path or straigh = full  
-                      # Others:  full / 2 
-                      # Update threat matrix used for routing
-                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + full
-                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + full
+                      # Review head vs path - 
+                      # TODO: replace with predict .. 
+                      dirn = sn.getDirection()
+                      full_square = full / 2
+                      full_hor = full / 4
+                      full_vert = full / 4
+                      if dirn in ['up', 'down']:
+                        full_vert = full_vert * 2  
+                      else: # left', 'right']:
+                        full_hor = full_hor * 2 
+                      
+                      threatmap[t][ay1:ay2, ax1:ax2] + full_square
+                      threatmap[t][aymin:aymax, ax] = threatmap[t][aymin:aymax, ax] + full_vert
+                      threatmap[t][ay, axmin:axmax] = threatmap[t][ay, axmin:axmax] + full_hor
                   
                   lasthead = head
         
@@ -718,7 +739,9 @@ class board():
         targets = np.nonzero(b > 0)
         rt = []
         wmin = CONST.routeThreshold
-        for t in targets:
+        # Iterate through potential targets 
+        for i in range(0, len(targets[0] - 1)):
+          t = [targets[0][i], targets[1][i]]
           try: 
             r, w = self.route(a, t, l)
             if w < wmin: 
@@ -1237,10 +1260,10 @@ class board():
         return d
 
 
-    def getEdges():
+    def getEdges(self):
         # Return all border / edge cells of the map
-        global h
-        global w
+        w = self.width
+        h = self.height
 
         edges = []
         edges = edges + fn.getPointsInLine([0,0], [0,w]) + \
