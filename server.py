@@ -221,7 +221,7 @@ def handle_move():
     log("shout", shout)
 
     # Print maps to console 
-    # theBoard.showMaps()
+    theBoard.showMaps()
 
     # Save game data
     game[game_id] = [theBoard, ourSnek, allSnakes]

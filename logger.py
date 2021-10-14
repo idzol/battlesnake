@@ -18,8 +18,8 @@ import constants as CONST
 global messages
 messages = {
     # Time 
-    'time':[3, "TIME"],
-    'timer-hurry':[3, "TIME", "Move time reached CONST.timePanic"],
+    'time':[6, "TIME"],
+    'timer-hurry':[6, "TIME", "Move time reached CONST.timePanic"],
 
     # Server 
     'healthcheck':[3,"INFO", "Healthcheck - OK"],
@@ -70,13 +70,12 @@ messages = {
     'strategy-trackwall':[6,"->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
 
     # Map 
-    'map':[2, "%s"],
+    'map':[3, "%s"],
     'map-predict':[6, "%s"],
     'map-debug':[6, "%s"],
 
-
     # Snake
-    'snake-showstats':[2, "SNAKE", """
+    'snake-showstats':[6, "SNAKE", """
   Health: %d
   Hunger: %d
   Aggro: %d
