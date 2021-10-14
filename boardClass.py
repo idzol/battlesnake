@@ -385,7 +385,6 @@ class board():
                     pass 
 
                   # Body generates shadow threat 
-                  # print(str(body))
                   if len(body): 
                     for b in body: 
                       ay = b[0]
@@ -397,21 +396,43 @@ class board():
                       threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + shadow
                       threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
 
-                  # TODO:  Combine with above
+                  # Body close to wall generates high threat 
+                  # TODO: Update threat  
+                  edges = self.getEdges() 
+                  for e in edges:
+                      pass 
+                  
+
+                  # Head threat for larger snakes 
+                  # TODO: 3x3|1x5 close to edge, otherwise 1x3 
                   if length >= you_len:
                       ay = head[0]
                       ax = head[1]
+                      # 3x3 square
                       ay1 = max(0, ay - 1)
                       ay2 = min(h, ay + 2)
                       ax1 = max(0, ax - 1)
                       ax2 = min(w, ax + 2)
+                      # 1x5 cross  
+                      aymin = max(0, ay - 2)
+                      aymax = min(h, ay + 3)
+                      axmin = max(0, ax - 2)
+                      axmax = min(w, ax + 3)
                       
-                      # TODO: Review head vs path .. 
-                      # Path or straigh = full  
-                      # Others:  full / 2 
-                      # Update threat matrix used for routing
-                      threatmap[t][ay1:ay2, ax] = threatmap[t][ay1:ay2, ax] + full
-                      threatmap[t][ay, ax1:ax2] = threatmap[t][ay, ax1:ax2] + full
+                      # Review head vs path - 
+                      # TODO: replace with predict .. 
+                      dirn = sn.getDirection()
+                      full_square = full / 2
+                      full_hor = full / 4
+                      full_vert = full / 4
+                      if dirn in ['up', 'down']:
+                        full_vert = full_vert * 2  
+                      else: # left', 'right']:
+                        full_hor = full_hor * 2 
+                      
+                      threatmap[t][ay1:ay2, ax1:ax2] + full_square
+                      threatmap[t][aymin:aymax, ax] = threatmap[t][aymin:aymax, ax] + full_vert
+                      threatmap[t][ay, axmin:axmax] = threatmap[t][ay, axmin:axmax] + full_hor
                   
                   lasthead = head
         
@@ -451,9 +472,11 @@ class board():
           dijksmap[t] = np.add(predict, threat) + 1
           # Adjust head & tail location to zero for routing 
           dijksmap[0][head[0], head[1]] = 0
-          if(length > 3):
+          # Erase tail since we are moving, unless we are eating 
+          if(length > 3) and sn.getEating():
               dijksmap[0][tail[0], tail[1]] = 0
-              
+              sn.setEating(False)
+
           # dijksmap[0][tail[0], tail[1]] = 0
           # dijksmap[0][ay, ax] = threat[0][ay, ax]
  
@@ -697,14 +720,38 @@ class board():
 # == ROUTING == 
 
     # TODO: Fuzzy Routing, ie. get close to an object)
-    # def fuzzyroute(a, blist): 
-        # log('time', 'Before Complex Route', self.getStartTime())
-        # r = self.route_complex(a, b)
-        # r, w = self.route_complex(a, b)
-        # weight = w
-        # print('WEIGHT 3')
-        # print(str(Weight))
-        # return []
+
+
+    def fuzzyRoute(self, a, b, l):
+    # Send shape - return best path to any point in shape 
+    # a = [1, 1] 
+    # b = np.zeros([h, w], np.intc)
+    # b[1:3, 3:6] = 1
+    # result, weight = fuzzyRoute(a, b)
+    
+        w = self.width
+        h = self.height
+        
+        r = np.zeros([h, w], np.intc)
+        r = r + b
+        r[a[0], a[1]] = 1
+        
+        targets = np.nonzero(b > 0)
+        rt = []
+        wmin = CONST.routeThreshold
+        # Iterate through potential targets 
+        for i in range(0, len(targets[0] - 1)):
+          t = [targets[0][i], targets[1][i]]
+          try: 
+            r, w = self.route(a, t, l)
+            if w < wmin: 
+                rt = r
+          except:
+            log('exception', 'fuzzyRoute', str(e))
+            pass 
+                
+        return rt, wmin    
+
 
     def route(self, a, b, length=0):
         
@@ -1045,16 +1092,27 @@ class board():
 
         return quad_dict[max_index]
 
-    # Return centrepoint 
     def findCentre(self, head):
+    # Return centrepoint location or [] if already in the centre 
         h = self.height
         w = self.width
 
-        cy = math.floor((h + 1) / 2) - 1
-        cx = math.floor((w + 1) / 2) - 1
-        target = [cy, cx]
-        if (target == head):
+        yl = math.floor((h + 1) / 2) - 1
+        yh = math.floor((h + 1) / 2) + 2
+        
+        xl = math.floor((w + 1) / 2) - 1
+        xh = math.floor((w + 1) / 2) + 2
+
+        target = np.zeros([h, w], np.intc)
+        target[yl:yh, xl:xh] = 1
+
+        ts = np.nonzero(target > 0)
+
+        # Check if we're already within bounds 
+        for t in ts: 
+          if (target == head):
             return []
+
         else:
             return target
             
@@ -1202,10 +1260,10 @@ class board():
         return d
 
 
-    def getEdges():
+    def getEdges(self):
         # Return all border / edge cells of the map
-        global h
-        global w
+        w = self.width
+        h = self.height
 
         edges = []
         edges = edges + fn.getPointsInLine([0,0], [0,w]) + \

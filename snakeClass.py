@@ -32,6 +32,7 @@ class snake:
         
         self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
+        self.eating = False 
         self.health = 100 
         self.length = 3
 
@@ -53,15 +54,16 @@ class snake:
         name = data['name']
 
         self.setName(name)
-        # Save current location to history 
-        self.savePath()
         # Set new location 
         self.setLocation(data)
+        # Save location to history 
+        self.savePath()
         
         # Set attributes
         self.setHealth(health)
         self.setLength(length)
-        
+        # self.setEating(False)
+
         # Set meta 
         aggro = CONST.aggroLow
         hunger = 100 - health
@@ -76,12 +78,12 @@ class snake:
         self.setName(name)
         self.setType("enemy")
         self.setId(data['id'])
-            
-        # Save current location to history 
+        
+        # Set new location 
+        self.setLocation(data)
+        # Save location to history 
         self.savePath()
     
-        # self.routeHistory(self.getHead)
-        self.setLocation(data)
         self.setLength(data['length'])
         # self.setHealth(health)
 
@@ -266,6 +268,12 @@ class snake:
     def setHealth(self, h):
         self.health = h
 
+    def getEating(self):
+        return copy.copy(self.eating)
+
+    def setEating(self, e):
+        self.eating = e
+
     def getHunger(self):
         return self.hunger
     
@@ -310,8 +318,10 @@ class snake:
       if (isinstance(dest, dict)):
         t = [dest['y'],dest['x']]
        
-      elif (isinstance(dest, list)):
-        t = dest
+      else:
+          # (isinstance(dest, list)):
+          # elif (type(dest).__module__ == np.__name__):
+        t = dest 
 
       self.target = copy.copy(t)
 

@@ -112,27 +112,34 @@ def stateMachine(bo:board, sn: snake, its: list):
 
     depth = CONST.maxPredictTurns
 
-    strategylist, strategyinfo = sn.getStrategy()
+    # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
-    defaultstrategy = ['Eat', '']
-    # CONST.defaultstrategy 
-    
+    strategylist, strategyinfo = sn.getStrategy()
+    strategylist_default = [['Eat', ''], ['Taunt', '']] # CONST.defaultstrategy 
+    strategy = []
+   
     start = sn.getHead()
     length = sn.getLength()
     aggro = sn.getAggro()
     tail = sn.getTail()
 
+    # Closest item(s) 
+    itsort = bo.findClosestItem(its, start) 
+    # snakes .. 
+    # threat .. 
+    # etc.. 
+
     # Outputs of state machine 
     target = []
     route = [] 
-    
-    
+  
     # Progress state machine
     i = 0
-    strategy = ""
+    
     while not len(route):
 
       log('strategy', str(strategy), str(interruptlist), str(strategylist), str(strategyinfo))
+      
       # Get next strategy .. 
       if len(interruptlist):
         # interruptlist - delete every turn   
@@ -147,13 +154,11 @@ def stateMachine(bo:board, sn: snake, its: list):
         # if 'default' in strategyinfo:
         #   strategy = strategyinfo['default']
         # else:
-        strategy = defaultstrategy
+        strategylist = copy.copy(strategylist_default)
+        strategy = strategylist.pop(0)
 
-      print ("STRATEGY: " +str(strategy))
-    
-      # Get closest item 
-      itsort = bo.findClosestItem(its, start) 
 
+      
       if(strategy[0] == "Kill"):
           if (strategy[1] == "Collide"):
             # HEAD ON COLLISION 
@@ -285,16 +290,26 @@ def stateMachine(bo:board, sn: snake, its: list):
           
           # Spiral  
 
-      if(strategy[0]=="Eat"): 
+      if(strategy[0]=='Eat'): 
 
+          print ("STRAT-EAT1", str(itsort))
+            
           # No food -- change strategy
           if(not len(itsort)):
-            # strategylist.insert(0, ['Taunt', ''])
+            # strategylist.append(['Taunt', ''])
             pass 
             
           else: 
+            # If no route, try again to next item
+            strategylist.append(["Eat",""])
             # Get route to target  
-            target = itsort.pop(0).getLocation()
+            itemclose = itsort.pop(0)
+            target = itemclose.getLocation()
+            print ("STRAT-EAT2", str(target))
+            # One square away, we are eating next turn 
+            if (fn.distanceToPoint(start, target)):
+              sn.setEating(True)
+
             # Continue to eat until interrupted
             # strategylist.insert(0, ['Eat', ''])
             log('strategy-eat', str(target))
@@ -308,7 +323,7 @@ def stateMachine(bo:board, sn: snake, its: list):
 
         if(strategy[1]=="Centre"): 
             target = bo.findCentre(start)
-            if (not(target)):
+            if (not(len(target))):
               strategylist.pop(0) 
               strategylist.append(['Idle', 'FindWall'])
 
@@ -348,8 +363,14 @@ def stateMachine(bo:board, sn: snake, its: list):
           print("TAUNT", str(target))
             
 
-      # Check route.  If no target or no route , try next strategy
-      route, weight = bo.route(start, target, length)
+      # Check route.  If no target or no route , try next strategy    
+      if 'numpy' in str(type(target)):
+          # Target is an area -- <class 'numpy.ndarray'> 
+          route, weight = bo.fuzzyRoute(start, target, length)
+
+      else:
+          # Target is a point -- <class 'list'> 
+          route, weight = bo.route(start, target, length)
 
       # No route found 
       if(not len(route)): 
@@ -363,7 +384,7 @@ def stateMachine(bo:board, sn: snake, its: list):
           log('time','Strategy search', st)
          
       else:
-          # # Secondary facors (eg. aggro, threat, health)  
+          # # Secondary factors (eg. aggro, threat, health)  
           # tmap = bo.getThreat()
           # # Adjust for future location 
           # turn = fn.distanceToPoint(start, target)
@@ -379,10 +400,7 @@ def stateMachine(bo:board, sn: snake, its: list):
           target = []
           route = []
           break
-          # log('strategyInsert random walk 
-          # target = random ... 
-          # interrupt = True 
-         
+          
       i = i + 1 
     
     
@@ -415,25 +433,23 @@ def makeMove(bo: board, sn: snake) -> str:
 
     if (not len(p) or not bo.inBounds(p)):
       # Final check that move is valid  
-      # TODO: Report on this condition -- solve through stateMachine  
+      
       # log('move-desparate', bo.dump, sn.dump)
-
-      # Tempoary logic to (a) avoid enclosed spaces and (b) avoid head to head collisions 
-
-      enclosed = copy.copy(bo.enclosed)
-      dijkstra = copy.copy(bo.dijkstra[0])
-
+      wmin = CONST.routeThreshold
       for d in CONST.directions:
-          a = list( map(add, start, CONST.directionMap[d]) )
-          if (not bo.inBounds(a) or dijkstra[a[0], a[1] > CONST.routeThreshold / 2]): 
-            try: 
-              enclosed.pop(d, None)
-            except:
-              pass 
-              
-      dirn = max(enclosed, key=enclosed.get)
-      p = list( map(add, start, CONST.directionMap[dirn]) )
-       
+        # Check each direction 
+        l = sn.getLength()
+        t = list( map(add, start, CONST.directionMap[d]) )
+        if (bo.inBounds(t)):
+          try: 
+            # Find lowest route
+            r, w = bo.route(start, t, l)
+            if w < wmin:
+                p = r.pop(0)
+            
+          except Exception as e:
+            log('exception','makeMove',str(e))
+            
     # Translate routepoint to direction
     move = fn.translateDirection(start, p)
     log('time', 'After Direction', bo.getStartTime())
@@ -624,20 +640,6 @@ def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
      
     log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
     return a1
-  
-def findCentre(bo, sn, proximity=2):
-    w = bo.getWidth()
-    h = bo.getHeight()
-
-    cx = int((w + 1)/2)
-    cy = int((h + 1)/2)
-    c = [cx, cy]
-
-    # if centre occupied 
-    return []
-
-    # if within proximity of centre 
-    # return c
 
 
 def numMovesAvailable(bo, sn):
