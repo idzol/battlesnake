@@ -778,7 +778,7 @@ class board():
               # Weighted threshold based on available moves 
               moves_avail = self.enclosed[move] 
               if (moves_avail < length):
-                  self.dijkstra[0][a1[0], a1[1]] = t * (1 - moves_avail / length)
+                  self.dijkstra[0][a1[0], a1[1]] = t * (2 - moves_avail / length)
 
 
             log('enclosed', str(self.enclosed), str(a1))
