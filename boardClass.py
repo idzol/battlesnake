@@ -775,12 +775,10 @@ class board():
             if(self.inBounds(a1)):
               move = fn.translateDirection(a, a1)
               
-              # Zero moves -- ie. wall 
-              if (self.enclosed[move] == 0):
-                  self.dijkstra[0][a1[0], a1[1]] = t 
-              # Less moves than snake length 
-              elif (self.enclosed[move] < length):
-                  self.dijkstra[0][a1[0], a1[1]] = t / 2
+              # Weighted threshold based on available moves 
+              moves_avail = self.enclosed[move] 
+              if (moves_avail < length):
+                  self.dijkstra[0][a1[0], a1[1]] = t * (1 - moves_avail / length)
 
             log('enclosed', str(self.enclosed), str(a1))
                 
