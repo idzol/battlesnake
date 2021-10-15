@@ -9,8 +9,8 @@ logLevelPrint = 5
 
 # Snake variables
 healthHigh = 100
-healthMed = 90
-healthLow = 80
+healthMed = 95
+healthLow = 90
 
 threatHigh = 80
 threatMed = 50
@@ -21,7 +21,8 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy variables 
-strategyDepth = 10
+strategyDepth = 10   # max strategies to explore each turn
+strategyLength = 5   # number of strategies to remember between turns
 strategyLargerBy = 3 
 
 # Routing variables 

@@ -420,17 +420,17 @@ class board():
                       axmax = min(w, ax + 3)
                       
                       # Review head vs path - 
-                      # TODO: replace with predict .. 
+                      # TODO: replace with predict (currently disabled)
                       dirn = sn.getDirection()
-                      full_square = full / 2
-                      full_hor = full / 4
-                      full_vert = full / 4
+                      full_square = full 
+                      full_hor = full  
+                      full_vert = full 
                       if dirn in ['up', 'down']:
-                        full_vert = full_vert * 2  
+                        full_vert = full_vert   
                       else: # left', 'right']:
-                        full_hor = full_hor * 2 
+                        full_hor = full_hor  
                       
-                      threatmap[t][ay1:ay2, ax1:ax2] + full_square
+                      threatmap[t][ay1:ay2, ax1:ax2] = threatmap[t][ay1:ay2, ax1:ax2] + full_square
                       threatmap[t][aymin:aymax, ax] = threatmap[t][aymin:aymax, ax] + full_vert
                       threatmap[t][ay, axmin:axmax] = threatmap[t][ay, axmin:axmax] + full_hor
                   
@@ -473,9 +473,10 @@ class board():
           # Adjust head & tail location to zero for routing 
           dijksmap[0][head[0], head[1]] = 0
           # Erase tail since we are moving, unless we are eating 
-          if(length > 3) and sn.getEating():
+          if(length > 3) and not sn.getEating():
               dijksmap[0][tail[0], tail[1]] = 0
-              sn.setEating(False)
+          
+          sn.setEating(False)
 
           # dijksmap[0][tail[0], tail[1]] = 0
           # dijksmap[0][ay, ax] = threat[0][ay, ax]
@@ -755,7 +756,7 @@ class board():
 
     def route(self, a, b, length=0):
         
-        t = CONST.routeThreshold / 2
+        t = CONST.routeThreshold
         route = []
         weight = -1
         routetype = ''   
@@ -773,8 +774,13 @@ class board():
             a1 = list (map(add, a, CONST.directionMap[d]))
             if(self.inBounds(a1)):
               move = fn.translateDirection(a, a1)
-              if (length < self.enclosed[move]):
-                  self.gradient[a1[0], a1[1]] = t 
+              
+              # Zero moves -- ie. wall 
+              if (self.enclosed[move] == 0):
+                  self.dijkstra[0][a1[0], a1[1]] = t 
+              # Less moves than snake length 
+              elif (self.enclosed[move] < length):
+                  self.dijkstra[0][a1[0], a1[1]] = t / 2
 
             log('enclosed', str(self.enclosed), str(a1))
                 
@@ -806,6 +812,7 @@ class board():
         # Return sorted path/points or [] if no path
         log('route', routetype, route, weight)     
         return route, weight
+
 
     def route_basic(self, a, b):
         
@@ -1553,48 +1560,6 @@ class board():
         log('map', 'SOLID', self.solid)
         log('map', 'COMBINE', self.combine)
 
+
+
 # == DELETE == 
-
-    # def dijkstraSum(self, a, b, turn=0):
-    #     # Sum dijkstra map between two points
-    #     # TODO:  Update to use predict[t] ... currently based off dijkstra[0] 
-        
-    #     maxpath = CONST.routeThreshold
-
-    #     # Check which prediction matrix to use 
-    #     tmax = CONST.maxPredictTurns
-    #     if(turn > tmax): 
-    #       turn = tmax
-    #     dt = self.dijkstra[turn]
-
-    #     # log('map', 'DIJSUM', dt)
-        
-    #     try:
-    #         # TODO: Simplify by sorting a, b for array search ..
-
-    #         # Check whether horizontal or vertical route
-    #         if (a[0] == b[0] and a[1] != b[1]):
-    #             # Get correct ordering for array sum 
-    #             if (a[1] < b[1]):
-    #                 result = sum(dt[a[0], a[1]:b[1] + 1])
-    #                 # print('RESULT1:', str(a), str(b), str(result))
-    #             else:
-    #                 result = sum(dt[a[0], b[1]:a[1] + 1])
-    #                 # print('RESULT2:', str(a), str(b), str(result))
-
-    #         elif (a[1] == b[1] and a[0] != b[0]):
-    #             if (a[0] < b[0]):
-    #                 result = sum(dt[a[0]:b[0] + 1, a[1]])
-    #                 # print('RESULT3:', str(a), str(b), str(result))
-    #             else:
-    #                 result = sum(dt[b[0]:a[0] + 1, a[1]])
-    #                 # print('RESULT4:', str(a), str(b), str(result))
-
-    #         else:
-    #             # Cannot be reached by 
-    #             result = maxpath + 1
-
-    #     except:
-    #         result = maxpath + 1
-
-    #     return result
