@@ -4,7 +4,8 @@ import random as rand
 # import numpy as np
 # import pandas as pd
 from operator import add
-
+from collections import OrderedDict
+      
 import time as time 
 import copy as copy 
 
@@ -89,14 +90,14 @@ def checkInterrupts(bo:board, snakes):
     # Survive interuupt 
     if (numMovesAvailable(bo, sn) < sn.getLength()):
         interruptlist.append(['Taunt', ''])
-        
-    # No threats & high health
-    if (health > CONST.healthHigh): 
-        interruptlist.append(["Idle", "FindWall"])
-        
+    
     # Health interrupt 
     if (health < CONST.healthLow): 
-        interruptlist.append(["Eat",""])
+        interruptlist.append(['Eat', ''])
+         
+    # No threats & high health
+    if (health > CONST.healthHigh): 
+        interruptlist.append(['Idle', 'FindCentre'])
         
     # Interrupt triggered
     if (len(interruptlist)):     
@@ -157,13 +158,13 @@ def stateMachine(bo:board, sn: snake, its: list):
         strategylist = copy.copy(strategylist_default)
         strategy = strategylist.pop(0)
 
-
       
       if(strategy[0] == "Kill"):
           if (strategy[1] == "Collide"):
             # HEAD ON COLLISION 
-            target = strategyinfo['kill']       
-            # TODO:  Use prediction route, current direction or random? 
+            target = strategyinfo['killpath']       
+            # Do not repeat strategy 
+
             log('strategy-killpath', 'killPath', str(start), start(length), str(target))
             
           # if (strategy[1] == "Cutoff"):
@@ -297,18 +298,22 @@ def stateMachine(bo:board, sn: snake, its: list):
           # No food -- change strategy
           if(not len(itsort)):
             # strategylist.append(['Taunt', ''])
+            # remove strategy 
+            # add strategy (top priority)
+            # add strategy (low priority)
             pass 
             
           else: 
             # If no route, try again to next item
-            strategylist.append(["Eat",""])
+            strategylist.insert(0, ['Eat',''])
             # Get route to target  
             itemclose = itsort.pop(0)
             target = itemclose.getLocation()
-            print ("STRAT-EAT2", str(target))
+            print ("STRAT-EAT2", str(start), str(target), str(fn.distanceToPoint(start, target)))
+
             # One square away, we are eating next turn 
-            if (fn.distanceToPoint(start, target)):
-              sn.setEating(True)
+            # if (fn.distanceToPoint(start, target) == 1):
+            sn.setEating(True)
 
             # Continue to eat until interrupted
             # strategylist.insert(0, ['Eat', ''])
@@ -324,18 +329,23 @@ def stateMachine(bo:board, sn: snake, its: list):
         if(strategy[1]=="Centre"): 
             target = bo.findCentre(start)
             if (not(len(target))):
-              strategylist.pop(0) 
+              # strategylist.pop(0) 
               strategylist.append(['Idle', 'FindWall'])
 
-            # strategylist.insert(0, defaultstrategy)
+            else: 
+              strategylist.insert(0, ['Idle', 'Centre'])
+            
             log('strategy-findcentre', target)
 
         # Find nearest wall 
         if(strategy[1]=="FindWall"):   
             target = bo.findClosestWall(start)
             if (not len(target)):
-              strategylist.pop(0) 
+              # strategylist.pop(0) 
               strategylist.append(['Idle', 'TrackWall'])
+            else:
+              strategylist.insert(0, ['Idle', 'FindWall'])
+              
             log('strategy-findwall', target)
             
         # Track wall - clockwise or counterclockwise 
@@ -353,14 +363,18 @@ def stateMachine(bo:board, sn: snake, its: list):
             log('strategy-trackwall', target)
             
     
-      if(strategy[0]=="Taunt"):
+      if(strategy[0]=='Taunt'):
           # Defensive -- Optimum use of space 
           # find dijkstras way out .. 
           # .. otherwise slinky pattern until death
           target = sn.getTail()
-          # strategylist.insert(0,['Taunt', ''])
           log('strategy-taunt', target)
           print("TAUNT", str(target))
+
+          # Taunt until interrupt or X turns 
+          # strategyinfo.insert(counter) = counter + 1
+          # if strategyinfo.counter > X 
+          # strategylist.insert(0,['Taunt', ''])
             
 
       # Check route.  If no target or no route , try next strategy    
@@ -393,14 +407,28 @@ def stateMachine(bo:board, sn: snake, its: list):
           # if threat < aggro: 
           #   break      
           break
-
       
+      # Exceeded number of attempts 
       if (i > CONST.strategyDepth or bo.hurry):
           # Exit loop
           target = []
           route = []
           break
-          
+
+      # Remove dulicates from strategy lsit 
+      stl_unique = []
+      for stl in strategylist: 
+          if stl in stl_unique:
+            pass
+          else: 
+            stl_unique.append(stl)
+          # list(OrderedDict.fromkeys(strategylist))
+      sttrategylist = stl_unique
+
+      # Trim strategies to max strategies 
+      while len(strategylist) > CONST.strategyLength: 
+        strategylist.pop(-1)
+        
       i = i + 1 
     
     
@@ -506,15 +534,18 @@ def killPath(bo, snakes):
     you_len = snakes[you].getLength() 
     you_head = snakes[you].getHead() 
  
+    # TODO:  Change from radius to shape 
     for identity in snakes:
       sn = snakes[identity]
       if sn.getType() != "us":
         enemy_len = sn.getLength()
         enemy_head = sn.getHead()
         dist = fn.distanceToPoint(you_head, enemy_head)
-        if (you_len > enemy_len) and dist < killRadius:
-          return sn
-    
+        if (you_len > enemy_len) and (dist < killRadius):
+          enemy_dirn = sn.getDirection()
+          sn_collide = list( map(add, enemy_head, CONST.directionMap[enemy_dirn]) )
+          return sn_collid
+
     return False
 
 

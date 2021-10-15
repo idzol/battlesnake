@@ -35,7 +35,7 @@ messages = {
     'predict-new':[6,"->PREDICT POINT", "%s: %s: %s"],
     'predict-erase':[6,"->PREDICT ERASE", "%s: %s: %s"],
     
-    'enclosed':[6,"->ENCLOSED", "%s %s"],
+    'enclosed':[3,"->ENCLOSED", "%s %s"],
     'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
