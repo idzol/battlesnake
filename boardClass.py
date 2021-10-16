@@ -1151,6 +1151,101 @@ class board():
         return itemsort
 
 
+    def findSnakeBox(self, start, enemy): # self, snake
+        # Return closest three vertices as a box array 
+
+        w = self.width
+        h = self.height
+        #board = np.zeros([w,h], np.intc)
+        
+        # body = enemy.getHead() + enemy.getBody()
+        body = enemy.getBody()
+        body.append(enemy.getHead())
+        
+        print ("DEFINESNAKE", str(body))
+        
+        xmin = w
+        xmax = 0
+        ymin = h
+        ymax = 0
+        
+        # Iterate through points in body to get bounds 
+        for b in body:
+            xmin = min(xmin, b[1])
+            xmax = max(xmax, b[1])
+            ymin = min(ymin, b[0])
+            ymax = max(ymax, b[0])
+
+        # Define bounds    
+        snakebox = [[ymin,xmin], [ymin,xmax], [ymax,xmin], [ymax,xmax]] 
+        
+        # Get distance to each point 
+        snakedist = {}
+        for pt in snakebox:
+            dist = abs(start[0] - pt[0]) + abs(start[1] - pt[1])
+            snakedist[dist] = pt 
+        
+        print(str(snakedist))
+        
+        # Sort list & return first X points 
+        snakedist = dict(sorted(snakedist.items(), key=lambda item: item[1]))
+        i = 0
+        imax = 3
+        box = [] 
+        for key in snakedist: 
+            if i < imax:
+                box.append(snakedist[key])
+            i = i + 1 
+          
+        # Pad box if only two vertices (small snake)
+        while len(box) < imax:
+            box.append(box[-1])
+        
+        print("FINDSNAKEBOX", str(snakedist), str(box))
+        
+        # Translate to area 
+        targets = []
+        for i in range(0, imax):
+            t = np.zeros([w,h], np.intc)
+            t[max(box[i][0]-1, 0):min(box[i][0]+2, h), \
+                max(box[i][1]-1, 0):min(box[i][1]+2, w)] = 1 
+            targets.append(t)
+            
+        return targets
+
+        # # Find bounds
+        # yb_area = np.zeros([w,h], np.intc)
+        # xb_area = np.zeros([w,h], np.intc)
+        
+        # # Convert to area 
+        # if ((h - ymax) > (ymin)) and ((w - xmax) < (xmin)):
+        #     # North east 
+        #     yb_area[max(ymax, 0):min(ymax+3, h), (w-3):(w)] = 1 
+        #     xb_area[0:3, max(xmin-2, 0):min(xmin+1, h)] = 1
+        #     dirn = 'ne'
+
+        # elif ((h - ymax) < (ymin)) and ((w - xmax) < (xmin)):
+        #     # South east
+        #     yb_area[max(ymin-2, 0):min(ymin+1, h), (w-3):(w)] = 1 
+        #     xb_area[(h-3):(h), max(xmin-2, 0):min(xmin+1, h)] = 1
+        #     dirn = 'se'
+
+        # elif ((h - ymax) > (ymin)) and ((w - xmax) > (xmin)):
+        #     # North west 
+        #     yb_area[max(ymax, 0):min(ymax+3, h), 0:3] = 1 
+        #     xb_area[0:3, max(xmax, 0):min(xmax+3, h)] = 1
+        #     dirn = 'nw'
+
+        # else:
+        #     # South west (or catchall)
+        #     yb_area[max(ymin-2, 0):min(ymin+1, h), 0:3] = 1 
+        #     xb_area[(h-3):h, max(xmin, 0):min(xmin+3, h)] = 1
+        #     dirn = 'sw+'
+            
+        # # print(str(dirn))
+        # return yb_area, xb_area
+        
+
 # == HELPERS == 
 
     def moveBy(self, a, diff): 
@@ -1554,12 +1649,12 @@ class board():
     def showMaps(self):
 
         # Routing maps 
-        log('map', 'GRADIENT', self.gradient)
-        log('map', 'PREDICT', self.predict[0])    
+        # log('map', 'GRADIENT', self.gradient)
+        # log('map', 'PREDICT', self.predict[0])    
+        # log('map', 'SOLID', self.solid)
         log('map', 'THREAT', self.threat[0])
         log('map', 'DIJKSTRA', self.dijkstra[0])
         # Visual maps 
-        log('map', 'SOLID', self.solid)
         log('map', 'COMBINE', self.combine)
 
 

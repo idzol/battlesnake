@@ -9,8 +9,9 @@ logLevelPrint = 5
 
 # Snake variables
 healthHigh = 100
-healthMed = 95
-healthLow = 90
+healthMed = 75
+healthLow = 50
+healthCritical = 25
 
 threatHigh = 80
 threatMed = 50
