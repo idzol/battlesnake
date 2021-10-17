@@ -69,7 +69,7 @@ def checkInterrupts(bo:board, snakes):
     if (largestSnake(bo, snakes) and health > CONST.healthMed):
         interruptlist.append(['Idle', 'Centre'])
         
-    # Survive interuupt 
+    # Survive interuupt  
     if (numMovesAvailable(bo, sn) < sn.getLength()):
         interruptlist.append(['Taunt', ''])
     
