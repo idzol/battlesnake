@@ -196,6 +196,7 @@ class board():
         by = self.updateBoardYou(data)
         bs = self.updateBoardSnakes(data)
         bi = self.updateBoardItems(data)
+        tr = self.updateTrails(snakes)
 
         # Combined boards
         rs = CONST.routeSolid
@@ -205,11 +206,9 @@ class board():
         # Meta boards 
         depth = CONST.maxPredictTurns
         en = self.enclosedSpacev2(head)
-        self.enclosed = en    # TODO: move to snake object .. 
+        self.enclosed = en  # TODO: move to snake object .. 
         
-        # Routing Boards - NEW
-        tr = self.updateTrails(snakes)
-
+        
         # Routing Boards 
         predict = []
         threat = []
@@ -728,15 +727,18 @@ class board():
             sn = snakes[snid]
             body = sn.getHeadBody()
             l = len(body)
-            # print("UPDATE TRAILS", str(body))
+
+            # If eating tail takes one more turn 
+            if sn.getEating():
+              l = l + 1 
+
             # Mark each point 
             for pt in body:
-                # print("UPDATE TRAILS - PT", str(pt))
                 trails[pt[0], pt[1]] = l
                 # Descending from head = N to tail = 1 
                 l = l - 1 
-
-        self.trails = trails     
+            
+        self.trails = copy.copy(trails)     
         return trails 
 
 
@@ -1054,7 +1056,7 @@ class board():
 
         return result
 
-    def routePadding(self, route, depth=20): 
+    def routePadding(self, route, depth=CONST.lookAhead): 
         # Make sure there is always a path with N moves (eg. route_complex + random walk) 
         # Else return [] 
 
@@ -1263,11 +1265,12 @@ class board():
         h = self.height
         w = self.width
 
-        yl = math.floor((h + 1) / 2) - 1
-        yh = math.floor((h + 1) / 2) + 2
+        # TODO: Deprecate & change to using self.paintArea('ce', 3)
+        yl = math.floor((h + 1) / 2) - 2
+        yh = math.floor((h + 1) / 2) + 1
         
-        xl = math.floor((w + 1) / 2) - 1
-        xh = math.floor((w + 1) / 2) + 2
+        xl = math.floor((w + 1) / 2) - 2
+        xh = math.floor((w + 1) / 2) + 1
 
         target = np.zeros([h, w], np.intc)
         target[yl:yh, xl:xh] = 1
@@ -1656,8 +1659,10 @@ class board():
 
     def paintArea(self, select, radius=0, a=0, b=0):
         # area = ['centre', 'radius', 'no', 'ea', 'so', 'we', 'ne', 'nw', 'se', 'sw', 'custom']
+        # radius = squares from edge ('radius' only)
 
-        self.allowed = []
+        # self.allowed = []
+
         h = self.height
         w = self.width
 
@@ -1730,7 +1735,8 @@ class board():
 
         # print(w, h, cx, cy, rx, ry, dx, dy)
         # print(str(allowed))
-        self.allowed = allowed
+        # self.allowed = allowed
+        
         return copy.copy(allowed)
 
 
@@ -1773,7 +1779,7 @@ class board():
         # self.enclosed = copy.copy(enclsum)
 
         log('enclosed-sum', str(enclsum))
-        return enclsum
+        return copy.copy(enclsum)
 
 
     def enclosedSpace_step(self, encl, dirn, turn=1):  

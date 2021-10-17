@@ -18,7 +18,7 @@ import constants as CONST
 global messages
 messages = {
     # Time 
-    'time':[6, "TIME"],
+    'time':[3, "TIME"],
     'timer-hurry':[6, "TIME", "Move time reached CONST.timePanic"],
 
     # Server 
@@ -59,7 +59,7 @@ messages = {
     'strategy-update':[4,"->STRATEGY", "\n%s"],
     'strategy-eat':[4,"-->EAT", " %s"],
     'strategy-attack':[4,"-->ATTACK", " %s %s %s %s"],
-    'strategy-killpath':[4,"-->KILL", " head:%s length:%s target:%s"],
+    'strategy-killpath':[4,"-->KILL", "%s head:%s length:%s target:%s"],
     'strategy-defend':[4,"-->DEFEND", " %s %s %s %s"],
     'strategy-control':[4,"-->CONTROL", " %s %s %s"],
     'strategy-survive':[4,"-->SURVIVE", " %s %s %s %s"],

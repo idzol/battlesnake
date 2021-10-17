@@ -50,13 +50,15 @@ def checkInterrupts(bo:board, snakes):
     reason = []
 
     # Kill interrupt -- larger than 
-    if (t := killPath(bo, snakes)):
+    t = killPath(bo, snakes)
+    if (len(t)):
         interruptlist.insert(0, ['Kill', 'Collide'])
         strategyinfo['killpath'] = t
         reason.append('killpath was identified')
 
     # Kill interrupt -- cut off path 
-    if (t := enemyEnclosed(bo, sn, snakes)):
+    t = enemyEnclosed(bo, sn, snakes)
+    if (len(t)):
         interruptlist.append(['Kill', 'Cutoff'])
         strategyinfo['killcut'] = t
         reason.append('enclosed enemy was identified')
@@ -81,19 +83,19 @@ def checkInterrupts(bo:board, snakes):
 
         reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
 
-    if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
-        interruptlist.append(['Idle', 'Centre'])
-        reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
+    # if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
+    #     interruptlist.append(['Idle', 'Centre'])
+    #     reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
 
     # Growth interrupt when small
     if (health < CONST.healthHigh and length < CONST.growLength): 
         interruptlist.append(['Eat', ''])
         reason.append('health is less than high and length less than '+str(CONST.growLength))
 
-    # No threats & high health
-    if (health >= CONST.healthLow): 
-        interruptlist.append(['Idle', 'Centre'])
-        reason.append('health is high')
+    # # No threats & high health
+    # if (health >= CONST.healthLow): 
+    #     interruptlist.append(['Idle', 'Centre'])
+    #     reason.append('health is high')
 
     # Health interrupt general 
     if (health < CONST.healthLow): 
@@ -135,7 +137,7 @@ def checkInterrupts(bo:board, snakes):
 
         # Collision & enemy larger
         # elif (pathThreat(bo, start, path, aggro)): 
-        #     strategy = ['Idle', 'FindWall']
+        #     strategy = ['Idle', 'Wall']
         #     interrupt = True 
 
 
@@ -148,15 +150,15 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
     strategylist, strategyinfo = sn.getStrategy()
-    strategylist_default = [['Eat', ''], ['Find', 'Centre'], ['Survive', '']] 
-    # CONST.defaultstrategy = [['Eat', ''], ['Taunt', '']]
+    strategylist_default = [['Eat', ''], ['Survive', '']] 
+    # CONST.defaultstrategy = [['Eat', ''], ['Taunt', '']], ['Idle', 'Wall']
     strategy = []
    
     start = sn.getHead()
     length = sn.getLength()
     aggro = sn.getAggro()
-    tail = sn.getTail()
-    alltails = getSnakeTails(snakes)
+    # tail = sn.getTail()
+    # alltails = getSnakeTails(snakes)
 
     # Closest item(s) 
     itsort = bo.findClosestItem(its, start) 
@@ -200,19 +202,19 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
           if (strategy[1] == 'Collide'):
             # HEAD ON COLLISION 
             target = strategyinfo['killpath']    
-            log('strategy-killpath', 'killPath', str(start), start(length), str(target))
+            log('strategy-killpath', 'killPath', str(start), str(length), str(target))
             # Do not repeat strategy 
 
           if (strategy[1] == 'Cutoff'):
-            if len(strategyinfo['killpath']):
-              target = strategyinfo['killpath'].pop()
+            if len(strategyinfo['killcut']):
+              target = strategyinfo['killcut'].pop()
               strategylist.insert(0, strategy)
 
             else: 
               # Repeat until no more paths 
                pass 
              
-            log('strategy-killpath', 'killCut', str(start), start(length), str(target))
+            log('strategy-killpath', 'killCut', str(start), str(length), str(target))
             
             
       if(strategy[0]=='Control'):
@@ -243,9 +245,10 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
 
             # Update step 
             strategyinfo['control'] = step
-
-            # Repeat (back of strategy)
-            strategylist.append(strategy)
+            
+            # TODO:  Repeat next turn but not this turn.  Should just interrupt again .. 
+            # strategylist.append(copy.copy(strategy))
+            # strategyinfo['norepeat'] = copy.copy(strategy)
             
             log('strategy-control', str(step), str(target), '')
 
@@ -300,12 +303,32 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
             # Repeat -- ie. if no route, try again to next item
             strategylist.insert(0, ['Eat',''])
             # Get route to target  
+            
             itemclose = itsort.pop(0)
             target = itemclose.getLocation()
-            
+
+            # Check if bigger snakes are closer to the food 
+            # if length > CONST.growLength:
+            for sid in snakes:
+              fsnake = snakes[sid]
+              ftype = fsnake.getType()
+              flen = fsnake.getLength()           
+              if (ftype == 'enemy' and flen > length):
+                # Enemy snake is larger 
+                fhead = fsnake.getHead()
+                fdist = fn.distanceToPoint(fhead, target)
+                usdist = fn.distanceToPoint(start, target)
+                # Enemy is closer or equal to us  
+                if (fdist < CONST.foodThreat and fdist <= usdist): 
+                  # print("EAT AVOID")
+                  # print(str(fsnake), str(ftype), str(flen), str(fdist))
+                  # Ignore , live to fight another day 
+                  target = []
+
             # One square away, we are eating next turn 
             # if (fn.distanceToPoint(start, target) == 1):
-            sn.setEating(True)
+            # sn.setEating(True)
+
 
             # Continue to eat until interrupted
             # strategylist.insert(0, ['Eat', ''])
@@ -315,30 +338,35 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
 
         # Default
         if(strategy[1]==''):
-          strategy[1]=='FindWall'
+          strategy[1]=='Wall'
           
 
         if(strategy[1]=='Centre'): 
             target = bo.findCentre(start)
             if (not(len(target))):
+              # If already in centre .. 
               # strategylist.pop(0) 
-              strategylist.append(['Idle', 'FindWall'])
+              strategylist.append(['Idle', 'Centre'])
 
             else: 
-              strategylist.insert(0, ['Idle', 'Centre'])
-            
+              # TODO:  Very computationally intensive.  Temporary remove from retry ..
+              # strategylist.append(strategy)
+              pass 
+
             log('strategy-findcentre', target)
 
         # Find nearest wall 
-        if(strategy[1]=='FindWall'):   
+        if(strategy[1]=='Wall'):   
             target = bo.findClosestWall(start)
             if (not len(target)):
+              pass 
               # Already on a wall 
-              strategylist.insert(0, ['Idle', 'TrackWall'])
+              # Do not repeat 
+              # strategylist.append(['Idle', 'Centre'])
 
             else:
               # Repeat until interrupt 
-              strategylist.insert(0, ['Idle', 'FindWall'])
+              strategylist.insert(0, strategy)
               
             log('strategy-findwall', target)
             
@@ -367,16 +395,14 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
           
           if(strategy[1]==''):  
             # Find any tail to chase 
-            if (len(alltails)):
-              # Try route to a enemy tail out of danger
-              # TODO: Erase dijkstra if enemy eating .. 
-              target = alltails.pop()
+            route, found = bo.routePadding([start])
+            if len(route):
+              # Remove start point .. 
+              target = route.pop(0)
               strategylist.insert(0, strategy)
-              
+            
             else:
-              # TODO:  Out of tails - optimise space  
-              pass 
-          
+              target = []
 
           if(strategy[1]=='Taunt'):
             # Chase our tail 
@@ -394,14 +420,17 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
           # Target is an area 
           route, weight = bo.fuzzyRoute(start, target, length)
 
-      else:
+      elif 'list' in str(type(target)):
           # Target is a point -- type == <class 'list'> 
           route, weight = bo.route(start, target, length)
 
+
       if (len(route)):
+          print("STRATEGY - ", str(route))
           # Pad out route to N moves 
           route.insert(0, start)
           route, found = bo.routePadding(route)
+          print("STRATEGY PADDED - ", str(route))
 
       if(found): 
           # Route found
@@ -463,17 +492,24 @@ def makeMove(bo: board, sn: snake) -> str:
     
     # if (change to strategy): 
     # path = bo.route(start, finish)   
-    path = sn.getRoute()
+    route = sn.getRoute()
     p = []
-    if len(path):
-      p = path.pop(0)
+    if len(route):
+      p = route.pop(0)
       
     print(str(p)) 
 
+    # No route - Use lookahead (route padding)
     if (not len(p) or not bo.inBounds(p)):
-      # Final check that move is valid  
-      
-      # log('move-desparate', bo.dump, sn.dump)
+      # Still no route .. 
+      route, found = bo.routePadding([start])
+      if len(route):
+        # Remove start point .. 
+        route.pop(0)
+        p = route.pop(0)
+
+    # Still no route - Use lowest gradient
+    if (not len(p) or not bo.inBounds(p)):
       wmin = CONST.routeThreshold
       for d in CONST.directions:
         # Check each direction 
@@ -481,37 +517,39 @@ def makeMove(bo: board, sn: snake) -> str:
         t = list( map(add, start, CONST.directionMap[d]) )
         if (bo.inBounds(t)):
           try: 
-            # Find lowest route
-            r, w = bo.route(start, t, l)
+            # Find lowest weight
+            w = bo.dijkstra[0][t[0],t[1]]
             if w < wmin:
-                p = r.pop(0)
-            
+              p = t
+              wmin = w 
+
           except Exception as e:
             log('exception','makeMove',str(e))
     
-    # FINAL CHECK - todo
-    route_status = '' 
-    if (not len(p)):
-      route_status = 'path error - no path'  
-    elif(not bo.inBounds(p)):
-      route_status = 'path error - not in bounds'  
-    elif(p in sn.getBody()):
-      route_status = 'path error - body collision'
-
-     # Translate move 
-    if(route_status):
-      enclosed = bo.enclosed
-      move = max(enclosed, key=enclosed.get)
     
-    else: 
-      route_status = 'path found'
-      # Translate routepoint to direction
-      move = fn.translateDirection(start, p)
+    # TODO -- cleanup 
+    # route_failure = '' 
+    # if (not len(p)):
+    #   route_failure = 'no path'  
+    # elif(not bo.inBounds(p)):
+    #   route_failure = 'path - not in bounds'  
+    # elif(p in sn.getBody()):
+    #   route_failure = 'path - body collision'
+
+    #  # Translate move 
+    # if(route_failure):
+    #   enclosed = bo.enclosed
+    #   move = max(enclosed, key=enclosed.get)
+    
+    route_status = 'path found'
+    # Translate routepoint to direction
+    move = fn.translateDirection(start, p)
 
     log('time', 'After Direction', bo.getStartTime())
     
     log('make-move', str(start), str(finish), str(p), str(move), str(route_status))
         
+    sn.setRoute(route)
     sn.setMove(move)    
     # return move
     
@@ -557,7 +595,7 @@ def pathThreat(board, start, path, maxthreat=CONST.aggroLow):
 
 
 def killPath(bo, snakes, radius=CONST.killRadius):
-    
+    # Find smaller snakes within a kill radius 
     you = bo.getIdentity()
     you_len = snakes[you].getLength() 
     you_head = snakes[you].getHead() 
@@ -569,12 +607,14 @@ def killPath(bo, snakes, radius=CONST.killRadius):
         enemy_len = sn.getLength()
         enemy_head = sn.getHead()
         dist = fn.distanceToPoint(you_head, enemy_head)
+
+        # If larger & within kill zone 
         if (you_len > enemy_len) and (dist <= radius):
           enemy_dirn = sn.getDirection()
           sn_collide = list( map(add, enemy_head, CONST.directionMap[enemy_dirn]) )
-          return sn_collid
+          return copy.copy(sn_collide)
 
-    return False
+    return []
 
 
 def threatPath(bo, sn, dist=2):
@@ -712,29 +752,34 @@ def numMovesAvailable(bo, sn):
 def enemyEnclosed(bo, us, snakes): 
     
     head = us.getHead()
-
+    
+    targets = [] 
     # Iterate through snakes 
     for snid in snakes:
       sn = snakes[snid]
-      if sn.getId() != us.getId():
+
+      if (sn.getType() == 'enemy'):
+        
         enemy_head = sn.getHead()
         # Calculate which squares we can get to 
         board_closest = bo.closestDist(head, enemy_head)
         # Assess enemy path 
         board_chance = bo.pathProbability(enemy_head)
         targets = findInterceptPath(head, board_closest, board_chance)
+
+        # print(str(board_closest))
+        # print(str(board_chance))
         
-        # TODO: move this to setEnemy ... 
+        # TODO: move these tables to setEnemy ... 
         # Set / get enemy boards  
         # sn.setClosest(board_closest)
         # sn.setChance(board_chance)
-        
-    print("KILL CUT: ", str(targets))
-    if (len(targets)):
-      return targets
+      
+
+    return copy.copy(targets)
 
 
-def findInterceptPath(start, board_dist, board_chance, chance=90):
+def findInterceptPath(start, board_dist, board_chance, chance=CONST.interceptMin):
     # Returns a sorted list of intercept paths that 
     # a) enemy snake will route through (%chance)
     # b) we can get to before the enemy 
@@ -750,10 +795,11 @@ def findInterceptPath(start, board_dist, board_chance, chance=90):
     for i in range(0, len(intercepts[0])):
         try:
             target = [intercepts[0][i], intercepts[1][i]]
-            dist = distanceToPoint(start, target)
+            dist = fn.distanceToPoint(start, target)
             intdict[str(target)] = dist
         except Exception as e:
-            pass 
+            # TODO: Look at these errors 
+            log('exception', 'findInterceptPath#1', str(e)) 
             
     intsort = dict(sorted(intdict.items(), key=lambda item: item[1]))
     intlist = []
@@ -767,7 +813,7 @@ def findInterceptPath(start, board_dist, board_chance, chance=90):
                 intlist.append([y, x])
             
         except Exception as e:
-            pass 
+            log('exception', 'findInterceptPath#1', str(e)) 
         
     return intlist
 

@@ -32,15 +32,19 @@ controlLargerBy = 3
 # Strategy - kill radius 
 killRadius = 2
 
-# Strategy - grow 
-growLength = 15
+# Strategy - kill intercept (%) 
+interceptMin = 40
 
+# Strategy - eat / grow 
+growLength = 25
+foodThreat = 3 
 
 # Routing variables 
 maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
+lookAhead = 40
 
 # TODO: .. 
 routeThreshold = 500   # Ignore route if larger 
@@ -50,7 +54,7 @@ routeHazard = 15
 routeCell = 1
 
 # Strategy 
-defaultstrategy = ['Eat', '']
+# defaultstrategy = ['Eat', '']
 
 # Movement directions 
 counterclockwise = "ccw"
