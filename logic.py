@@ -446,23 +446,22 @@ def makeMove(bo: board, sn: snake) -> str:
           except Exception as e:
             log('exception','makeMove',str(e))
     
-    # FINAL CHECK - todod
-    route_failure = '' 
-    if (not len(p)):
-      route_failure = 'no path'  
-    elif(not bo.inBounds(p)):
-      route_failure = 'path - not in bounds'  
-    elif(p in sn.getBody()):
-      route_failure = 'path - body collision'
+    # TODO -- cleanup 
+    # route_failure = '' 
+    # if (not len(p)):
+    #   route_failure = 'no path'  
+    # elif(not bo.inBounds(p)):
+    #   route_failure = 'path - not in bounds'  
+    # elif(p in sn.getBody()):
+    #   route_failure = 'path - body collision'
 
-     # Translate move 
-    if(route_failure):
-      enclosed = bo.enclosed
-      move = max(enclosed, key=enclosed.get)
+    #  # Translate move 
+    # if(route_failure):
+    #   enclosed = bo.enclosed
+    #   move = max(enclosed, key=enclosed.get)
     
-    else: 
-      # Translate routepoint to direction
-      move = fn.translateDirection(start, p)
+    # Translate routepoint to direction
+    move = fn.translateDirection(start, p)
 
     log('time', 'After Direction', bo.getStartTime())
     
