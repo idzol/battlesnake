@@ -136,9 +136,15 @@ def handle_move():
     
     # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
-    
+
     # Update items and objects (theItems)
     foods = data['board']['food']
+    # TODO: Check data object to see if it contains food eaten info 
+    food_lastturn = [] 
+    for food in theItems:
+      floc = food.getLocation()
+      food_lastturn.append(floc)
+
     theItems = []
     for f in foods:
       it = item("food", f) 
@@ -169,13 +175,22 @@ def handle_move():
           aliveSnakes[identity] = copy.deepcopy(sn)
     
     allSnakes = aliveSnakes
-  
-
+    
+    # Set whether snakes are eating 
+    # TODO:  Move to setEnemy/setAll 
+    for sid in allSnakes:
+      sn = allSnakes[sid]
+      head = sn.getHead()
+      sn.setEating(False)
+      if (head in food_lastturn):
+        sn.setEating(True)
+        
+ 
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
-    theBoard.updateBoards(data)
-    log('time', 'predictSnakeMoves', theBoard.getStartTime())
+    theBoard.updateBoards(data, allSnakes)
     
+    log('time', 'predictSnakeMoves', theBoard.getStartTime())
     theBoard.predictSnakeMoves(allSnakes, theItems)
     
     # Initialise routing gradient 
@@ -203,7 +218,7 @@ def handle_move():
     
     log('time', 'stateMachine', theBoard.getStartTime())
     # Progress state machine, set route
-    stateMachine(theBoard, ourSnek, theItems)
+    stateMachine(theBoard, ourSnek, allSnakes, theItems)
     
     # Strategy Complete 
     log('time', '== Strategy complete ==', theBoard.getStartTime())
@@ -216,11 +231,11 @@ def handle_move():
     log('time', 'Path complete', theBoard.getStartTime())
    
     print("SNAKE")
-    ourSnek.showStats()
     log("move", move)
     log("shout", shout)
 
     # Print maps to console 
+    ourSnek.showStats()
     theBoard.showMaps()
 
     # Save game data

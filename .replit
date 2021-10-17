@@ -1,5 +1,5 @@
 language = "python3"
-run = "python server.py"
+run = "python3 server.py"
 
 onBoot="INFO: Boot sequence initiated"
 

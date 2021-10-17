@@ -4,13 +4,14 @@ timePanic = 300
 
 # Log level 
 logFile = "games.log"
-logLevelConsole = 5
-logLevelPrint = 5
+logLevelConsole = 6
+logLevelPrint = 6
 
 # Snake variables
 healthHigh = 100
-healthMed = 95
-healthLow = 90
+healthMed = 75
+healthLow = 50
+healthCritical = 25
 
 threatHigh = 80
 threatMed = 50
@@ -20,16 +21,30 @@ aggroHigh = 80
 aggroMed = 50
 aggroLow = 20
 
-# Strategy variables 
+# Strategy 
 strategyDepth = 10   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
-strategyLargerBy = 3 
+
+# Strategy - control board 
+controlMinLength = 10
+controlLargerBy = 3
+
+# Strategy - kill radius 
+killRadius = 2
+
+# Strategy - kill intercept (%) 
+interceptMin = 40
+
+# Strategy - eat / grow 
+growLength = 25
+foodThreat = 3 
 
 # Routing variables 
 maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
+lookAhead = 20
 
 # TODO: .. 
 routeThreshold = 500   # Ignore route if larger 
@@ -39,7 +54,7 @@ routeHazard = 15
 routeCell = 1
 
 # Strategy 
-defaultstrategy = ['Eat', '']
+# defaultstrategy = ['Eat', '']
 
 # Movement directions 
 counterclockwise = "ccw"
