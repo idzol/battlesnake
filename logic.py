@@ -80,15 +80,17 @@ def checkInterrupts(bo:board, snakes):
           sid = snakes[sndata].getId() 
           if sid != you:
             strategyinfo['enemy'] = snakes[sndata]
+          
+    if (largestSnake(bo, snakes) and health > CONST.healthMed):
+        interruptlist.append(['Idle', 'Centre'])
+        
+    # Survive interuupt  
+    if (numMovesAvailable(bo, sn) < sn.getLength()):
+        interruptlist.append(['Taunt', ''])
+    
+    # Health interrupt 
+    if (health < CONST.healthHigh): 
 
-        reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
-
-    # if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
-    #     interruptlist.append(['Idle', 'Centre'])
-    #     reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
-
-    # Growth interrupt when small
-    if (health < CONST.healthHigh and length < CONST.growLength): 
         interruptlist.append(['Eat', ''])
         reason.append('health is less than high and length less than '+str(CONST.growLength))
 
@@ -526,20 +528,6 @@ def makeMove(bo: board, sn: snake) -> str:
           except Exception as e:
             log('exception','makeMove',str(e))
     
-    
-    # TODO -- cleanup 
-    # route_failure = '' 
-    # if (not len(p)):
-    #   route_failure = 'no path'  
-    # elif(not bo.inBounds(p)):
-    #   route_failure = 'path - not in bounds'  
-    # elif(p in sn.getBody()):
-    #   route_failure = 'path - body collision'
-
-    #  # Translate move 
-    # if(route_failure):
-    #   enclosed = bo.enclosed
-    #   move = max(enclosed, key=enclosed.get)
     
     route_status = 'path found'
     # Translate routepoint to direction
