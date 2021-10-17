@@ -170,12 +170,12 @@ def handle_move():
     
     allSnakes = aliveSnakes
   
-
+  
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
-    theBoard.updateBoards(data)
-    log('time', 'predictSnakeMoves', theBoard.getStartTime())
+    theBoard.updateBoards(data, allSnakes)
     
+    log('time', 'predictSnakeMoves', theBoard.getStartTime())
     theBoard.predictSnakeMoves(allSnakes, theItems)
     
     # Initialise routing gradient 
@@ -203,7 +203,7 @@ def handle_move():
     
     log('time', 'stateMachine', theBoard.getStartTime())
     # Progress state machine, set route
-    stateMachine(theBoard, ourSnek, theItems)
+    stateMachine(theBoard, ourSnek, allSnakes, theItems)
     
     # Strategy Complete 
     log('time', '== Strategy complete ==', theBoard.getStartTime())
@@ -216,11 +216,11 @@ def handle_move():
     log('time', 'Path complete', theBoard.getStartTime())
    
     print("SNAKE")
-    ourSnek.showStats()
     log("move", move)
     log("shout", shout)
 
     # Print maps to console 
+    ourSnek.showStats()
     theBoard.showMaps()
 
     # Save game data

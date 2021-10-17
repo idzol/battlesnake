@@ -35,10 +35,11 @@ class board():
     snakes = []         # Array of other snek (201-head, 200-body)
     items = []          # Array of items (300-food, 301-hazard)
 
-    solid = []  # Array of all solids (snakes, walls)
-    combine = []  # Array of all layers (snakes, walls, items)
-
-    predict = []    # List of Array of board in n moves (prediction)
+    solid = []        # Array of all solids (snakes, walls)
+    combine = []      # Array of all layers (snakes, walls, items)
+    trails = []       # Array of all trails where N = time to expiry 
+    
+    predict = []    # List of Array of board in n moves (prediction) 
     threat = []     # List of Array of threat rating
     dijkstra = []   # List of Array of route complexity 
 
@@ -175,7 +176,7 @@ class board():
 
 # == BOARDS == 
 
-    def updateBoards(self, data):
+    def updateBoards(self, data, snakes):
         # Enclosed - xx
         # Solid - xx 
         # Combine - Array of all layers (snakes, walls, items)
@@ -203,8 +204,12 @@ class board():
         
         # Meta boards 
         depth = CONST.maxPredictTurns
-        en = self.enclosedSpace(head)
+        en = self.enclosedSpacev2(head)
+        self.enclosed = en    # TODO: move to snake object .. 
         
+        # Routing Boards - NEW
+        tr = self.updateTrails(snakes)
+
         # Routing Boards 
         predict = []
         threat = []
@@ -553,8 +558,7 @@ class board():
             vector.insert(0, head)
             rt = fn.getPointsInRoute(vector)
 
-            # print("PREDICT ROUTE", str(name), str(rt))
-            
+            # print("PREDICT ROUTE", str(name), str(rt))            
             body.insert(0, head)
 
             # Ignore dead or invalid snakes
@@ -709,22 +713,102 @@ class board():
             self.gradient[a1[0], a1[1]] = self.dijkstra[0][a1[0], a1[1]]
 
 
-    def predictCollisionFuture(bo, route): 
-    # DEPRECATE -- replaced by predict -> dijkstra
-        # TODO: work in progress
-        # Check for collision in x rounds time
-        # for r in route:
-        #   i = i + 1
-        #   board = predict[i]
-        #   checkCollision(board, r)
-        # return coll
-        pass
+
+    def updateTrails(self, snakes): 
+        # TODO: Replace updatePredict with a set of layers 
+        # updatePredict 
+        # predict = trails + ...
+        
+        w = self.width
+        h = self.height
+        trails = np.zeros([w, h], np.intc)
+      
+        for snid in snakes: 
+  
+            sn = snakes[snid]
+            body = sn.getHeadBody()
+            l = len(body)
+            # print("UPDATE TRAILS", str(body))
+            # Mark each point 
+            for pt in body:
+                # print("UPDATE TRAILS - PT", str(pt))
+                trails[pt[0], pt[1]] = l
+                # Descending from head = N to tail = 1 
+                l = l - 1 
+
+        self.trails = trails     
+        return trails 
+
+
+    def pathProbability(self, head): 
+        # Calculates the probability assuming random walk from any location on the board (head), given obstacles (trails)
+        # Returns probablility board (chance) from 0 - 100 (%)
+
+        w = self.width
+        h = self.height
+        chance = np.zeros([w,h], np.intc)
+
+        enclosed = self.enclosedSpacev2(head)
+        dirn_avail = dict(filter(lambda elem: elem[1] > 0, enclosed.items()))
+        
+        # Calculate random walk probabiliy of each square 
+        for dirn in dirn_avail:
+            path = [head]
+            prob = 100 / len(dirn_avail)
+            turn = 1
+            step = list(map(add, head, CONST.directionMap[dirn]))
+            self.pathProbability_step(chance, path, prob, step, turn)
+            
+        # dirn_avail.remove(dirn)
+        # print(str(dirn_avail))
+
+        return chance
+
+
+    def pathProbability_step(self, chance, path, prob, step, turn=1): 
+        
+        # print("PATH PROBABILITY" + str(step))
+        dy = int(step[0])
+        dx = int(step[1])
+        s = self.trails
+        
+        # Check if not blocked 
+        if(turn >= s[dy, dx]): 
+            
+            # Add to enclosure 
+            chance[dy, dx] = chance[dy, dx] + prob 
+            dirn_avail = self.findEmptySpace(path, step, turn + 1)
+            path.append(step)
+            
+            # print("PATH PROB", str(turn), str(step), str(dirn_avail))
+
+            for d in dirn_avail:
+
+                dnext = list( map(add, step, CONST.directionMap[d]) )
+                dny = dnext[0]
+                dnx = dnext[1]
+                
+                # Reduces based on # directions 
+                prob = prob * 1 / len(dirn_avail)
+                
+                # If point is in map & prob > threshold to prevent loop
+                if (self.inBounds(dnext) and prob > 5):
+                    # Recursive  
+                    turn = turn + 1
+                    
+                    # print("PATH PROB STEP", str(path), str(prob), str(dnext), str(turn))
+                    chance = self.pathProbability_step(chance, path, prob, dnext, turn)
+
+        else:
+            pass
+
+
+        return chance 
 
 
 # == ROUTING == 
 
     # TODO: Fuzzy Routing, ie. get close to an object)
-
 
     def fuzzyRoute(self, a, b, l):
     # Send shape - return best path to any point in shape 
@@ -750,7 +834,7 @@ class board():
             r, w = self.route(a, t, l)
             if w < wmin: 
                 rt = r
-          except:
+          except Exception as e:
             log('exception', 'fuzzyRoute', str(e))
             pass 
                 
@@ -970,6 +1054,79 @@ class board():
 
         return result
 
+    def routePadding(self, route, depth=20): 
+        # Make sure there is always a path with N moves (eg. route_complex + random walk) 
+        # Else return [] 
+
+        # Needs minimum one point to start padding route 
+        if (not len(route)):
+          return []
+
+        # Route to path (points) 
+        path = fn.getPointsInRoute(route)
+        # print("ROUTE"+str(route))
+        # print("PATH"+str(path))
+        
+        turns_found = len(path)
+        start = route[-1]
+        found = False 
+        
+        # Increase depth as snake increases
+        # depth = sn.getLength() * 2
+        
+        # Confirm we found a path 
+        if (turns_found):
+              
+            # Confirm any path exists.  Pad path to N turns using random walk 
+            turn = len(path)        
+            path = self.findLargestPath(path, turn, depth) 
+            if len(path) >= depth:
+                # Max path found 
+                found = True
+    
+        # Return path (list) & wheth max depth found (boolean)
+        return path, found
+
+
+    def findLargestPath(self, path, turn=1, depth=20): 
+        # Iterate through closed space to check volume 
+        # **TODO: Include own path as layer in future updateTrails
+        # TODO: Introduce panic timers if routing too long 
+          
+        # print("FINDPATH", str(path), str(turn))
+        # If one path meets depth, end recursion
+        if(len(path) >= depth): 
+            return path      
+        
+        # .. else continue until paths run out .. 
+        s = self.trails   
+        step = path[-1]
+            
+        # Look in all directions 
+        for d in CONST.directions:
+            dnext = list( map(add, step, CONST.directionMap[d]) )
+            dy = dnext[0]
+            dx = dnext[1]
+            
+            # print("EMPTY SPACE", str(d), str(turn), str(s[dy, dx]), str(dnext), str(path))
+            # Check next path is in bounds, available and not already visited**
+            if(self.inBounds(dnext) and \
+                    turn >= s[dy, dx] and \
+                    not dnext in path):
+
+                # Add to dirns 
+                # dirn = dirn 
+                path.append(dnext)
+                # print("FINDPATH2", str(path), str(dnext))
+        
+                turn = turn + 1
+                path = self.findLargestPath(path, turn, depth)
+                if (len(path) >= depth): 
+                    # Max path found - Exit search 
+                    break
+        
+        return path
+        
 
 # == FINDERS == 
 
@@ -1185,7 +1342,7 @@ class board():
             dist = abs(start[0] - pt[0]) + abs(start[1] - pt[1])
             snakedist[dist] = pt 
         
-        print(str(snakedist))
+        # print(str(snakedist))
         
         # Sort list & return first X points 
         snakedist = dict(sorted(snakedist.items(), key=lambda item: item[1]))
@@ -1201,7 +1358,7 @@ class board():
         while len(box) < imax:
             box.append(box[-1])
         
-        print("FINDSNAKEBOX", str(snakedist), str(box))
+        # print("FINDSNAKEBOX", str(snakedist), str(box))
         
         # Translate to area 
         targets = []
@@ -1464,7 +1621,7 @@ class board():
 
         self.distances = dists
 
-        print(str(dists))
+        # print(str(dists))
 
         return dists
         # eg.
@@ -1577,13 +1734,13 @@ class board():
         return copy.copy(allowed)
 
 
-    def enclosedSpace(self, start): 
+    def enclosedSpacev2(self, start): 
         # Return volume of enclosed spaces in each direction 
         # TODO:  If < lenght AND tail < dist... 
         
         w = self.width
         h = self.height
-     
+  
         sy = start[0]
         sx = start[1]
         
@@ -1600,34 +1757,42 @@ class board():
             
             if (self.inBounds(dirn)):
                 # print("ENCLOSED", str(encl), str(dirn))
-                self.enclosedSpace_step(encl, dirn) 
+                encl = self.enclosedSpace_step(encl, dirn) 
                                   
             enclosed[d] = copy.copy(encl)
         
 
         enclsum = {}
+        # print("ENCLOSED", str(enclosed))
         for d in CONST.directions: 
             # Return array of total spaces by direction (eg. up:10
             enclsum[d] = sum(sum(enclosed[d])) - 1
             # print(d, str(enclosed[d]))
         
-        self.enclosed = copy.copy(enclsum)
+        # TODO: Assess where else this is used (optimise).  Save to snake (setEnclose/getEnclose), ie. self.enclosed 
+        # self.enclosed = copy.copy(enclsum)
+
         log('enclosed-sum', str(enclsum))
-        return enclsum 
+        return enclsum
 
 
-    def enclosedSpace_step(self, encl, dirn): 
+    def enclosedSpace_step(self, encl, dirn, turn=1):  
         # Iterate through closed space to check volume 
 
         dy = int(dirn[0])
         dx = int(dirn[1])
-        s = self.solid
+        # s = self.solid
+        s = self.trails
+        
+        # Trails not defined yet 
+        if (not len(s)): 
+            return encl
 
         # If the point is not a wall 
-        # # print("ENCLOSED-STEP", str(dx), str(dy))
+        # print("ENCLOSED-STEP", str(dx), str(dy), str(s))
         
-        if(not s[dy, dx]): 
-            # Add to enclosure 
+        if(turn >= s[dy, dx]):
+            # Path available -- add to enclosure 
             encl[dy, dx] = 1
     
             for d in CONST.directions:
@@ -1641,10 +1806,53 @@ class board():
                     self.enclosedSpace_step(encl, dnext)
         
         else:
+            # Path not available
             pass
             
+        return encl
+    
+
+    def closestDist(self, us, them): 
+        # us = sn.getHead(), them = enemy.getHead()
+        # TODO: Assumes no solids in closest distance, otherwise requires a version of route with dijkstra / gradient (ie. closestDist_complex)
         
-        return 
+        w = self.width
+        h = self.height
+        closest = np.zeros([w,h], np.intc)
+        
+        for y in range(0, h):
+            for x in range(0, w):
+                us_dist = abs(us[0] - y) + abs(us[1] - x)
+                them_dist = abs(y - them[0]) + abs(x - them[1])
+                if them_dist > us_dist:
+                    closest[y, x] = 1
+                    
+        return closest
+
+
+
+    def findEmptySpace(self, path, dirn, turn=1): 
+        # Iterate through closed space to check volume 
+        
+        s = self.trails
+      
+        dirns_avail = []
+        
+        for d in CONST.directions:
+        
+            dnext = list( map(add, dirn, CONST.directionMap[d]) )
+            dy = dnext[0]
+            dx = dnext[1]
+            
+            # print("EMPTY SPACE", str(d), str(turn), str(s[dy, dx]), str(dnext), str(path))
+            if(self.inBounds(dnext) and \
+                    turn >= s[dy, dx] and \
+                    not dnext in path): 
+                # Add to dirns 
+                dirns_avail.append(d)
+
+        return dirns_avail
+
 
     def showMaps(self):
 
@@ -1660,3 +1868,83 @@ class board():
 
 
 # == DELETE == 
+
+    # def predictCollisionFuture(bo, route): 
+    # # DEPRECATE -- replaced by predict -> dijkstra
+    #     # TODO: work in progress
+    #     # Check for collision in x rounds time
+    #     # for r in route:
+    #     #   i = i + 1
+    #     #   board = predict[i]
+    #     #   checkCollision(board, r)
+    #     # return coll
+    #     pass
+
+    # def enclosedSpace(self, start): 
+    #     # Return volume of enclosed spaces in each direction 
+    #     # TODO:  If < lenght AND tail < dist... 
+        
+    #     w = self.width
+    #     h = self.height
+     
+    #     sy = start[0]
+    #     sx = start[1]
+        
+    #     enclosed = {} 
+        
+    #     # Check enclosed space in four directions from start 
+    #     for d in CONST.directions:
+            
+    #         encl = np.zeros([h, w], np.intc)
+    #         encl[sy, sx] = 1
+        
+    #         dirn = list( map(add, start, CONST.directionMap[d]) )
+    #         # print(str(dirn))
+            
+    #         if (self.inBounds(dirn)):
+    #             # print("ENCLOSED", str(encl), str(dirn))
+    #             self.enclosedSpace_step(encl, dirn) 
+                                  
+    #         enclosed[d] = copy.copy(encl)
+        
+
+    #     enclsum = {}
+    #     for d in CONST.directions: 
+    #         # Return array of total spaces by direction (eg. up:10
+    #         enclsum[d] = sum(sum(enclosed[d])) - 1
+    #         # print(d, str(enclosed[d]))
+        
+    #     self.enclosed = copy.copy(enclsum)
+    #     log('enclosed-sum', str(enclsum))
+    #     return enclsum 
+
+
+    # def enclosedSpace_step(self, encl, dirn): 
+    #     # Iterate through closed space to check volume 
+
+    #     dy = int(dirn[0])
+    #     dx = int(dirn[1])
+    #     s = self.solid
+
+    #     # If the point is not a wall 
+    #     # # print("ENCLOSED-STEP", str(dx), str(dy))
+        
+    #     if(not s[dy, dx]): 
+    #         # Add to enclosure 
+    #         encl[dy, dx] = 1
+    
+    #         for d in CONST.directions:
+                
+    #             dnext = list( map(add, dirn, CONST.directionMap[d]) )
+    #             dny = dnext[0]
+    #             dnx = dnext[1]
+    #             # If point is in map & not already visited 
+    #             if (self.inBounds(dnext) and not encl[dny, dnx]):
+    #                 # Recursive  
+    #                 self.enclosedSpace_step(encl, dnext)
+        
+    #     else:
+    #         pass
+            
+        
+    #     return 

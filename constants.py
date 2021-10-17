@@ -21,10 +21,20 @@ aggroHigh = 80
 aggroMed = 50
 aggroLow = 20
 
-# Strategy variables 
+# Strategy 
 strategyDepth = 10   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
-strategyLargerBy = 3 
+
+# Strategy - control board 
+controlMinLength = 10
+controlLargerBy = 3
+
+# Strategy - kill radius 
+killRadius = 2
+
+# Strategy - grow 
+growLength = 15
+
 
 # Routing variables 
 maxSearchDepth = 3
