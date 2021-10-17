@@ -51,23 +51,22 @@ messages = {
     'route-complex-step':[6,"-->ROUTE COMPLEX", "from: %s to: %s"],
     'route-complex-path':[6,"-->ROUTE COMPLEX", "path: %s"],
 
-    'make-move':[3,"-->MAKE MOVE"," start:%s finish:%s path:%s point:%s move:%s"],
+    'make-move':[3,"->MAKE MOVE"," start:%s target:%s next:%s move:%s status:%s"],
 
     # Strategy 
-    'interrupt':[4,"->INTERRUPT"," %s"],
-    'strategy':[4,"->STRAT", "%s interrupt:%s strategy:%s strategyinfo:%s"],
-    'strategy-update':[4,"->STRAT", "%s\n%s"],
-    'strategy-iterate':[4,"->STRAT", "Updated - %s"],
-    'strategy-eat':[4,"->EAT", " %s"],
-    'strategy-attack':[4,"->ATTACK", " %s %s %s %s"],
-    'strategy-killpath':[4,"->KILL", " head:%s length:%s target:%s"],
-    'strategy-defend':[4,"->DEFEND", " %s %s %s %s"],
-    'strategy-control':[4,"->CONTROL", " %s %s %s"],
-    'strategy-survive':[4,"->SURVIVE", " %s %s %s %s"],
-    'strategy-taunt':[4,"->TAUNT", " %s"],
-    'strategy-findcentre':[4,"->FINDCENTRE", " Target %s"],
-    'strategy-findwall':[4,"->FINDWALL", " Target %s"],
-    'strategy-trackwall':[4,"->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
+    'interrupt':[4,"->INTERRUPT","\nInterrupts:%s \nReasons:%s"],
+    'strategy':[4,"->STRATEGY", "\nStrategy:%s \n Reason:%s \n Strategylist: %s,  Strategyinfo:%s"],
+    'strategy-update':[4,"->STRATEGY", "\n%s"],
+    'strategy-eat':[4,"-->EAT", " %s"],
+    'strategy-attack':[4,"-->ATTACK", " %s %s %s %s"],
+    'strategy-killpath':[4,"-->KILL", "%s head:%s length:%s target:%s"],
+    'strategy-defend':[4,"-->DEFEND", " %s %s %s %s"],
+    'strategy-control':[4,"-->CONTROL", " %s %s %s"],
+    'strategy-survive':[4,"-->SURVIVE", " %s %s %s %s"],
+    'strategy-taunt':[4,"-->TAUNT", " %s"],
+    'strategy-findcentre':[4,"-->FINDCENTRE", " Target %s"],
+    'strategy-findwall':[4,"-->FINDWALL", " Target %s"],
+    'strategy-trackwall':[4,"-->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
 
     # Map 
     'map':[3, "%s"],
@@ -118,7 +117,7 @@ def log(src, *vars):
         try: 
             output = msg[1] + ": {:.2f} ms | ".format(diff) + vars[0]
         except Exception as e:       
-            log('exception', 'log', str(vars[0]) + str(e))
+            log('exception', 'log#1', str(vars[0]) + str(e))
   
     # Map function
     elif(src.startswith('map')):
@@ -135,14 +134,14 @@ def log(src, *vars):
           output = str(vars[0]) + "\n" + str(md)
             
         except Exception as e:       
-          log('exception', 'log', str(vars[0]) + str(e))
+          log('exception', 'log#2', str(vars[0]) + str(e))
   
     # General print function 
     else:          
         try:
           output = msg[1] + ": " + msg[2] % vars
         except Exception as e:       
-          log('exception', 'log', str(vars[0]) + str(e))
+          log('exception', 'log#3', str(vars[0]) + str(e))
   
 
     # Print to console 

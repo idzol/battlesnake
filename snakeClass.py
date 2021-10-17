@@ -217,6 +217,13 @@ class snake:
         r = self.body
         return r[:]
 
+    # TODO:  Test 
+    def getHeadBody(self):
+        b = copy.copy(self.body)
+        h = copy.copy(self.head)
+        b.insert(0, h) 
+        return b[:]
+
     def setPredict(self, p):
         self.predict = copy.copy(p)
         
