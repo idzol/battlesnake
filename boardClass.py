@@ -363,6 +363,7 @@ class board():
         # Update hazard board 
         if len(hazards):
           for hz in hazards: 
+              print("HAZARDS", str(hz))
               try:
                 threatmap[:][hz['y'], hz['x']] = CONST.routeHazard 
               except Exception as e: 
@@ -477,21 +478,25 @@ class board():
           # Get relevant predict / threat matrix 
           predict = self.predict[t]
           threat = self.threat[t]
-          
-          # Dijkstra combines solids, foods, hazards (threats)
-          dijksmap[t] = np.add(predict, threat) + 1
-          # Adjust head & tail location to zero for routing 
-          dijksmap[0][head[0], head[1]] = 0
-          # Erase tail since we are moving, unless we are eating 
-          if(length > 3) and not sn.getEating():
-              dijksmap[0][tail[0], tail[1]] = 0
-          else:  
-              # TODO: Check tail logic being correctly set 
-              dijksmap[0][tail[0], tail[1]] = t 
+          try: 
+            # Dijkstra combines solids, foods, hazards (threats)
+            dijksmap[t] = np.add(predict, threat) + 1
+            # Adjust head & tail location to zero for routing 
+            print("DIJKSTRA DEBUG", str(head))
+            dijksmap[0][head[0], head[1]] = 0
+            # Erase tail since we are moving, unless we are eating 
+            if(length > 3) and not sn.getEating():
+                dijksmap[0][tail[0], tail[1]] = 0
+            else:  
+                # TODO: Check tail logic being correctly set 
+                dijksmap[0][tail[0], tail[1]] = t 
 
-          # dijksmap[0][tail[0], tail[1]] = 0
-          # dijksmap[0][ay, ax] = threat[0][ay, ax]
- 
+            # dijksmap[0][tail[0], tail[1]] = 0
+            # dijksmap[0][ay, ax] = threat[0][ay, ax]
+          
+          except Exception as e: 
+            print('exception', 'updateDijkstra#1', str(e))
+
         self.setDijkstra(dijksmap)
 
 
