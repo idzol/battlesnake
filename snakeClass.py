@@ -286,7 +286,6 @@ class snake:
         e = False 
         if (l > 2): 
           # If last two points are the same 
-          print(str(b))
           if(b[-1] == b[-2]):
             e = True
 

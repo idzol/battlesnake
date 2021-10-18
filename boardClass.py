@@ -361,7 +361,7 @@ class board():
         # Update hazard board
         if len(hazards):
             for hz in hazards:
-                print("HAZARDS", str(hz))
+                # print("HAZARDS", str(hz))
                 try:
                     threatmap[:][hz['y'], hz['x']] = CONST.routeHazard
                 except Exception as e:
@@ -455,9 +455,11 @@ class board():
         self.threat = copy.deepcopy(threatmap)
         # print(str(self.threat))
 
+
     def updateDijkstra(self, sn):
 
         depth = CONST.maxPredictTurns
+
 
         w = self.width
         h = self.height
@@ -485,18 +487,13 @@ class board():
                 # Dijkstra combines solids, foods, hazards (threats)
                 dijksmap[t] = np.add(predict, threat) + 1
                 # Adjust head & tail location to zero for routing
-                print("DIJKSTRA DEBUG", str(head))
                 dijksmap[0][head[0], head[1]] = 0
-                # Erase tail since we are moving, unless we are eating
+                
+                # Erase tail unless we are eating
                 if (length > 3) and not sn.getEating():
                     dijksmap[0][tail[0], tail[1]] = 0
-                else:
-                    # TODO: Check tail logic being correctly set
-                    dijksmap[0][tail[0], tail[1]] = t
-
-                # dijksmap[0][tail[0], tail[1]] = 0
-                # dijksmap[0][ay, ax] = threat[0][ay, ax]
-
+                
+                
             except Exception as e:
                 print('exception', 'updateDijkstra#1', str(e))
 
@@ -524,11 +521,10 @@ class board():
                     finish = []
 
                 # TODO: Form gradient for each snake (currently using our routing matrix)
-                self.updateGradient(start)
-                self.recursion_route = 0
-
-                rt, weight = self.route(start, finish)
-                # Limit depth to X
+                # self.updateGradient(start)
+                # self.recursion_route = 0
+                # rt, weight = self.route(start, finish)
+                rt, weight = self.route_corner(start, finish, 10 * CONST.routeThreshold)
 
                 # TODO: Assume strategy is kill (len > X)
                 # TODO: Assume strategy is board control / loop etc (eg. circular)
@@ -677,18 +673,22 @@ class board():
         # Exit if timer or recursion exceeded
         rr = self.recursion_route
         self.recursion_route = rr + 1
+
         if (self.hurry or rr > CONST.maxRecursion):
             return
 
-        if (rr > 0 and not (rr % 1000)):
+        if (rr > 0 and not (rr % 500)):
+            # TODO: Remove limit to N recursions 
             st = self.getStartTime()
-            log('time', 'Gradient 1000', st)
+            log('time', 'Gradient 500', st)
+            log('timer-hurry')
+            self.hurry = True 
 
-            # Timer exceeded
-            diff = 1000 * (time.time() - st)
-            if diff > CONST.timePanic:
-                log('timer-hurry')
-                self.hurry = True
+            # # Timer exceeded
+            # diff = 1000 * (time.time() - st)
+            # if diff > CONST.timePanic:
+            #     log('timer-hurry')
+            #     self.hurry = True
 
         # Iterate through four directions
         for d in CONST.directions:
@@ -715,12 +715,14 @@ class board():
                     turn = turn + 1
                     self.updateGradient(a1, turn)
 
+
     def updateGradientFix(self, a):
         # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn (eg. loop around & think not there)
         for d in CONST.directions:
             a1 = list(map(add, a, CONST.directionMap[d]))
             if (self.inBounds(a1)):
                 self.gradient[a1[0], a1[1]] = self.dijkstra[0][a1[0], a1[1]]
+
 
     def updateTrails(self, snakes):
         # TODO: Replace updatePredict with a set of layers
@@ -794,8 +796,8 @@ class board():
             for d in dirn_avail:
 
                 dnext = list(map(add, step, CONST.directionMap[d]))
-                dny = dnext[0]
-                dnx = dnext[1]
+                # dny = dnext[0]
+                # dnx = dnext[1]
 
                 # Reduces based on # directions
                 prob = prob * 1 / len(dirn_avail)
@@ -818,15 +820,18 @@ class board():
 
 # TODO: Fuzzy Routing, ie. get close to an object)
 
-    def fuzzyRoute(self, a, b, l):
+    def fuzzyRoute(self, start, targetmap, length):
         # Send shape - return best path to any point in shape
         # a = [1, 1]
         # b = np.zeros([h, w], np.intc)
         # b[1:3, 3:6] = 1
         # result, weight = fuzzyRoute(a, b)
-
         w = self.width
         h = self.height
+        
+        a = copy.copy(start)
+        b = copy.copy(targetmap)
+        l = copy.copy(length)
 
         r = np.zeros([h, w], np.intc)
         r = r + b
@@ -848,9 +853,12 @@ class board():
 
         return rt, wmin
 
-    def route(self, a, b, length=0):
 
-        t = CONST.routeThreshold
+    def route(self, start, dest, length=0, threshold = CONST.routeThreshold):
+
+        a = copy.copy(start)
+        b = copy.copy(dest)
+
         route = []
         weight = -1
         routetype = ''
@@ -864,7 +872,7 @@ class board():
             return route, weight
 
         # Eliminate dead ends
-        # TODO:  Replaced by route pad or route fail logic ..
+        # TODO:  Replaced by routePadding or route fail logic ..
         # for d in CONST.directions:
         #     a1 = list (map(add, a, CONST.directionMap[d]))
         #     if(self.inBounds(a1)):
@@ -923,13 +931,12 @@ class board():
         # log("route", "BASIC", str(r), str(w))
         return r, w
 
-    def route_corner(self, a, b):
+    def route_corner(self, a, b, w = CONST.routeThreshold):
 
         r = []
         corners = [[a[0], b[1]], [b[0], a[1]]]
 
         # Calculate path routes for two options all the individual legs
-        w = CONST.routeThreshold
         for c in corners:
             path = []
             path = fn.getPointsInLine(a, c) + fn.getPointsInLine(c, b)
@@ -1093,7 +1100,7 @@ class board():
             print("ROUTE PAD#2", str(path), str(len(path)), str(depth))
 
         # Return path (list) & wheth max depth found (boolean)
-        route = route + path
+        # route = route + path
         # Remove first point of route (head)
         route.pop(0)
         return copy.copy(route), copy.copy(found)
@@ -1136,8 +1143,11 @@ class board():
                     # Max path found - Exit search
                     break
 
-        newpath.pop(0)
-        return copy.copy(newpath)
+        if len(newpath):
+          return copy.copy(newpath)
+
+        else:
+          return []
 
     def findLargestPath_step(self,
                              route,
@@ -1347,7 +1357,7 @@ class board():
         body = enemy.getBody()
         body.append(enemy.getHead())
 
-        print("DEFINESNAKE", str(body))
+        # print("DEFINESNAKE", str(body))
 
         xmin = w
         xmax = 0
@@ -1603,10 +1613,10 @@ class board():
         self.hazardIndex = hi  # [6, 7]
         self.labels = labels
 
-        print(str(labels))
-        print(str(si))
-        print(str(fi))
-        print(str(hi))
+        # print(str(labels))
+        # print(str(si))
+        # print(str(fi))
+        # print(str(hi))
 
         return 1
 

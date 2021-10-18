@@ -17,15 +17,15 @@ import constants as CONST
 global messages
 messages = {
     # Time 
-    'time':[3, "TIME"],
-    'timer-hurry':[6, "TIME", "Move time reached CONST.timePanic"],
+    'time':[2, "TIME"],
+    'timer-hurry':[2, "TIME", "Move time reached CONST.timePanic"],
 
     # Server 
-    'healthcheck':[3,"INFO", "Healthcheck - OK"],
-    'start':[3,"START", " %s"],
-    'end':[3,"END", " %s"],
-    'move':[3,"MOVE", " %s"],
-    'shout':[3,"SHOUT", " %s"],
+    'healthcheck':[1,"INFO", "Healthcheck - OK"],
+    'start':[1,"START", " %s"],
+    'end':[1,"END", " %s"],
+    'move':[1,"MOVE", " %s"],
+    'shout':[1,"SHOUT", " %s"],
     
     # Board 
     'updateboardsnakes-warn':[6, "WARN", "Enemy snake head not defined. %s"],
