@@ -44,7 +44,7 @@ maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
-lookAhead = 20
+lookAhead = 15
 
 # TODO: .. 
 routeThreshold = 500   # Ignore route if larger 

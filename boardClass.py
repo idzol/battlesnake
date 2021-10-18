@@ -20,7 +20,7 @@ import sys
 
 # Set recursion limit 
 # TODO: Replace with loop if possible .. 
-sys.setrecursionlimit(100000)
+sys.setrecursionlimit(50000)
 
 class board():
 
@@ -1093,22 +1093,20 @@ class board():
         if (turns_found):
             # Confirm any path exists.  Pad path to N turns using random walk 
             turn = len(path) 
-            print("ROUTE PAD#1", str(path))     
-            finalpath = self.findLargestPath(path, turn) 
-            if len(finalpath) >= depth:
+            print("ROUTE PAD#1", str(path))   
+            original = copy.copy(path)  
+            path = self.findLargestPath(original, turn, depth) 
+            if len(path) >= depth:
                 # Max path found 
                 found = True
             
-            print("ROUTE PAD#2", str(finalpath))
+            print("ROUTE PAD#2", str(path), str(len(path)), str(depth))
     
         # Return path (list) & wheth max depth found (boolean)
-        if (found):
-          return copy.copy(finalpath), copy.copy(found)
-        else: 
-          return copy.copy(path), copy.copy(found)
+        return copy.copy(path), copy.copy(found)
 
 
-    def findLargestPath(self, original, turn=1, depth=20, path=[]): 
+    def findLargestPath(self, original, turn=1, depth=CONST.lookAhead, path=[]): 
         # Iterate through closed space to check volume 
         # **TODO: Include own path as layer in future updateTrails
         # TODO: Introduce panic timers if routing too long 
