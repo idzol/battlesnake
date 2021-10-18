@@ -39,17 +39,17 @@ messages = {
     'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route':[3,"-->ROUTE"," %s r:%s w:%s"],
-    'route-fromto':[3,"-->FROM TO", " %s %s"],
-    'route-return':[3,"-->ROUTE", " %s %s"],
-    'paths':[3,"-->PATH", " %s"],
-    'path-target':[6,"-->TARGET", " %s"], 
-    'route-dijkstra-sum':[6,"-->DSUM"," %s-%s-%s path:%s = %d"],
-    'route-findclosestwall':[6,"-->WALLPATH"," %s %s"],
-    'route-leastline-dsum':[6,"-->LDSUM"," %s %s-%s = %d"],
-    'route-gradient':[6,"-->PATH", " Gradient %s"],
-    'route-complex-step':[6,"-->ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[6,"-->ROUTE COMPLEX", "path: %s"],
+    'route':[5,"-->ROUTE"," %s r:%s w:%s"],
+    'route-fromto':[5,"-->FROM TO", " %s %s"],
+    'route-return':[5,"-->ROUTE", " %s %s"],
+    'paths':[5,"-->PATH", " %s"],
+    'path-target':[5,"-->TARGET", " %s"], 
+    'route-dijkstra-sum':[5,"-->DSUM"," %s-%s-%s path:%s = %d"],
+    'route-findclosestwall':[5,"-->WALLPATH"," %s %s"],
+    'route-leastline-dsum':[5,"-->LDSUM"," %s %s-%s = %d"],
+    'route-gradient':[5,"-->PATH", " Gradient %s"],
+    'route-complex-step':[5,"-->ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[5,"-->ROUTE COMPLEX", "path: %s"],
 
     'make-move':[3,"->MAKE MOVE"," start:%s target:%s next:%s move:%s status:%s"],
 

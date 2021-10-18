@@ -16,6 +16,11 @@ from logger import log
 import constants as CONST
 import functions as fn
 
+import sys
+
+# Set recursion limit 
+# TODO: Replace with loop if possible .. 
+sys.setrecursionlimit(100000)
 
 class board():
 

@@ -591,7 +591,8 @@ def killPath(bo, snakes, radius=CONST.killRadius):
         if (you_len > enemy_len) and (dist <= radius):
           enemy_dirn = sn.getDirection()
           sn_collide = list( map(add, enemy_head, CONST.directionMap[enemy_dirn]) )
-          return copy.copy(sn_collide)
+          if (bo.inBounds(sn_collide)):
+            return copy.copy(sn_collide)
 
     return []
 
@@ -602,15 +603,6 @@ def threatPath(bo, sn, dist=2):
     # try to increase dist (eg.)
       # if cannot do safely ...
     return False
-
-
-def headOnCollision(bo, sn):
-    # snake predict enemy head 
-    # for each enemy head range(0,turns)
-    # get distance to prediction 
-    # if (distance == futureturns)
-    # return killpath 
-    return []
 
 
 def boardControl(bo, sn):
