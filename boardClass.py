@@ -1066,73 +1066,97 @@ class board():
         # Make sure there is always a path with N moves (eg. route_complex + random walk) 
         # Else return [] 
 
-        # Needs minimum one point to start padding route 
-        if (not len(route)):
-          return []
-
-        # Route to path (points) 
-        path = fn.getPointsInRoute(route)
-        # print("ROUTE"+str(route))
-        # print("PATH"+str(path))
-        
-        turns_found = len(path)
-        # start = route[-1]
+        path = []
         found = False 
         
-        # Increase depth as snake increases
+        # Needs minimum one point to start padding route 
+        if (not len(route)):
+          return path, found 
+
+        # Convert vectors to points
+        if (len(route) > 1): 
+          path = fn.getPointsInRoute(route)
+
+        turns_found = len(path)
+        # start = route[-1]
+        
+        # TODO:  Increase depth as snake increases rather than fixed amount 
+        # CONFIRM:  If no path == depth, return max lenght
         # depth = sn.getLength() * 2
         
-        # Confirm we found a path 
+        # Confirm we have a path 
         if (turns_found):
-              
             # Confirm any path exists.  Pad path to N turns using random walk 
-            turn = len(path)        
-            path = self.findLargestPath(path, turn, depth) 
-            if len(path) >= depth:
+            turn = len(path) 
+            print("ROUTE PAD#1", str(path))     
+            finalpath = self.findLargestPath(path, turn) 
+            if len(finalpath) >= depth:
                 # Max path found 
                 found = True
+            
+            print("ROUTE PAD#2", str(finalpath))
     
         # Return path (list) & wheth max depth found (boolean)
-        return path, found
+        if (found):
+          return copy.copy(finalpath), copy.copy(found)
+        else: 
+          return copy.copy(path), copy.copy(found)
 
 
-    def findLargestPath(self, path, turn=1, depth=20): 
+    def findLargestPath(self, original, turn=1, depth=20, path=[]): 
         # Iterate through closed space to check volume 
         # **TODO: Include own path as layer in future updateTrails
         # TODO: Introduce panic timers if routing too long 
-          
+        # TODO: Introduce threat from other snakes into s[dy, dx] -> s[turn][dy, dx] udating predict matrix
+        # TODO:  Return best path vs any path (similar to introducing snake threat)
+        
         # print("FINDPATH", str(path), str(turn))
-        # If one path meets depth, end recursion
+        
+        # If path not defined yet, use original 
+        if (len(path) == 0):
+          path = copy.copy(original)
+          turn = 1 
+        
+        step = path[-1]
+
+        # If path meets depth, end recursion
         if(len(path) >= depth): 
             return path      
         
-        # .. else continue until paths run out .. 
         s = self.trails   
-        step = path[-1]
             
         # Look in all directions 
+        dirn_avail = 4
         for d in CONST.directions:
             dnext = list( map(add, step, CONST.directionMap[d]) )
             dy = dnext[0]
             dx = dnext[1]
             
-            # print("EMPTY SPACE", str(d), str(turn), str(s[dy, dx]), str(dnext), str(path))
             # Check next path is in bounds, available and not already visited**
             if(self.inBounds(dnext) and \
                     turn >= s[dy, dx] and \
                     not dnext in path):
 
                 # Add to dirns 
-                # dirn = dirn 
-                path.append(dnext)
-                # print("FINDPATH2", str(path), str(dnext))
-        
+                path.append(copy.copy(dnext))
                 turn = turn + 1
-                path = self.findLargestPath(path, turn, depth)
+
+                path = self.findLargestPath(original, turn, depth, path)
                 if (len(path) >= depth): 
                     # Max path found - Exit search 
                     break
-        
+
+                # Reset turn counter  
+                if (path == original): 
+                  turn = 1 
+                
+            else:
+              dirn_avail = dirn_avail - 1
+    
+        # Dead end and depth not met 
+        if (dirn_avail == 0 and len(path) != depth):
+          return copy.copy(original)
+          
         return path
         
 

@@ -159,13 +159,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
     # alltails = getSnakeTails(snakes)
 
     # Outputs of state machine 
-    target = []
     route = [] 
-    
-    # Progress state machine
     i = 0
     
     while not len(route):
+      # Reset every turn 
+      target = []
+      route = []
       reason = []
     
       # Get next strategy .. 
@@ -215,7 +215,8 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           if (strategy[1]=='Space'):
 
             target = controlSpace(bo, sn, snakes)
-            
+            log('strategy-route', "CONTROL SPACE", str(start), str(target))
+           
           
           if (strategy[1]=='Box'):
             
@@ -357,13 +358,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           
           if(strategy[1]==''):  
             # Find any way out .. 
-            route, found = bo.routePadding([start])
+            route = bo.findLargestPath([start])
             if len(route) > 1:
-              # Remove start point
+              # Remove start point (head)
               route.pop(0) 
               # Target is next point
               target = route.pop(0)
-              strategylist.insert(0, strategy)
+              # strategylist.insert(0, strategy)
             
             else:
               target = []
@@ -380,31 +381,38 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
       # Check route
       found = False 
       # If no target or no route , try next strategy    
-      if 'numpy' in str(type(target)):
+      if 'numpy' in str(type(target)) and bo.inBounds(target):
           # Target is an area 
+          log('strategy-route', "TARGET", str(strategy), str(target))
           route, weight = bo.fuzzyRoute(start, target, length)
 
-      elif 'list' in str(type(target)):
+      elif 'list' in str(type(target)) and bo.inBounds(target):
           # Target is a point -- type == <class 'list'> 
+          log('strategy-route', "TARGET", str(strategy), str(target))
           route, weight = bo.route(start, target, length)
 
 
       if (len(route)):
           # If route valid 
-          print("ROUTE", str(route))
-
+          log('strategy-route', "ROUTE", str(target), str(route))
           if bo.inBounds(route[0]):
               # Pad out route to N moves 
               route.insert(0, start)
-              route, found = bo.routePadding(route)
+              fullroute, found = bo.routePadding(route)
+              log('strategy-route', "ROUTE PADDING", str(fullroute), str(found))
+    
 
-          print("ROUTE PADDING", str(route))
-            
       if(found): 
           # Route found
+          route = copy.copy(fullroute)
+
           log('strategy-update','Path found\nTarget:'+str(target)+'\nRoute:'+str(route)+'\nWeight: '+str(weight))
           break
       
+      else: 
+          # Dead end 
+          target = []
+
       # Check if time exceeds limit 
       st = bo.getStartTime()
       diff = 1000 * (time.time() - st)
@@ -863,8 +871,6 @@ def findBestFood(foods, bo, us, snakes):
  
 def controlSpace(bo, us, snakes):
  
-    width = bo.getWidth()
-    height = bo.getHeight()
     start = us.getHead()
     target = [] 
 
@@ -877,18 +883,37 @@ def controlSpace(bo, us, snakes):
         fhead = fsnake.getHead()
         heads.append(fhead)
         
-    # Look for each location and maximise board control 
+    # Look for each location and maximise board control - stepwise max 
     control_max = 0
-    for h in range(0, height):
-        for w in range(0, width):
-          start = [h, w]
-          dist = bo.closestDist(start, heads)
+    dist_final = []
+    for d in CONST.directions: 
+        step = list(map(add, start, CONST.directionMap[d]))
+        if (bo.inBounds(step)):
+          # Return board control matrix 
+          dist = bo.closestDist(step, heads)
           control = np.sum(dist)
+
           # Save location wtih max control 
           if control > control_max:
               control_max = control
               target = copy.copy(start) 
+              dist_final = copy.copy(dist)
               # board_dist = copy.copy(dist) 
+    
+    print("CONTROL SPACE", str(target), str(dist_final))
+
+    # Board max - brute force search   
+    # control_max = 0
+    # for h in range(0, height):
+    #     for w in range(0, width):
+    #       start = [h, w]
+    #       dist = bo.closestDist(start, heads)
+    #       control = np.sum(dist)
+    #       # Save location wtih max control 
+    #       if control > control_max:
+    #           control_max = control
+    #           target = copy.copy(start) 
+    #           # board_dist = copy.copy(dist) 
 
     return copy.copy(target)
 

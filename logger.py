@@ -48,8 +48,8 @@ messages = {
     'route-findclosestwall':[6,"-->WALLPATH"," %s %s"],
     'route-leastline-dsum':[6,"-->LDSUM"," %s %s-%s = %d"],
     'route-gradient':[6,"-->PATH", " Gradient %s"],
-    'route-complex-step':[3,"-->ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[3,"-->ROUTE COMPLEX", "path: %s"],
+    'route-complex-step':[6,"-->ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[6,"-->ROUTE COMPLEX", "path: %s"],
 
     'make-move':[3,"->MAKE MOVE"," start:%s target:%s next:%s move:%s status:%s"],
 
@@ -63,6 +63,7 @@ messages = {
     'strategy-defend':[4,"-->DEFEND", " %s %s %s %s"],
     'strategy-control':[4,"-->CONTROL", " %s %s %s"],
     'strategy-survive':[4,"-->SURVIVE", " %s %s %s %s"],
+    'strategy-route':[4,"-->ROUTE", " %s: %s %s"],
     'strategy-taunt':[4,"-->SURVIVE", " %s"],
     'strategy-findcentre':[4,"-->FINDCENTRE", " Target %s"],
     'strategy-findwall':[4,"-->FINDWALL", " Target %s"],
