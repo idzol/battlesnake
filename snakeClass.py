@@ -34,7 +34,7 @@ class snake:
         self.hunger = 0  # out of 100 
         self.eating = False 
         self.health = 100 
-        self.length = 3
+        self.length = 0
 
         self.identity = ""  # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
         self.name = ""  # idzol, brensch .. 
@@ -56,13 +56,13 @@ class snake:
         self.setName(name)
         # Set new location 
         self.setLocation(data)
+        self.setEating()
         # Save location to history 
         self.savePath()
         
         # Set attributes
         self.setHealth(health)
         self.setLength(length)
-        # self.setEating(False)
 
         # Set meta 
         aggro = CONST.aggroLow
@@ -79,8 +79,10 @@ class snake:
         self.setType("enemy")
         self.setId(data['id'])
         
+        self.setEating() 
         # Set new location 
         self.setLocation(data)
+
         # Save location to history 
         self.savePath()
     
@@ -278,7 +280,16 @@ class snake:
     def getEating(self):
         return copy.copy(self.eating)
 
-    def setEating(self, e):
+    def setEating(self):
+        b = self.getBody()
+        l = self.getLength()
+        e = False 
+        if (l > 2): 
+          # If last two points are the same 
+          print(str(b))
+          if(b[-1] == b[-2]):
+            e = True
+
         self.eating = e
 
     def getHunger(self):

@@ -1,6 +1,6 @@
 # Time variable 
 timeLow = 100
-timePanic = 300
+timePanic = 200
 
 # Log level 
 logFile = "games.log"
@@ -44,7 +44,7 @@ maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
-lookAhead = 15
+lookAhead = 5
 
 # TODO: .. 
 routeThreshold = 500   # Ignore route if larger 

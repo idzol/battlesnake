@@ -122,7 +122,6 @@ def handle_move():
     # print(str(data))
     
     game_id = data['game']['id']
-    
     # Support for multiple games 
     if game_id in game: 
         try:
@@ -145,7 +144,7 @@ def handle_move():
 
     # Update food objects 
     foods = data['board']['food']
-    food_lastturn = copy.copy(theFoods)
+    # food_lastturn = copy.copy(theFoods)
     theFoods = []
     for f in foods:
       food = [f['y'], f['x']]
@@ -182,9 +181,6 @@ def handle_move():
     for sid in allSnakes:
       sn = allSnakes[sid]
       head = sn.getHead()
-      sn.setEating(False)
-      if (head in food_lastturn):
-        sn.setEating(True)
         
  
     # Update predict & threat matrix  

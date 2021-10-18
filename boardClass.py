@@ -331,7 +331,7 @@ class board():
                 d = fn.distanceToPoint(head, [j, i])
                 self.distance[i, j] = d
 
-    def updateThreat(self, snakes, hazards):
+    def updateThreat(self, snakes, hazards=[]):
     # Assign "threat" value based on prediction model, distance to enemy snake and size etc..
         w = self.width
         h = self.height
@@ -361,11 +361,12 @@ class board():
             threatmap[0][h-1, w-1] = full / 2
       
         # Update hazard board 
-        for hz in hazards: 
-            try:
-              threatmap[:][hz['y'], hz['x']] = CONST.routeHazard 
-            except Exception as e: 
-              log('exception', 'updateThreat', str(e))
+        if len(hazards):
+          for hz in hazards: 
+              try:
+                threatmap[:][hz['y'], hz['x']] = CONST.routeHazard 
+              except Exception as e: 
+                log('exception', 'updateThreat#1', str(e))
         
         # Head on collisions 
         for identity in snakes:
@@ -488,8 +489,6 @@ class board():
               # TODO: Check tail logic being correctly set 
               dijksmap[0][tail[0], tail[1]] = t 
 
-          sn.setEating(False)
-
           # dijksmap[0][tail[0], tail[1]] = 0
           # dijksmap[0][ay, ax] = threat[0][ay, ax]
  
@@ -563,16 +562,12 @@ class board():
             body = sn.getBody()
             vector = sn.getRoute()
             
-            # TODO:  Check to convert route to points (if not already).
+            # Convert route to points
             vector.insert(0, head)
             rt = fn.getPointsInRoute(vector)
 
-            # print("PREDICT ROUTE", str(name), str(rt))            
+            # Reinsert head (vector function strips head)           
             body.insert(0, head)
-
-            # Ignore dead or invalid snakes
-            if (head == [-1, -1]):
-                break
 
             # Create blank template
             snakemap = [None] * (depth + 1)
@@ -739,8 +734,8 @@ class board():
             l = len(body)
 
             # If eating tail takes one more turn 
-            if sn.getEating():
-              l = l + 1 
+            # if sn.getEating():
+            #   l = l + 1 
 
             # Mark each point 
             for pt in body:
@@ -1070,7 +1065,7 @@ class board():
     def routePadding(self, route, depth=CONST.lookAhead): 
         # Make sure there is always a path with N moves (eg. route_complex + random walk) 
         # Else return [] 
-
+        
         path = []
         found = False 
         
@@ -1131,6 +1126,7 @@ class board():
         # Look in all directions 
         dirn_avail = 4
         for d in CONST.directions:
+
             dnext = list( map(add, step, CONST.directionMap[d]) )
             dy = dnext[0]
             dx = dnext[1]
