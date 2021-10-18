@@ -85,9 +85,10 @@ def checkInterrupts(bo:board, snakes):
 
         reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
 
-    # if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
-    #     interruptlist.append(['Idle', 'Centre'])
-    #     reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
+
+    if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
+        interruptlist.append(['Idle', 'Centre'])
+        reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
 
     # Growth interrupt when small
     if (health < CONST.healthHigh and length < CONST.growLength): 
