@@ -18,7 +18,6 @@ app = Flask(__name__)
 
 # Globals 
 global theBoard 
-global theFoods 
 global ourSnek 
 global codeTime
 global allSnakes
@@ -26,7 +25,6 @@ global allSnakes
 
 game = {}  
 theBoard = board()
-theFoods = []          # array of item() class
 allSnakes = {}       # dict of snake() class. id:snake
 ourSnek = snake()
 clock = {}           # time - dict
@@ -47,7 +45,6 @@ def handle_info():
 @app.post("/start")
 def handle_start():
     global theBoard 
-    global theFoods
     global ourSnek 
     global allSnakes
     global codeTime
@@ -109,7 +106,6 @@ def handle_start():
 @app.post("/move")
 def handle_move():
     global theBoard 
-    global theFoods 
     global ourSnek 
     global allSnakes
     global codeTime  
@@ -152,13 +148,13 @@ def handle_move():
 
     # Refresh enemy snakes. Remove dead sneks
     snakes = data['board']['snakes']
-
+    ourSnek.setAll(data['you'])
+        
     aliveSnakes = {}
     for alive in snakes:
       identity = alive['id']
       if (identity == ourSnek.getId()):
         # We are alive! 
-        ourSnek.setAll(data['you'])
         aliveSnakes[identity] = ourSnek
     
       else:
@@ -176,13 +172,6 @@ def handle_move():
     
     allSnakes = aliveSnakes
     
-    # Set whether snakes are eating 
-    # TODO:  Move to setEnemy/setAll 
-    for sid in allSnakes:
-      sn = allSnakes[sid]
-      head = sn.getHead()
-        
- 
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
     theBoard.updateBoards(data, allSnakes)

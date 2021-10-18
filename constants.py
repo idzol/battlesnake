@@ -1,5 +1,5 @@
 # Time variable 
-timeLow = 100
+timeLow = 50
 timePanic = 200
 
 # Log level 
@@ -44,7 +44,7 @@ maxSearchDepth = 3
 maxOwnPaths = 100
 maxPredictTurns = 4
 maxRecursion = 2000
-lookAhead = 5
+lookAhead = 10
 
 # TODO: .. 
 routeThreshold = 500   # Ignore route if larger 

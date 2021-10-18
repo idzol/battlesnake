@@ -474,45 +474,51 @@ def makeMove(bo: board, sn: snake) -> str:
     """
     
     start = sn.getHead()
-    finish = sn.getTarget()
-    
+    finish = sn.getTarget()    
+    route_method = ''
+
     # 0) Route Found 
     route = sn.getRoute()
     p = []
     if len(route):
+      route_method = 'route_stateMachine'
       p = route.pop(0)
       
     print(str(p)) 
 
     # 1) No route - Use lookahead (route padding)
+    # TODO: Combine lookahead & dijkstra to avoid 
+    #   collision with high threat 
     if (not len(p) or not bo.inBounds(p)):
-      # Still no route .. 
-      route, found = bo.routePadding([start])
+      route_method = 'route_findLargestPath'
+      route = bo.findLargestPath([start])
+      print("ROUTE LARGEST", str(start), str(route))
       if len(route) > 1:
         # Remove start point .. 
-        route.pop(0)
+        # route.pop(0)
         p = route.pop(0)
 
     # 2) Still no route - Use lowest gradient
     if (not len(p) or not bo.inBounds(p)):
+      route_method = 'route_dijkstra'
       wmin = CONST.routeThreshold
       for d in CONST.directions:
         # Check each direction 
-        l = sn.getLength()
         t = list( map(add, start, CONST.directionMap[d]) )
         if (bo.inBounds(t)):
           try: 
             # Find lowest weight
             w = bo.dijkstra[0][t[0],t[1]]
             if w < wmin:
-              p = t
-              wmin = w 
+              p = copy.copy(t)
+              wmin = copy.copy(w) 
 
           except Exception as e:
             log('exception','makeMove',str(e))
     
     # 3) Still no route - Use self.enclosd available moves 
     # if (not len(p) or not bo.inBounds(p)):
+    #   route_method = 'route_dijkstra'
     #   for d in CONST.directions:
     #     moves_avail = bo.enclosed[move] 
     #     ..
@@ -531,13 +537,12 @@ def makeMove(bo: board, sn: snake) -> str:
     #   enclosed = bo.enclosed
     #   move = max(enclosed, key=enclosed.get)
     
-    route_status = 'path found'
     # Translate routepoint to direction
     move = fn.translateDirection(start, p)
 
     log('time', 'After Direction', bo.getStartTime())
     
-    log('make-move', str(start), str(finish), str(p), str(move), str(route_status))
+    log('make-move', str(start), str(finish), str(p), str(move), str(route_method))
         
     sn.setRoute(route)
     sn.setMove(move)    
