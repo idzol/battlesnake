@@ -11,7 +11,6 @@ import copy as copy
 # move classes to class/snake, class/board... 
 from snakeClass import snake
 from boardClass import board
-from itemClass import item
 
 from logic import checkInterrupts, stateMachine, makeMove
 
@@ -19,7 +18,7 @@ app = Flask(__name__)
 
 # Globals 
 global theBoard 
-global theItems 
+global theFoods 
 global ourSnek 
 global codeTime
 global allSnakes
@@ -27,7 +26,7 @@ global allSnakes
 
 game = {}  
 theBoard = board()
-theItems = []          # array of item() class
+theFoods = []          # array of item() class
 allSnakes = {}       # dict of snake() class. id:snake
 ourSnek = snake()
 clock = {}           # time - dict
@@ -48,7 +47,7 @@ def handle_info():
 @app.post("/start")
 def handle_start():
     global theBoard 
-    global theItems 
+    global theFoods
     global ourSnek 
     global allSnakes
     global codeTime
@@ -70,8 +69,8 @@ def handle_start():
     # TODO: Don't reinitliaise board & clear counters,eg. keep win stats 
     theBoard = board()
     
-    # initialise items (theItems)
-    theItems = []
+    # initialise food
+    theFoods = []
 
     # Initialise our snake (ourSnek)
     allSnakes = {}
@@ -110,7 +109,7 @@ def handle_start():
 @app.post("/move")
 def handle_move():
     global theBoard 
-    global theItems 
+    global theFoods 
     global ourSnek 
     global allSnakes
     global codeTime  
@@ -123,12 +122,19 @@ def handle_move():
     # print(str(data))
     
     game_id = data['game']['id']
+    
+    # Support for multiple games 
     if game_id in game: 
-        theBoard = game[game_id][0]
-        ourSnek = game[game_id][1]
-        allSnakes = game[game_id][2]
+        try:
+          theBoard = game[game_id][0]
+          ourSnek = game[game_id][1]
+          allSnakes = game[game_id][2]
+        
+        except Exception as e:
+          log('exception', 'server::move', str(e)) 
+          theBoard = board()
+          ourSnek.__init__()          
     else: 
-        # TODO: confirm this works 
         pass 
 
     log('time', '== Start Move ==', theBoard.getStartTime())
@@ -137,18 +143,13 @@ def handle_move():
     # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
 
-    # Update items and objects (theItems)
+    # Update food objects 
     foods = data['board']['food']
-    # TODO: Check data object to see if it contains food eaten info 
-    food_lastturn = [] 
-    for food in theItems:
-      floc = food.getLocation()
-      food_lastturn.append(floc)
-
-    theItems = []
+    food_lastturn = copy.copy(theFoods)
+    theFoods = []
     for f in foods:
-      it = item("food", f) 
-      theItems.append(it)
+      food = [f['y'], f['x']]
+      theFoods.append(food)
 
     # Refresh enemy snakes. Remove dead sneks
     snakes = data['board']['snakes']
@@ -191,7 +192,7 @@ def handle_move():
     theBoard.updateBoards(data, allSnakes)
     
     log('time', 'predictSnakeMoves', theBoard.getStartTime())
-    theBoard.predictSnakeMoves(allSnakes, theItems)
+    theBoard.predictSnakeMoves(allSnakes, theFoods)
     
     # Initialise routing gradient 
     log('time', 'updatePredict', theBoard.getStartTime())
@@ -218,7 +219,7 @@ def handle_move():
     
     log('time', 'stateMachine', theBoard.getStartTime())
     # Progress state machine, set route
-    stateMachine(theBoard, ourSnek, allSnakes, theItems)
+    stateMachine(theBoard, ourSnek, allSnakes, theFoods)
     
     # Strategy Complete 
     log('time', '== Strategy complete ==', theBoard.getStartTime())
@@ -253,21 +254,20 @@ def handle_move():
 @app.post("/end")
 def end():
     global theBoard 
-    global theItems 
+    global theFoods 
     global ourSnek 
     global codeTime
   
     data = request.get_json()
     
-    # Delete game data (TODO:  Dump to log)
-    game_id = data['game']['id']
-    game[game_id] = None
-    
-    # print(str(data))
-    # if 
+    # TODO: Dump game data to log 
+    # Record win / loss 
     # data['you']['health'] = 0 
     # data['you']['head'] = out of bounds ..  
-    # else win ? 
+    
+    # Delete game data 
+    game_id = data['game']['id']
+    game[game_id] = None
     
     log("end", data['game']['id'])
 

@@ -1,15 +1,14 @@
 
-import random as rand
-import numpy as np
-
-from logger import log
+# import random as rand
+# import constants as CONST 
 # from typing import Dict
 # import pandas as pd
 
-import constants as CONST 
+import numpy as np
+import copy as copy 
 
-# move = getMove(pHead, route.pop(0)) 
-# def pointsToDirection(a, b)
+from logger import log
+
 
 def translateDirection(a, b): 
     
@@ -190,30 +189,31 @@ def raiseError(e):
     return True
 
 
+def findClosestItem(foods, start):
+  # Return sorted list of items (foods) closest to point (start)
+
+  # print("FIND CLOSEST ITEM")
+  # print(str(start), str(foods))
+
+  fooddict = {}
+  for food in foods:
+      dist = distanceToPoint(start, food)
+      fooddict[str(food)] = dist
+          
+  foodsort = dict(sorted(fooddict.items(), key=lambda item: item[1]))
+  
+  foodlist = []
+  for fs in foodsort:
+      try: 
+          y, x = fs.strip('][').split(', ')
+          y = int(y)
+          x = int(x)
+          foodlist.append([y, x])
+      except Exception as e:
+          log('exception', 'findClosestItem', str(e))
+
+  # print(str(foodlist))
+  
+  return copy.copy(foodlist)
+
 # == DEPRECATE / DELETE == 
-
-# Rotate a direction
-# def rotateMove(a, d=CONST.clockwise): 
-
-#   if (CONST.counterclockwise):
-#     if (CONST.up):
-#         move = CONST.left
-#     elif (CONST.left):
-#         move = CONST.down
-#     elif (CONST.down):
-#         move = CONST.right
-#     else: # CONST.right
-#         move = CONST.up
-
-#   else: # CONST.clockwise:  
-#     if (CONST.up):
-#         move = CONST.right
-#     elif (CONST.right):
-#         move = CONST.down
-#     elif (CONST.down):
-#         move = CONST.left
-#     else: # CONST.left
-#         move = CONST.up
-
-#   return move
-
