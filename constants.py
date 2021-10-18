@@ -37,7 +37,7 @@ interceptMin = 40
 
 # Strategy - eat / grow 
 growLength = 25
-foodThreat = 3 
+foodThreat = 5 
 
 # Routing variables 
 maxSearchDepth = 3

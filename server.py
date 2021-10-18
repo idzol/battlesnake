@@ -244,7 +244,7 @@ def handle_move():
     
     for key in allSnakes:
         snk = allSnakes[key]
-        print("SNAKES", snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection())
+        print("SNAKES", snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
 
     log('time', '== Move complete ==', theBoard.getStartTime())  
     

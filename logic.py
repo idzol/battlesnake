@@ -148,7 +148,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
     strategylist, strategyinfo = sn.getStrategy()
-    strategylist_default = [['Eat', ''], ['Survive', '']] 
+    strategylist_default = [['Eat', ''], ['Control', 'Space'], ['Survive', '']] 
     # CONST.defaultstrategy = [['Eat', ''], ['Taunt', '']], ['Idle', 'Wall']
     strategy = []
    
@@ -210,8 +210,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
             
             
       if(strategy[0]=='Control'):
-          # target = bo.findClosestNESW(start)
 
+          # target = bo.findClosestNESW(start)  
+          if (strategy[1]=='Space'):
+
+            target = controlSpace(bo, sn, snakes)
+            
+          
           if (strategy[1]=='Box'):
             
             if not 'control' in strategyinfo: 
@@ -285,8 +290,8 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
 
           # No food -- change strategy
           target = findBestFood(foods, bo, sn, snakes)
-          # if(not len(target)):
-          #   # Remove strategy
+          if(not len(target)):
+              strategylist.insert(0, ['Control', 'Space'])
           
           log('strategy-eat', str(target))
           
@@ -351,10 +356,12 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           # Defensive 
           
           if(strategy[1]==''):  
-            # Find any tail to chase 
+            # Find any way out .. 
             route, found = bo.routePadding([start])
-            if len(route):
-              # Remove start point .. 
+            if len(route) > 1:
+              # Remove start point
+              route.pop(0) 
+              # Target is next point
               target = route.pop(0)
               strategylist.insert(0, strategy)
             
@@ -383,12 +390,16 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
 
 
       if (len(route)):
+          # If route valid 
+          print("ROUTE", str(route))
 
           if bo.inBounds(route[0]):
               # Pad out route to N moves 
               route.insert(0, start)
               route, found = bo.routePadding(route)
-              
+
+          print("ROUTE PADDING", str(route))
+            
       if(found): 
           # Route found
           log('strategy-update','Path found\nTarget:'+str(target)+'\nRoute:'+str(route)+'\nWeight: '+str(weight))
@@ -446,9 +457,7 @@ def makeMove(bo: board, sn: snake) -> str:
     start = sn.getHead()
     finish = sn.getTarget()
     
-    
-    # if (change to strategy): 
-    # path = bo.route(start, finish)   
+    # 0) Route Found 
     route = sn.getRoute()
     p = []
     if len(route):
@@ -456,16 +465,16 @@ def makeMove(bo: board, sn: snake) -> str:
       
     print(str(p)) 
 
-    # No route - Use lookahead (route padding)
+    # 1) No route - Use lookahead (route padding)
     if (not len(p) or not bo.inBounds(p)):
       # Still no route .. 
       route, found = bo.routePadding([start])
-      if len(route):
+      if len(route) > 1:
         # Remove start point .. 
         route.pop(0)
         p = route.pop(0)
 
-    # Still no route - Use lowest gradient
+    # 2) Still no route - Use lowest gradient
     if (not len(p) or not bo.inBounds(p)):
       wmin = CONST.routeThreshold
       for d in CONST.directions:
@@ -483,7 +492,12 @@ def makeMove(bo: board, sn: snake) -> str:
           except Exception as e:
             log('exception','makeMove',str(e))
     
-    
+    # 3) Still no route - Use self.enclosd available moves 
+    # if (not len(p) or not bo.inBounds(p)):
+    #   for d in CONST.directions:
+    #     moves_avail = bo.enclosed[move] 
+    #     ..
+
     # TODO -- cleanup 
     # route_failure = '' 
     # if (not len(p)):
@@ -719,7 +733,7 @@ def enemyEnclosed(bo, us, snakes):
         
         enemy_head = sn.getHead()
         # Calculate which squares we can get to 
-        board_closest = bo.closestDist(head, enemy_head)
+        board_closest = bo.closestDist(head, [enemy_head])
         # Assess enemy path 
         board_chance = bo.pathProbability(enemy_head)
         targets = findInterceptPath(head, board_closest, board_chance)
@@ -798,12 +812,14 @@ def findBestFood(foods, bo, us, snakes):
     foodsort = fn.findClosestItem(foods, start)
 
     target = []
-    
+   
+    # 1) Closest food 
+    # Abandon closest if enemy snakes are closer & larger 
     while not len(target) and len(foodsort): 
 
       # Gen next food  
       f = foodsort.pop(0) 
-      target = f 
+      target = copy.copy(f) 
       
       # Check we can route to location 
       r, w = bo.route(start, f)
@@ -812,23 +828,70 @@ def findBestFood(foods, bo, us, snakes):
         usdist = len(fn.getPointsInRoute(r))
 
         # Check each snake to see if larger / closer snake  
+        # Find furthest food from other snakes 
         for sid in snakes:
           fsnake = snakes[sid]
           ftype = fsnake.getType()
           flen = fsnake.getLength()   
-          if (ftype == 'enemy' and flen > length):
-            # Enemy snake is larger 
+          if (ftype == 'enemy'):
             fhead = fsnake.getHead()
+            # Append to heads -- used later if no path found 
             fdist = fn.distanceToPoint(fhead, f)
-            if (fdist < CONST.foodThreat and fdist <= usdist): 
-              # Enemy is closer or equal to us  
+            
+            # Enemy is same / larger and equal / closer 
+            if (fdist < CONST.foodThreat and fdist <= usdist and flen > length):
+              # Ignore , live to fight another day 
+              target = []
+            
+            # Enemy is smaller but closer 
+            elif(fdist < CONST.foodThreat and fdist < usdist):
+
               # Ignore , live to fight another day 
               target = []
 
+    # 2) Uncontested food 
+    # Find food furthest from enemy snakes 
+    # TODO: Check if covered by above
+
+    # 3) Empty space -- Maximise control and wait for next food spawn.  See ['Control', 'Space']
+ 
     # print("EAT AVOID")
     # print(str(fsnake), str(ftype), str(flen), str(fdist))
               
     return copy.copy(target)
+
+ 
+def controlSpace(bo, us, snakes):
+ 
+    width = bo.getWidth()
+    height = bo.getHeight()
+    start = us.getHead()
+    target = [] 
+
+    # Find all enemy heads 
+    heads = []
+    for sid in snakes:
+      fsnake = snakes[sid]
+      ftype = fsnake.getType()   
+      if (ftype == 'enemy'):
+        fhead = fsnake.getHead()
+        heads.append(fhead)
+        
+    # Look for each location and maximise board control 
+    control_max = 0
+    for h in range(0, height):
+        for w in range(0, width):
+          start = [h, w]
+          dist = bo.closestDist(start, heads)
+          control = np.sum(dist)
+          # Save location wtih max control 
+          if control > control_max:
+              control_max = control
+              target = copy.copy(start) 
+              # board_dist = copy.copy(dist) 
+
+    return copy.copy(target)
+
 
 # == DEPRECATE / DELETE == 
 

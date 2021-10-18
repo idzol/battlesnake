@@ -132,10 +132,13 @@ def getPointsInRoute(rt, a=[]):
 
     # TODO: Check is of form of route is always [a, b, c] and not [b, c].  optional to provide a, as separate variable until resolved, eg. if len(a) 
 
+    # If point, return point 
+    if (len(rt) == 1): 
+      return rt
+
     # Translate vectors into points 
     pts = []
     va = []
-    
     for vb in rt:
     # Skip first point (need two points for line)  
     

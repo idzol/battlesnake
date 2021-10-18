@@ -514,6 +514,8 @@ class board():
 
                 # TODO: Form gradient for each snake (currently using our routing matrix)
                 self.updateGradient(start)
+                self.recursion_route = 0
+
                 rt, weight = self.route(start, finish)
                 # Limit depth to X
 
@@ -862,18 +864,19 @@ class board():
             return route, weight 
 
         # Eliminate dead ends 
-        for d in CONST.directions:
-            a1 = list (map(add, a, CONST.directionMap[d]))
-            if(self.inBounds(a1)):
-              move = fn.translateDirection(a, a1)
+        # TODO:  Replaced by route pad or route fail logic .. 
+        # for d in CONST.directions:
+        #     a1 = list (map(add, a, CONST.directionMap[d]))
+        #     if(self.inBounds(a1)):
+        #       move = fn.translateDirection(a, a1)
               
-              # Weighted threshold based on available moves 
-              moves_avail = self.enclosed[move] 
-              if (moves_avail < length):
-                  self.dijkstra[0][a1[0], a1[1]] = t * (2 - moves_avail / length)
+        #       # Weighted threshold based on available moves 
+        #       moves_avail = self.enclosed[move] 
+        #       if (moves_avail < length):
+        #           self.dijkstra[0][a1[0], a1[1]] = t * (2 - moves_avail / length)
 
 
-            log('enclosed', str(self.enclosed), str(a1))
+        #     log('enclosed', str(self.enclosed), str(a1))
                 
         # try simple, medium, complex route
         while 1:
@@ -1073,7 +1076,7 @@ class board():
         # print("PATH"+str(path))
         
         turns_found = len(path)
-        start = route[-1]
+        # start = route[-1]
         found = False 
         
         # Increase depth as snake increases
@@ -1765,7 +1768,7 @@ class board():
         return encl
     
 
-    def closestDist(self, us, them): 
+    def closestDist(self, us, them:list): 
         # us = sn.getHead(), them = enemy.getHead()
         # TODO: Assumes no solids in closest distance, otherwise requires a version of route with dijkstra / gradient (ie. closestDist_complex)
         
@@ -1776,8 +1779,14 @@ class board():
         for y in range(0, h):
             for x in range(0, w):
                 us_dist = abs(us[0] - y) + abs(us[1] - x)
-                them_dist = abs(y - them[0]) + abs(x - them[1])
-                if them_dist > us_dist:
+                them_further = True
+                
+                for th in them: 
+                    them_dist = abs(y - th[0]) + abs(x - th[1])
+                    if them_dist <= us_dist:
+                        them_further = False 
+                
+                if them_further:
                     closest[y, x] = 1
                     
         return closest
@@ -1810,9 +1819,10 @@ class board():
     def showMaps(self):
 
         # Routing maps 
-        # log('map', 'GRADIENT', self.gradient)
-        # log('map', 'PREDICT', self.predict[0])    
-        # log('map', 'SOLID', self.solid)
+        log('map', 'GRADIENT', self.gradient)
+        log('map', 'PREDICT', self.predict[0])    
+        log('map', 'SOLID', self.solid)
+        log('map', 'TRAILS', self.trails)
         log('map', 'THREAT', self.threat[0])
         log('map', 'DIJKSTRA', self.dijkstra[0])
         # Visual maps 
