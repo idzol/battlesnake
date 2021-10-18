@@ -3,7 +3,6 @@
 # log('time', 'Before Route', bo.getStartTime())
 # log('time', 'After Route', bo.getStartTime())
 
-
 import numpy as np
 
 import time as time 

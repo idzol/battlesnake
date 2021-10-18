@@ -61,6 +61,10 @@ def checkInterrupts(bo:board, snakes):
         strategyinfo['killcut'] = t
         reason.append('enclosed enemy was identified')
 
+    # t = foodNearby(bo, sn, snakes)
+    # if (len(t)):
+    #   interruptlist.insert(0, ['Eat', ''])
+
     # Critical health interrupt -- get food
     if (health < CONST.healthCritical):
         interruptlist.insert(0, ['Eat', ''])
@@ -148,7 +152,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
     strategylist, strategyinfo = sn.getStrategy()
-    strategylist_default = [['Eat', ''], ['Control', 'Space'], ['Survive', '']] 
+    strategylist_default = [['Eat', ''], ['Control', 'Space'], ['Control', 'Centre']] 
     # CONST.defaultstrategy = [['Eat', ''], ['Taunt', '']], ['Idle', 'Wall']
     strategy = []
    
@@ -379,7 +383,11 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
 
 
       # Check route
-      found = False 
+      found = False
+
+      st = bo.getStartTime()
+      log('time', 'Strategy::Route', st)
+ 
       # If no target or no route , try next strategy    
       if 'numpy' in str(type(target)) and bo.inBounds(target):
           # Target is an area 
@@ -391,6 +399,8 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           log('strategy-route', "TARGET", str(strategy), str(target))
           route, weight = bo.route(start, target, length)
 
+      st = bo.getStartTime()
+      log('time', 'Strategy::RoutePadding', st)
 
       if (len(route)):
           # If route valid 
@@ -401,6 +411,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
               fullroute, found = bo.routePadding(route)
               log('strategy-route', "ROUTE PADDING", str(fullroute), str(found))
     
+
 
       if(found): 
           # Route found
@@ -888,7 +899,7 @@ def controlSpace(bo, us, snakes):
           # Save location wtih max control 
           if control > control_max:
               control_max = control
-              target = copy.copy(start) 
+              target = copy.copy(step) 
               dist_final = copy.copy(dist)
               # board_dist = copy.copy(dist) 
     
