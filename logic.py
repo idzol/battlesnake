@@ -16,8 +16,6 @@ import constants as CONST
 
 from snakeClass import snake
 from boardClass import board
-from itemClass import item
-
 
 # === STATE MACHINE ===
 # Core decision making engine
@@ -142,7 +140,7 @@ def checkInterrupts(bo:board, snakes):
 
 
 
-def stateMachine(bo:board, sn: snake, snakes: list, its: list): 
+def stateMachine(bo:board, sn: snake, snakes: list, foods: list): 
     # Returns target (next move) based on inputs 
 
     depth = CONST.maxPredictTurns
@@ -156,15 +154,9 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
    
     start = sn.getHead()
     length = sn.getLength()
-    aggro = sn.getAggro()
+    # aggro = sn.getAggro()
     # tail = sn.getTail()
     # alltails = getSnakeTails(snakes)
-
-    # Closest item(s) 
-    itsort = bo.findClosestItem(its, start) 
-    # snakes .. 
-    # threat .. 
-    # etc.. 
 
     # Outputs of state machine 
     target = []
@@ -292,48 +284,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
       if(strategy[0]=='Eat'): 
 
           # No food -- change strategy
-          if(not len(itsort)):
-            # strategylist.append(['Taunt', ''])
-            # remove strategy 
-            # add strategy (top priority)
-            # add strategy (low priority)
-            pass 
-            
-          else: 
-            # Repeat -- ie. if no route, try again to next item
-            strategylist.insert(0, ['Eat',''])
-            # Get route to target  
-            
-            itemclose = itsort.pop(0)
-            target = itemclose.getLocation()
-
-            # Check if bigger snakes are closer to the food 
-            # if length > CONST.growLength:
-            for sid in snakes:
-              fsnake = snakes[sid]
-              ftype = fsnake.getType()
-              flen = fsnake.getLength()           
-              if (ftype == 'enemy' and flen > length):
-                # Enemy snake is larger 
-                fhead = fsnake.getHead()
-                fdist = fn.distanceToPoint(fhead, target)
-                usdist = fn.distanceToPoint(start, target)
-                # Enemy is closer or equal to us  
-                if (fdist < CONST.foodThreat and fdist <= usdist): 
-                  # print("EAT AVOID")
-                  # print(str(fsnake), str(ftype), str(flen), str(fdist))
-                  # Ignore , live to fight another day 
-                  target = []
-
-            # One square away, we are eating next turn 
-            # if (fn.distanceToPoint(start, target) == 1):
-            # sn.setEating(True)
-
-
-            # Continue to eat until interrupted
-            # strategylist.insert(0, ['Eat', ''])
-            log('strategy-eat', str(target))
+          target = findBestFood(foods, bo, sn, snakes)
+          # if(not len(target)):
+          #   # Remove strategy
           
+          log('strategy-eat', str(target))
+          
+
       if(strategy[0]=='Idle'):
 
         # Default
@@ -426,12 +383,12 @@ def stateMachine(bo:board, sn: snake, snakes: list, its: list):
 
 
       if (len(route)):
-          print("STRATEGY - ", str(route))
-          # Pad out route to N moves 
-          route.insert(0, start)
-          route, found = bo.routePadding(route)
-          print("STRATEGY PADDED - ", str(route))
 
+          if bo.inBounds(route[0]):
+              # Pad out route to N moves 
+              route.insert(0, start)
+              route, found = bo.routePadding(route)
+              
       if(found): 
           # Route found
           log('strategy-update','Path found\nTarget:'+str(target)+'\nRoute:'+str(route)+'\nWeight: '+str(weight))
@@ -817,13 +774,61 @@ def findInterceptPath(start, board_dist, board_chance, chance=CONST.interceptMin
         
     return intlist
 
+def findBestFood(foods, bo, us, snakes): 
+    # Check if bigger snakes are closer to the food 
+    #  # REWRITE .. 
+    #  Eat strategy
+    #     Closest 
+    #     # Work out how many food we can get to before enemy 
+    #     Faster than enemies  
+    #     Multiples 
+    #        Most items 
+    #     Safest 
+    #        Big snakes 
+    #        Corners 
+    #     Waiting 
+    #        Least threat quadrant 
+    #     etc..
+
+
+    start = us.getHead()
+    length = us.getLength()
+
+    # Sort by closest food
+    foodsort = fn.findClosestItem(foods, start)
+
+    target = []
+    
+    while not len(target) and len(foodsort): 
+
+      # Gen next food  
+      f = foodsort.pop(0) 
+      target = f 
       
+      # Check we can route to location 
+      r, w = bo.route(start, f)
+      if (len(r)): 
+        # Route exists 
+        usdist = len(fn.getPointsInRoute(r))
+
+        # Check each snake to see if larger / closer snake  
+        for sid in snakes:
+          fsnake = snakes[sid]
+          ftype = fsnake.getType()
+          flen = fsnake.getLength()   
+          if (ftype == 'enemy' and flen > length):
+            # Enemy snake is larger 
+            fhead = fsnake.getHead()
+            fdist = fn.distanceToPoint(fhead, f)
+            if (fdist < CONST.foodThreat and fdist <= usdist): 
+              # Enemy is closer or equal to us  
+              # Ignore , live to fight another day 
+              target = []
+
+    # print("EAT AVOID")
+    # print(str(fsnake), str(ftype), str(flen), str(fdist))
+              
+    return copy.copy(target)
+
 # == DEPRECATE / DELETE == 
 
-def getItemByName(its, name):
-  # DEPRECATE / DELETE:  belongs in functions?  duplicate in board.  
-  for it in its: 
-      if it.getName() == name:
-        return it 
-
-  return {}

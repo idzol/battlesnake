@@ -492,7 +492,7 @@ class board():
 
 
     # Go through snakes and estimate most likely path
-    def predictSnakeMoves(self, snakes, items):
+    def predictSnakeMoves(self, snakes, foods):
       
         for identity in snakes:
             # Iterate through dict (id:snake)
@@ -506,9 +506,12 @@ class board():
             else:
                 # Assume strategy is food
                 start = sn.getHead()
-                its = self.findClosestItem(items, start)  # ??
-                finish = its.pop(0).getLocation()
-                
+                its = fn.findClosestItem(foods, start) 
+                if (len(its)):
+                    finish = its.pop(0)
+                else:
+                    finish = []
+
                 # TODO: Form gradient for each snake (currently using our routing matrix)
                 self.updateGradient(start)
                 rt, weight = self.route(start, finish)
@@ -1292,24 +1295,6 @@ class board():
         # break into quadrants
         # return
 
-    def findClosestItem(self, items, start):
-        
-        itemsort = []
-        itemlist = []
-        
-        # if (types == "food"):
-        for it in items:
-            b = it.getLocation()
-            d = fn.distanceToPoint(start, b)
-            itemlist.append({'dist':d, 'item':it})
-      
-        # Return sorted list by distance
-        itemlist.sort(key=operator.itemgetter('dist'))
-        for i in itemlist: 
-          itemsort.append(i['item'])
-          
-        return itemsort
-
 
     def findSnakeBox(self, start, enemy): # self, snake
         # Return closest three vertices as a box array 
@@ -1537,15 +1522,7 @@ class board():
 
         return edges
 
-    def getItemByName(self, items, name):
-    # DEPRECATE / DELETE:  belongs in functions?  duplicate in logic.  
-        for it in items:
-            if it.getName() == name:
-                return it
-
-        return {}
-
-
+    
     def randomPoint(self):
         x = int(self.width * rand.random())
         y = int(self.height * rand.random())
@@ -1605,36 +1582,6 @@ class board():
 
         return 1
 
-
-    def calculateDistances(self, snakes, items):
-    # DEPRECATE: Not used? 
-  
-        n = len(snakes) + len(items)
-        dists = np.zeros((n, n), np.intc)
-
-        things = snakes
-        things = things.append(items)
-
-        for t1 in range(0, things):
-            for t2 in range(0, things):
-                t1loc = things[t1].getLocation()
-                t2loc = things[t2].getLocation()
-                d = fn.calculateDistance(t1loc, t2loc)
-                dists[t1, t2] = d
-
-        self.distances = dists
-
-        # print(str(dists))
-
-        return dists
-        # eg.
-        # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
-        # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
-        # [ 9, 3, 0, 4, 2 ]
-
-    # def leastweightPath(self, paths):
-      # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ...
-      # return path
 
     def leastWeightLine(self, a, points):
         # Find path with smallest dijkstra value
@@ -1954,3 +1901,34 @@ class board():
             
         
     #     return 
+
+
+    # def calculateDistances(self, snakes, foods):
+    # # DEPRECATE: Not used? 
+  
+    #     n = len(snakes) + len(foods)
+    #     dists = np.zeros((n, n), np.intc)
+
+    #     things = snakes
+    #     things = things.append(foods)
+
+    #     for t1 in range(0, things):
+    #         for t2 in range(0, things):
+    #             t1loc = things[t1].getLocation()
+    #             t2loc = things[t2].getLocation()
+    #             d = fn.calculateDistance(t1loc, t2loc)
+    #             dists[t1, t2] = d
+
+    #     self.distances = dists
+
+    #     # print(str(dists))
+
+    #     return dists
+    #     # eg.
+    #     # [ 0, 5, 9, 3, 6 ]  - you to you,s1,s2,f1,h1
+    #     # [ 5, 0, 3, 2, 1 ]  - s1 to you,s1,s2,f1,h1
+    #     # [ 9, 3, 0, 4, 2 ]
+
+    # # def leastweightPath(self, paths):
+    #   # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ...
+    #   # return path
