@@ -29,32 +29,23 @@ class board():
 
     legend = CONST.legend  # Import map values
 
-    identity = ""  # Identity of your snake
+    # distance = []  # Array of distance
+    # you = []  # Array of snek (101-head, 100-body)
+    # you_route = []  # Array of snek (minus head)
 
-    land = []  # board matrices
-    mask = []
+    # snakes = []  # Array of other snek (201-head, 200-body)
+    # items = []  # Array of items (300-food, 301-hazard)
 
-    distance = []  # Array of distance
-    you = []  # Array of snek (101-head, 100-body)
-    you_route = []  # Array of snek (minus head)
+    # solid = []  # Array of all solids (snakes, walls)
+    # combine = []  # Array of all layers (snakes, walls, items)
+    # trails = []  # Array of all trails where N = time to expiry
 
-    snakes = []  # Array of other snek (201-head, 200-body)
-    items = []  # Array of items (300-food, 301-hazard)
-
-    solid = []  # Array of all solids (snakes, walls)
-    combine = []  # Array of all layers (snakes, walls, items)
-    trails = []  # Array of all trails where N = time to expiry
-
-    predict = []  # List of Array of board in n moves (prediction)
-    threat = []  # List of Array of threat rating
-    dijkstra = []  # List of Array of route complexity
-
-    gradient = []  # Array of gradient normalised to turn 0
+    # gradient = []  # Array of gradient normalised to turn 0
 
     # gradients = {}  # List of previous gradients for future calc
     # 'cell':[turn,gradient]
 
-    enclosed = {}  # Dict of enclosed space volume by direction
+    # enclosed = {}  # Dict of enclosed space volume by direction
 
     recursion_route = 0
     turn = 0
@@ -64,7 +55,7 @@ class board():
         # globals
         # height = data['board']['height']
         # width = data['board']['width']
-
+        self.identity = "" 
         self.height = height
         self.width = width
 
@@ -78,14 +69,20 @@ class board():
         self.win = 0
         self.loss = 0
 
-        self.threat = [None] * CONST.maxPredictTurns
-        self.predict = [None] * CONST.maxPredictTurns
-        self.dijkstra = [None] * CONST.maxPredictTurns
+        # self.threat = [None] * CONST.lookAhead
+        # self.predict = [None] * CONST.lookAhead
         # self.gradient = [None] * CONST.maxPredictTurns
 
+        self.dijkstra = [None] * CONST.lookAhead
+        self.markovs = [None] * CONST.lookAhead
+
+
+
         self.hurry = False
+        
 
     def resetCounters(self):
+        # Reset start of each turn 
         self.turn = 0
         self.hurry = False
         self.recursion_route = 0
@@ -159,9 +156,9 @@ class board():
     def setDijkstra(self, d):
         self.dijkstra = copy.copy(d)
 
-    # Return future predict matrix
-    def getPredictMatrix(self, t):
-        return self.predict[t]
+    # # Return future predict matrix
+    # def getPredictMatrix(self, t):
+    #     return self.predict[t]
 
     def getTurn(self):
         t = self.turn
@@ -208,24 +205,29 @@ class board():
         self.combine = by + bs + bi
 
         # Meta boards
-        depth = CONST.maxPredictTurns
+        depth = CONST.lookAhead
+        
         en = self.enclosedSpacev2(head)
-        self.enclosed = en  # TODO: move to snake object ..
+        self.enclosed = copy.copy(en)  # TODO: move to snake object ..
 
-        # Routing Boards
-        predict = []
-        threat = []
+        # Routing Boards - init (blank)
+        # predict = []
+        # threat = []
+        markovs = []
         dijkstra = []
         for t in range(0, depth):
-            predict.append(np.zeros([height, width], np.intc))
-            threat.append(np.zeros([height, width], np.intc))
+            # predict.append(np.zeros([height, width], np.intc))
+            # threat.append(np.zeros([height, width], np.intc))
+            markovs.append(np.zeros([height, width], np.intc))
             dijkstra.append(np.zeros([height, width], np.intc))
 
             # self.updateGradient() -- only update when rqd for routing
+        self.markovs = copy.copy(markovs)
+        self.dijkstra = copy.copy(dijkstra)
 
-        self.predict = predict
-        self.threat = threat
-        self.setDijkstra(dijkstra)
+
+        # self.predict = predict
+        # self.threat = threat
 
         # Other meta-boards
         # bt = self.updateThreat(data, snakes) -- needs snakes
@@ -329,136 +331,222 @@ class board():
                 d = fn.distanceToPoint(head, [j, i])
                 self.distance[i, j] = d
 
-    def updateThreat(self, snakes, hazards=[]):
-        # Assign "threat" value based on prediction model, distance to enemy snake and size etc..
+
+    def updateMarkov(self, us, snakes:dict, foods:list, turns=CONST.lookAhead): 
+          # TODO: Assumes no solids, otherwise requires a version of route with gradient = 1..
+          w = self.width
+          h = self.height
+          
+          markovs = []   
+          for t in range(0, turns - 1):
+            
+            # Iterate through snakes to get the first step / next step based on probability
+            # snakes_updated = []
+            for sid in snakes:
+                
+                sn = snakes[sid]
+                markov = np.zeros([w,h], np.intc)
+                sn_body = []
+                sn_future = []
+                  
+                # Prediction for first turn
+                if (not t):
+                  # First move -- establish initial markov (t = 0) 
+                  sn_body = sn.getHeadBody()
+                  sn.setFuture(sn_body, 0)
+                  
+                else:
+                  # Predict current move (t) based on last markov (t) 
+                  # Set future location ) 
+                  sn_body = self.predictMove_step(sn, foods, t - 1)
+                  
+                  sn.setFuture(sn_body, t)
+                  
+                for cell in sn_body: 
+                    if(self.inBounds(cell)):
+                      # Paint markov matrix for turn t + 1
+                      y = cell[0]
+                      x = cell[1]
+                      markov[y, x] = 100
+                
+                # Set markov 
+                sn.setMarkov(copy.copy(markov), t)
+                # Update markov probability 
+                self.updateMarkov_step(sn, copy.deepcopy(snakes), foods, t)
+
+                # snakes_updated.append(sn)
+                snakes[sid] = copy.deepcopy(sn)
+
+
+            # snakes = copy.deepcopy(snakes_updated)
+            
+            # Calculate next round of probabiliy based on new markov models
+            # for sn in snakes:
+            #     self.updateMarkov_step(sn, snakes, foods, t)
+                
+          
+          # Sum all snakes into final markov matrix
+          for sn in snakes:
+            for t in range(0, turns - 1): 
+
+              markov = np.zeros([w, h], np.intc)
+              for snid in snakes:
+                  sn = snakes[snid]
+                  # markov_sn = sn[identity].getMarkov()
+                  markov_sn = sn.getMarkov(t)
+                  markov = markov + markov_sn
+
+              self.markovs[t] = copy.copy(markov)
+          
+          # self.markovs = copy.copy(markovs)
+          
+
+    def predictMove_step(self, target, foods, turn=0):
+        # Based on markov for one snake, calculate most likely path -- eg. food, killcut, other
+        # TODO:  Special logic for our snake (known path)
+        
+        # Get current body 
+        
+        snake = copy.copy(target)      
+        sn_future = snake.getFuture(turn)
+              
+        body = sn_future['body']
+        if (not (len(body))):
+          return body
+        
+        # Get current markov 
+        markov = snake.getMarkov(turn)
+                  
+        # Select path based on probability (start with highest)
+        if(snake.getType() == 'us'):
+            # TODO: special logic for us 
+            new_head = []
+            pass
+
+        else:  
+            # Enemy snake             
+            probs = np.nonzero((markov < 100) & (markov > 0))
+            prob_max = 0
+            prob_max_pt = []
+
+            for i in range(0, len(probs[0] - 1)):
+              prob_pt = [probs[0][i], probs[1][i]]
+              prob = markov[prob_pt[0], prob_pt[1]]
+              
+              if prob > prob_max:
+                prob_max = copy.copy(prob)
+                prob_max_pt = copy.copy(prob_pt)
+                
+            if (self.inBounds(prob_max_pt)):
+                # Make this new head
+                # markov[prob_max_pt[0], prob_max_pt[1]] = 100
+                new_head = copy.copy(prob_max_pt)
+
+        
+        # If eating -- add Tail 
+        if snake.getEating(): 
+          tail = body[-1]
+          body.append(tail)
+
+        # Reduce body length by one
+        body.pop(-1)
+        
+        # Add new head
+        new_body = copy.copy(body)
+        if (len(new_head)):
+            new_body.insert(0, new_head)
+
+        # Update body
+        return new_body
+
+
+    def updateMarkov_step(self, target, snakes:dict, foods:list, turn=1): 
+
+        # Output probability path for target.  Update markov 
+
         w = self.width
         h = self.height
+            
+        # Target snake
+        markov = target.getMarkov(turn)
+        body_dict = target.getFuture(turn)
+        
+        # No body (too far in future)
+        body = body_dict['body']
+        if (not len(body)):
+            # Set blank markov 
+            markov = np.zeros([w, h], np.intc)
+            target.setMarkov(markov, turn)
+            return 
 
-        full = CONST.routeSolid
-        shadow = CONST.routeSolid / 10
-        depth = CONST.maxPredictTurns
+        # Head 
+        head = body[0]
+        # Tail 
+        tail = body[-1]
 
-        threatmap = [None] * depth
-        for t in range(0, depth):
-            threatmap[t] = np.zeros([w, h], np.intc)
+        # Direciton  & Eating      
+        eating = False
+        if(len(body) >= 3):
+          a = body[0]
+          b = body[1]
+          if (a == b):
+              # TODO: work out where duplicate coming from.. 
+              # ie. [[9, 8], [9, 8], [10, 8] ... ]
+              b = body[2]
+          
+          dirn = fn.translateDirection(b, a)
+          # print(target.getName(), a, b, body, dirn)
+          if (body[-1] == body[-2]):
+            eating = True 
 
-        # log("predict-update")
-        you_len = 10
+        else:
+          # Direction uncertain
+          dirn = 'none'
+          # Eating uncertain
+          pass 
 
-        # Get our head
-        for identity in snakes:
-            sn = snakes[identity]
-            if (sn.getType() == "us"):
-                you_len = sn.getLength()
+        # Update probabiliy by direction
+        if(target.getType() == 'us'):
+            # TODO: special logic for us 
+            pass
+        else: 
+            # Enemy snake  
+            sides = CONST.directionSides[dirn] 
+            i = 0
+            for side in sides: 
+              
+              prob_pt = list(map(add, head, side))
+              if (self.inBounds(prob_pt)):
+                if(dirn == 'none'):
+                  probability = 25           
+                else:
+                  if i == 0:
+                    probability = 50 
+                  else: 
+                    probability = 25 
+            
+                current = markov[prob_pt[0], prob_pt[1]]
+                if (current < 100):
+                  markov[prob_pt[0], prob_pt[1]] = current + probability
 
-        # Optional: Stay away from corners / edges
-        if (True):
-            threatmap[0][0, 0] = full / 2
-            threatmap[0][0, w - 1] = full / 2
-            threatmap[0][h - 1, 0] = full / 2
-            threatmap[0][h - 1, w - 1] = full / 2
+              i = i + 1
 
-        # Update hazard board
-        if len(hazards):
-            for hz in hazards:
-                # print("HAZARDS", str(hz))
-                try:
-                    threatmap[:][hz['y'], hz['x']] = CONST.routeHazard
-                except Exception as e:
-                    log('exception', 'updateThreat#1', str(e))
+        # # TODO:  Introduce logic based on other snakes  
+        # for sn in snakes: 
+        #   # Get heads .. 
+        #   pass 
 
-        # Head on collisions
-        for identity in snakes:
-            sn = snakes[identity]
-            if (sn.getType() != "us"):
+        # # TODO:  Introduce logic based on food  
+        # for fo in foods:
+        #   # Get
+        #   pass  
 
-                # s = np.zeros([h, w], np.intc)
-                # Death zone (+) around larger snakes
-                length = sn.getLength()
-                head = sn.getHead()
-                body = sn.getBody()
-                lasthead = copy.copy(head)
-                path = sn.getPath()
-
-                for t in range(0, depth - 1):
-
-                    if (len(path)):
-                        # Use next path as head
-                        head = path.pop(0)
-                        if (not len(head)):
-                            # If point is blank
-                            head = lasthead
-
-                    else:
-                        # Use original / last head
-                        pass
-
-                    # Body generates shadow threat
-                    if len(body):
-                        for b in body:
-                            ay = b[0]
-                            ax = b[1]
-                            ay1 = max(0, ay - 1)
-                            ay2 = min(h, ay + 2)
-                            ax1 = max(0, ax - 1)
-                            ax2 = min(w, ax + 2)
-                            threatmap[t][ay1:ay2,
-                                         ax] = threatmap[t][ay1:ay2,
-                                                            ax] + shadow
-                            threatmap[t][
-                                ay,
-                                ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
-
-                    # Body close to wall generates high threat
-                    # TODO: Update threat
-                    edges = self.getEdges()
-                    for e in edges:
-                        pass
-
-                    # Head threat for larger snakes
-                    # TODO: 3x3|1x5 close to edge, otherwise 1x3
-                    if length >= you_len:
-                        ay = head[0]
-                        ax = head[1]
-                        # 3x3 square
-                        ay1 = max(0, ay - 1)
-                        ay2 = min(h, ay + 2)
-                        ax1 = max(0, ax - 1)
-                        ax2 = min(w, ax + 2)
-                        # 1x5 cross
-                        aymin = max(0, ay - 2)
-                        aymax = min(h, ay + 3)
-                        axmin = max(0, ax - 2)
-                        axmax = min(w, ax + 3)
-
-                        # Review head vs path -
-                        # TODO: replace with predict (currently disabled)
-                        dirn = sn.getDirection()
-                        full_square = full
-                        full_hor = full
-                        full_vert = full
-                        if dirn in ['up', 'down']:
-                            full_vert = full_vert
-                        else:  # left', 'right']:
-                            full_hor = full_hor
-
-                        threatmap[t][ay1:ay2, ax1:ax2] = threatmap[t][
-                            ay1:ay2, ax1:ax2] + full_square
-                        threatmap[t][aymin:aymax,
-                                     ax] = threatmap[t][aymin:aymax,
-                                                        ax] + full_vert
-                        threatmap[t][ay, axmin:axmax] = threatmap[t][
-                            ay, axmin:axmax] + full_hor
-
-                    lasthead = head
-
-        self.threat = copy.deepcopy(threatmap)
-        # print(str(self.threat))
+        target.setMarkov(markov, turn)
 
 
     def updateDijkstra(self, sn):
 
-        depth = CONST.maxPredictTurns
+        depth = CONST.lookAhead
 
 
         w = self.width
@@ -467,10 +555,6 @@ class board():
         head = sn.getHead()
         tail = sn.getTail()
         length = sn.getLength()
-
-        # TODO: Check self.predict[0] is the same as self.solid
-        # TODO: determine if we need to zero start loc
-        # TODO:  Make sure predict/threat[t] exist & are non-zero
 
         dijksmap = [None] * depth
 
@@ -481,11 +565,10 @@ class board():
 
         for t in range(0, depth):
             # Get relevant predict / threat matrix
-            predict = self.predict[t]
-            threat = self.threat[t]
+            markov = self.markovs[t]
             try:
                 # Dijkstra combines solids, foods, hazards (threats)
-                dijksmap[t] = np.add(predict, threat) + 1
+                dijksmap[t] = markov + 1
                 # Adjust head & tail location to zero for routing
                 dijksmap[0][head[0], head[1]] = 0
                 
@@ -497,158 +580,8 @@ class board():
             except Exception as e:
                 print('exception', 'updateDijkstra#1', str(e))
 
-        self.setDijkstra(dijksmap)
+        self.dijkstra = copy.copy(dijksmap)
 
-    # Go through snakes and estimate most likely path
-    def predictSnakeMoves(self, snakes, foods):
-
-        for identity in snakes:
-            # Iterate through dict (id:snake)
-            sn = snakes[identity]
-            if (sn.getType() == "us"):
-                # Path loaded after route()
-                # Use previous route or update afterwards?
-                # sn.get/setRoute()
-                pass
-
-            else:
-                # Assume strategy is food
-                start = sn.getHead()
-                its = fn.findClosestItem(foods, start)
-                if (len(its)):
-                    finish = its.pop(0)
-                else:
-                    finish = []
-
-                # TODO: Form gradient for each snake (currently using our routing matrix)
-                # self.updateGradient(start)
-                # self.recursion_route = 0
-                # rt, weight = self.route(start, finish)
-                rt, weight = self.route_corner(start, finish, 10 * CONST.routeThreshold)
-
-                # TODO: Assume strategy is kill (len > X)
-                # TODO: Assume strategy is board control / loop etc (eg. circular)
-                # print("SNAKE HEAD", str(start))
-                sn.setRoute(rt)
-                sn.setPath(rt)
-
-    def updatePredict(self, snakes):
-        # Update the prediction board
-        # p - predict matrix
-        # t - turn
-        # r1 - point
-        # val - gradient / path weight
-
-        w = self.width
-        h = self.height
-        p = self.predict
-        depth = CONST.maxPredictTurns
-        full = CONST.routeSolid
-
-        # log("predict-update")
-        you_head = [-1, -1]
-
-        # Get our head
-        for identity in snakes:
-            sn = snakes[identity]
-            if (sn.getType() == "us"):
-                you_head = sn.getHead()
-
-        # Iterate through next t turns
-        for identity in snakes:
-            sn = snakes[identity]
-
-            # Get head, body & predicted route
-            name = sn.getType()
-            head = sn.getHead()
-            body = sn.getBody()
-            vector = sn.getRoute()
-
-            # Convert route to points
-            vector.insert(0, head)
-            rt = fn.getPointsInRoute(vector)
-
-            # Reinsert head (vector function strips head)
-            body.insert(0, head)
-
-            # Create blank template
-            snakemap = [None] * (depth + 1)
-
-            for t in range(0, depth):
-                snakemap[t] = np.zeros([w, h], np.intc)
-
-            # Paint body
-            snakemap[0][head[0], head[1]] = full
-            for r1 in body:
-                snakemap[0][r1[0], r1[1]] = full
-
-            # Go through next t moves
-            for t in range(1, depth):
-                # Copy template from last move
-                snakemap[t] = copy.copy(snakemap[t - 1])
-                # Prediction values for partial or full matches
-                if (name == "us"):
-                    # Certain
-                    val_predict = full
-                    val_certain = full
-                else:
-                    # Consider scaling factor on predictions
-                    val_predict = full
-                    val_certain = full
-
-                try:
-                    if (name != "us"):
-                        if (len(rt)):
-                            # Get next move from route
-                            r1 = rt.pop(0)
-
-                        else:
-                            # Continue moving in current direction
-                            diff = CONST.directionMap[sn.getDirection()]
-                            head = self.moveBy(head, diff)
-                            r1 = copy.copy(head)
-
-                        # Add to prediction matrix
-                        snakemap[t][r1[0],
-                                    r1[1]] = p[t][r1[0], r1[1]] + val_predict
-                        # Add route to head of body
-                        body.insert(0, r1)
-                        log('predict-new', str(t), str(rt), str(r1))
-
-                except Exception as e:
-                    # end of route
-                    log('exception', 'updatePredict#1', str(e))
-                    pass
-
-                # Erase tail (last point in body)
-                try:
-                    # Remove tail
-                    b1 = body.pop(-1)
-                    # Update the prediction board
-                    snakemap[t][b1[0],
-                                b1[1]] = snakemap[t][b1[0],
-                                                     b1[1]] - val_certain
-                    log('predict-erase', str(t), str(body), str(b1))
-
-                except Exception as e:
-                    # end of body
-                    log('exception', 'updatePredict#2', str(e))
-                    pass
-
-            # Update predict matrix for snake
-            sn.setPredict(snakemap)
-
-        # Sum all snakes into final prediction matrix
-        p = [None] * depth
-        for t in range(0, depth):
-            p[t] = np.zeros([w, h], np.intc)
-
-            for identity in snakes:
-                psnake = snakes[identity].getPredict()
-                p[t] = p[t] + psnake[t]
-
-        self.predict = p
-        return p
 
     def updateGradient(self, a, turn=0):
 
@@ -663,7 +596,7 @@ class board():
             self.gradient[a[0], a[1]] = 0
 
         # Max number of turns / boards in prediction matrix
-        tmax = CONST.maxPredictTurns - 1
+        tmax = CONST.lookAhead - 1
         if (turn > tmax):
             turn = tmax
 
@@ -677,18 +610,17 @@ class board():
         if (self.hurry or rr > CONST.maxRecursion):
             return
 
-        if (rr > 0 and not (rr % 500)):
+        if (rr > 0 and not (rr % 1000)):
             # TODO: Remove limit to N recursions 
             st = self.getStartTime()
-            log('time', 'Gradient 500', st)
+            log('time', 'Gradient 1000', st)
             log('timer-hurry')
-            self.hurry = True 
-
-            # # Timer exceeded
-            # diff = 1000 * (time.time() - st)
-            # if diff > CONST.timePanic:
-            #     log('timer-hurry')
-            #     self.hurry = True
+            
+            # Timer exceeded
+            diff = 1000 * (time.time() - st)
+            if diff > CONST.timePanic:
+                log('timer-hurry')
+                self.hurry = True
 
         # Iterate through four directions
         for d in CONST.directions:
@@ -922,9 +854,9 @@ class board():
         if (a[0] == b[0]) or (a[1] == b[1]):
             # Get points in line & measure route
             path = fn.getPointsInLine(a, b)
-            w = self.dijkstraPath(path)
+            w, pmax = self.dijkstraPath(path)
             # If weight less than threshold, and not deadend
-            if (w < CONST.routeThreshold):
+            if (w < CONST.routeThreshold) and (pmax < CONST.pointThreshold):
                 # Return path
                 r = [b]
 
@@ -940,15 +872,15 @@ class board():
         for c in corners:
             path = []
             path = fn.getPointsInLine(a, c) + fn.getPointsInLine(c, b)
-            csum = self.dijkstraPath(path)
+            csum, pmax = self.dijkstraPath(path)
             if csum < w:
                 w = csum
                 r = c
                 log('route-dijkstra-sum', str(a), str(c), str(b), str(path),
                     csum)
 
-        # log("route", "CORNER", str(r), str(w))
-        if (w < CONST.routeThreshold):
+        # Check if path exceeds probability thresholds
+        if (csum < CONST.routeThreshold) and (pmax < CONST.pointThreshold):
             return [r, b], w
         else:
             return [], CONST.routeThreshold
@@ -1019,7 +951,7 @@ class board():
         log('route-complex-step', a, b)
 
         # Define walls
-        gmin = CONST.routeThreshold
+        gmin = CONST.pointThreshold
         c = []
 
         # Look in each direction
@@ -1043,9 +975,13 @@ class board():
 
     def dijkstraPath(self, path, turn=0):
         # Sum dijkstra map between two points
-        tmax = CONST.maxPredictTurns - 1
+        tmax = CONST.lookAhead - 1
 
         result = 0
+
+        # Capture largest increment (probability of collision)  
+        largest_point = 0
+        
         # Iterate through path
         dt = self.getDijkstra()
 
@@ -1056,13 +992,14 @@ class board():
                     turn = tmax
 
                 # Add dijkstra value
-                result = result + int(dt[0][p[0], p[1]])
+                increment = int(dt[0][p[0], p[1]])
+                result = result + increment
                 turn = turn + 1
+                if (increment > largest_point):
+                  largest_point = increment 
 
-        else:
-            pass
+        return copy.copy(result), copy.copy(largest_point)
 
-        return result
 
     def routePadding(self, route, depth=CONST.lookAhead):
         # Make sure there is always a path with N moves (eg. route_complex + random walk)
@@ -1129,10 +1066,14 @@ class board():
             newpath = []
             dy = step[0]
             dx = step[1]
-
+            
+            # Get future markov matrix 
+            turn_max = min(CONST.lookAhead - 1, turn)
+            markov = copy.copy(self.markovs[turn_max])
             # Check next path is in bounds, available and not already visited**
             if(self.inBounds(step) and \
-                    turn >= s[dy, dx]):
+                    turn >= s[dy, dx] and 
+                    markov[dy, dx] < CONST.pointThreshold):
 
                 newturn = newturn + 1
 
@@ -1341,10 +1282,10 @@ class board():
             return target
 
     # Return quadrant with highest/lowest threat
-    def findThreat(self):
-        pass
-        # break into quadrants
-        # return
+    # def findThreat(self):
+    #     pass
+    #     # break into quadrants
+    #     # return
 
     def findSnakeBox(self, start, enemy):  # self, snake
         # Return closest three vertices as a box array
@@ -1631,7 +1572,7 @@ class board():
         for p in points:
             # Check path weigth
             path = fn.getPointsInLine(a, p)
-            psum = self.dijkstraPath(path)
+            psum, pmax = self.dijkstraPath(path)
 
             if psum < best:
                 best = psum
@@ -1846,12 +1787,15 @@ class board():
     def showMaps(self):
 
         # Routing maps
+        # log('map', 'PREDICT', self.predict[0])
+        # log('map', 'THREAT', self.threat[0])
+        # log('map', 'SOLID', self.solid)
         log('map', 'GRADIENT', self.gradient)
-        log('map', 'PREDICT', self.predict[0])
-        log('map', 'SOLID', self.solid)
         log('map', 'TRAILS', self.trails)
-        log('map', 'THREAT', self.threat[0])
-        log('map', 'DIJKSTRA', self.dijkstra[0])
+        log('map', 'MARKOV0', self.markovs[0])
+        log('map', 'MARKOV1', self.markovs[1])
+        log('map', 'MARKOV2', self.markovs[2])
+        log('map', 'DIJKSTRA0', self.dijkstra[0])
         # Visual maps
         log('map', 'COMBINE', self.combine)
 
@@ -1964,3 +1908,283 @@ class board():
 # # def leastweightPath(self, paths):
 #   # paths = [[[5, 4], [5, 0]], [[5, 4], [5, 10]], [[5, 4], [10, 4]], [[5, 4], [0, 4]]] ...
 #   # return path
+
+    # def updateThreat(self, snakes, hazards=[]):
+    #     # Assign "threat" value based on prediction model, distance to enemy snake and size etc..
+    #     w = self.width
+    #     h = self.height
+
+    #     full = CONST.routeSolid
+    #     shadow = CONST.routeSolid / 10
+    #     depth = CONST.maxPredictTurns
+
+    #     threatmap = [None] * depth
+    #     for t in range(0, depth):
+    #         threatmap[t] = np.zeros([w, h], np.intc)
+
+    #     # log("predict-update")
+    #     you_len = 10
+
+    #     # Get our head
+    #     for identity in snakes:
+    #         sn = snakes[identity]
+    #         if (sn.getType() == "us"):
+    #             you_len = sn.getLength()
+
+    #     # Optional: Stay away from corners / edges
+    #     if (True):
+    #         threatmap[0][0, 0] = full / 2
+    #         threatmap[0][0, w - 1] = full / 2
+    #         threatmap[0][h - 1, 0] = full / 2
+    #         threatmap[0][h - 1, w - 1] = full / 2
+
+    #     # Update hazard board
+    #     if len(hazards):
+    #         for hz in hazards:
+    #             # print("HAZARDS", str(hz))
+    #             try:
+    #                 threatmap[:][hz['y'], hz['x']] = CONST.routeHazard
+    #             except Exception as e:
+    #                 log('exception', 'updateThreat#1', str(e))
+
+    #     # Head on collisions
+    #     for identity in snakes:
+    #         sn = snakes[identity]
+    #         if (sn.getType() != "us"):
+
+    #             # s = np.zeros([h, w], np.intc)
+    #             # Death zone (+) around larger snakes
+    #             length = sn.getLength()
+    #             head = sn.getHead()
+    #             body = sn.getBody()
+    #             lasthead = copy.copy(head)
+    #             path = sn.getPath()
+
+    #             for t in range(0, depth - 1):
+
+    #                 if (len(path)):
+    #                     # Use next path as head
+    #                     head = path.pop(0)
+    #                     if (not len(head)):
+    #                         # If point is blank
+    #                         head = lasthead
+
+    #                 else:
+    #                     # Use original / last head
+    #                     pass
+
+    #                 # Body generates shadow threat
+    #                 if len(body):
+    #                     for b in body:
+    #                         ay = b[0]
+    #                         ax = b[1]
+    #                         ay1 = max(0, ay - 1)
+    #                         ay2 = min(h, ay + 2)
+    #                         ax1 = max(0, ax - 1)
+    #                         ax2 = min(w, ax + 2)
+    #                         threatmap[t][ay1:ay2,
+    #                                      ax] = threatmap[t][ay1:ay2,
+    #                                                         ax] + shadow
+    #                         threatmap[t][
+    #                             ay,
+    #                             ax1:ax2] = threatmap[t][ay, ax1:ax2] + shadow
+
+    #                 # Body close to wall generates high threat
+    #                 # TODO: Update threat
+    #                 edges = self.getEdges()
+    #                 for e in edges:
+    #                     pass
+
+    #                 # Head threat for larger snakes
+    #                 # TODO: 3x3|1x5 close to edge, otherwise 1x3
+    #                 if length >= you_len:
+    #                     ay = head[0]
+    #                     ax = head[1]
+    #                     # 3x3 square
+    #                     ay1 = max(0, ay - 1)
+    #                     ay2 = min(h, ay + 2)
+    #                     ax1 = max(0, ax - 1)
+    #                     ax2 = min(w, ax + 2)
+    #                     # 1x5 cross
+    #                     aymin = max(0, ay - 2)
+    #                     aymax = min(h, ay + 3)
+    #                     axmin = max(0, ax - 2)
+    #                     axmax = min(w, ax + 3)
+
+    #                     # Review head vs path -
+    #                     # TODO: replace with predict (currently disabled)
+    #                     dirn = sn.getDirection()
+    #                     full_square = full
+    #                     full_hor = full
+    #                     full_vert = full
+    #                     if dirn in ['up', 'down']:
+    #                         full_vert = full_vert
+    #                     else:  # left', 'right']:
+    #                         full_hor = full_hor
+
+    #                     threatmap[t][ay1:ay2, ax1:ax2] = threatmap[t][
+    #                         ay1:ay2, ax1:ax2] + full_square
+    #                     threatmap[t][aymin:aymax,
+    #                                  ax] = threatmap[t][aymin:aymax,
+    #                                                     ax] + full_vert
+    #                     threatmap[t][ay, axmin:axmax] = threatmap[t][
+    #                         ay, axmin:axmax] + full_hor
+
+    #                 lasthead = head
+
+    #     self.threat = copy.deepcopy(threatmap)
+    #     # print(str(self.threat))
+
+    # Go through snakes and estimate most likely path
+
+    
+    # def predictSnakeMoves(self, snakes, foods):
+
+    #     for identity in snakes:
+    #         # Iterate through dict (id:snake)
+    #         sn = snakes[identity]
+    #         if (sn.getType() == "us"):
+    #             # Path loaded after route()
+    #             # Use previous route or update afterwards?
+    #             # sn.get/setRoute()
+    #             pass
+
+    #         else:
+    #             # Assume strategy is food
+    #             start = sn.getHead()
+    #             its = fn.findClosestItem(foods, start)
+    #             if (len(its)):
+    #                 finish = its.pop(0)
+    #             else:
+    #                 finish = []
+
+    #             # TODO: Form gradient for each snake (currently using our routing matrix)
+    #             # self.updateGradient(start)
+    #             # self.recursion_route = 0
+    #             # rt, weight = self.route(start, finish)
+    #             rt, weight = self.route_corner(start, finish, 10 * CONST.routeThreshold)
+
+    #             # TODO: Assume strategy is kill (len > X)
+    #             # TODO: Assume strategy is board control / loop etc (eg. circular)
+    #             # print("SNAKE HEAD", str(start))
+    #             sn.setRoute(rt)
+    #             sn.setPath(rt)
+
+    # def updatePredict(self, snakes):
+    #     # Update the prediction board
+    #     # p - predict matrix
+    #     # t - turn
+    #     # r1 - point
+    #     # val - gradient / path weight
+
+    #     w = self.width
+    #     h = self.height
+    #     p = self.predict
+    #     depth = CONST.maxPredictTurns
+    #     full = CONST.routeSolid
+
+    #     # log("predict-update")
+    #     you_head = [-1, -1]
+
+    #     # Get our head
+    #     for identity in snakes:
+    #         sn = snakes[identity]
+    #         if (sn.getType() == "us"):
+    #             you_head = sn.getHead()
+
+    #     # Iterate through next t turns
+    #     for identity in snakes:
+    #         sn = snakes[identity]
+
+    #         # Get head, body & predicted route
+    #         name = sn.getType()
+    #         head = sn.getHead()
+    #         body = sn.getBody()
+    #         vector = sn.getRoute()
+
+    #         # Convert route to points
+    #         vector.insert(0, head)
+    #         rt = fn.getPointsInRoute(vector)
+
+    #         # Reinsert head (vector function strips head)
+    #         body.insert(0, head)
+
+    #         # Create blank template
+    #         snakemap = [None] * (depth + 1)
+
+    #         for t in range(0, depth):
+    #             snakemap[t] = np.zeros([w, h], np.intc)
+
+    #         # Paint body
+    #         snakemap[0][head[0], head[1]] = full
+    #         for r1 in body:
+    #             snakemap[0][r1[0], r1[1]] = full
+
+    #         # Go through next t moves
+    #         for t in range(1, depth):
+    #             # Copy template from last move
+    #             snakemap[t] = copy.copy(snakemap[t - 1])
+    #             # Prediction values for partial or full matches
+    #             if (name == "us"):
+    #                 # Certain
+    #                 val_predict = full
+    #                 val_certain = full
+    #             else:
+    #                 # Consider scaling factor on predictions
+    #                 val_predict = full
+    #                 val_certain = full
+
+    #             try:
+    #                 if (name != "us"):
+    #                     if (len(rt)):
+    #                         # Get next move from route
+    #                         r1 = rt.pop(0)
+
+    #                     else:
+    #                         # Continue moving in current direction
+    #                         diff = CONST.directionMap[sn.getDirection()]
+    #                         head = self.moveBy(head, diff)
+    #                         r1 = copy.copy(head)
+
+    #                     # Add to prediction matrix
+    #                     snakemap[t][r1[0],
+    #                                 r1[1]] = p[t][r1[0], r1[1]] + val_predict
+    #                     # Add route to head of body
+    #                     body.insert(0, r1)
+    #                     log('predict-new', str(t), str(rt), str(r1))
+
+    #             except Exception as e:
+    #                 # end of route
+    #                 log('exception', 'updatePredict#1', str(e))
+    #                 pass
+
+    #             # Erase tail (last point in body)
+    #             try:
+    #                 # Remove tail
+    #                 b1 = body.pop(-1)
+    #                 # Update the prediction board
+    #                 snakemap[t][b1[0],
+    #                             b1[1]] = snakemap[t][b1[0],
+    #                                                  b1[1]] - val_certain
+    #                 log('predict-erase', str(t), str(body), str(b1))
+
+    #             except Exception as e:
+    #                 # end of body
+    #                 log('exception', 'updatePredict#2', str(e))
+    #                 pass
+
+    #         # Update predict matrix for snake
+    #         sn.setPredict(snakemap)
+
+    #     # Sum all snakes into final prediction matrix
+    #     p = [None] * depth
+    #     for t in range(0, depth):
+    #         p[t] = np.zeros([w, h], np.intc)
+
+    #         for identity in snakes:
+    #             psnake = snakes[identity].getPredict()
+    #             p[t] = p[t] + psnake[t]
+
+    #     self.predict = p
+    #     return p
+

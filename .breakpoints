@@ -1,22 +1,30 @@
 {
   "files": {
+    "functions.py": [
+      {
+        "id": "59a15eb2-b1ad-4e04-8952-37cccaaae7db",
+        "line": 10,
+        "version": 887,
+        "index": 144
+      }
+    ],
     "logic.py": [
       {
         "id": "0340ab88-7732-49ef-998f-e98d711edad0",
         "line": 9,
-        "version": 25516,
+        "version": 25535,
         "index": 137
       },
       {
         "id": "71177279-d332-488c-b729-64fc56bdbd25",
         "line": 19,
-        "version": 25516,
+        "version": 25535,
         "index": 312
       },
       {
         "id": "aec5051c-bb72-4d00-bb4f-44ada878e2b1",
         "line": 64,
-        "version": 25516,
+        "version": 25535,
         "index": 1622
       }
     ],

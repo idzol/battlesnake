@@ -13,8 +13,8 @@ class snake:
 
     def __init__(self, data=""):
 
-        depth = CONST.maxPredictTurns
-        self.predict = [None] * (depth + 1)
+        depth = CONST.lookAhead
+        # self.predict = [None] * (depth + 1)
         
         self.interruptlist = []
         self.strategyinfo = {}
@@ -45,6 +45,33 @@ class snake:
         self.direction = "right" # direction of travel 
         self.shout = ""
         # self.setLocation(data)
+
+        self.futures = [None] * CONST.lookAhead
+        self.markovs = [None] * CONST.lookAhead
+        
+
+    def setMarkov(self, m, t):
+      self.markovs[t] = copy.copy(m) 
+
+
+    def getMarkov(self, t):
+      m = self.markovs[t]
+      return copy.copy(m)
+
+   
+    def setFuture(self, b, t=0):
+        future = { 
+          'body':copy.copy(b)
+        }
+        self.futures[t] = copy.copy(future)
+
+
+    def getFuture(self, turn=0):
+      future = copy.copy(self.futures[turn])
+      if (future == None):
+        return []
+      else: 
+        return future
 
 
     def setAll(self, data):
@@ -226,12 +253,12 @@ class snake:
         b.insert(0, h) 
         return b[:]
 
-    def setPredict(self, p):
-        self.predict = copy.copy(p)
+    # def setPredict(self, p):
+    #     self.predict = copy.copy(p)
         
-    def getPredict(self):
-        p = copy.copy(self.predict)
-        return p
+    # def getPredict(self):
+    #     p = copy.copy(self.predict)
+    #     return p
 
     def getLocation(self, p):
         if(p == "head"):

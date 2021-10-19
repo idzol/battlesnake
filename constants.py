@@ -1,11 +1,11 @@
 # Time variable 
 timeLow = 50
-timePanic = 200
+timePanic = 250
 
 # Log level 
 logFile = "games.log"
-logLevelConsole = 6
-logLevelPrint = 6
+logLevelConsole = 4
+logLevelPrint = 4
 
 # Snake variables
 healthHigh = 100
@@ -22,7 +22,7 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy 
-strategyDepth = 10   # max strategies to explore each turn
+strategyDepth = 5   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
 
 # Strategy - control board 
@@ -46,9 +46,11 @@ maxPredictTurns = 4
 maxRecursion = 2000
 lookAhead = 10
 
-# TODO: .. 
-routeThreshold = 500   # Ignore route if larger 
-pointThreshold = 10   # Ignore point if larger
+# Routing threshold - collision probability
+routeThreshold = 99   # Ignore route if larger 
+pointThreshold = 25   # Ignore point if larger
+
+
 routeSolid = 500
 routeHazard = 15 
 routeCell = 1
@@ -75,6 +77,14 @@ cwMap = {
 }
 
 directions = ["up","right","down","left"]
+
+directionSides = {
+  'up':[[1,0],[0,1],[0,-1]],
+  'down':[[-1,0],[0,1],[0,-1]],
+  'left':[[0,-1],[1,0],[-1,0]],
+  'right':[[0,1],[1,0],[-1,0]],
+  'none':[[0,1],[0,-1],[1,0],[-1,0]]
+}
 
 up = "up"
 down = "down"

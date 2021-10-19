@@ -14,7 +14,7 @@ def translateDirection(a, b):
     
     # X - left, right [0][X]
     # Y - up, down.   [Y][0] 
-    move = ""
+    move = 'none'
     
     try: 
       if (not len(a) or not len(b)): 
@@ -26,13 +26,13 @@ def translateDirection(a, b):
       bx = b[1]
       
       if (bx < ax): 
-          move = "left"
+          move = 'left'
       if (bx > ax): 
-          move = "right"
+          move = 'right'
       if (by < ay): 
-          move = "down"
+          move = 'down'
       if (by > ay): 
-          move = "up" 
+          move = 'up' 
 
     except Exception as e:
         log('exception', 'translateDirection' + str(a) + ':' + str(b), str(e)) 
