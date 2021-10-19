@@ -38,9 +38,9 @@ messages = {
     'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
 
     # Routing 
-    'route':[5,"-->ROUTE"," %s r:%s w:%s"],
-    'route-fromto':[5,"-->FROM TO", " %s %s"],
-    'route-return':[5,"-->ROUTE", " %s %s"],
+    'route':[4,"-->ROUTE"," %s r:%s w:%s"],
+    'route-fromto':[4,"-->FROM TO", " %s %s"],
+    'route-return':[4,"-->ROUTE", " %s %s"],
     'paths':[5,"-->PATH", " %s"],
     'path-target':[5,"-->TARGET", " %s"], 
     'route-dijkstra-sum':[5,"-->DSUM"," %s-%s-%s path:%s = %d"],

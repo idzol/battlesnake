@@ -176,14 +176,15 @@ def handle_move():
     hazards = data['board']['hazards']
     theBoard.updateBoards(data, allSnakes)
     
-    log('time', 'predictSnakeMoves', theBoard.getStartTime())
-    theBoard.predictSnakeMoves(allSnakes, theFoods)
-    
+    # log('time', 'predictSnakeMoves', theBoard.getStartTime())
+    # theBoard.predictSnakeMoves(allSnakes, theFoods)
     # Initialise routing gradient 
-    log('time', 'updatePredict', theBoard.getStartTime())
-    theBoard.updatePredict(allSnakes)
-    log('time', 'updateThreat', theBoard.getStartTime())
-    theBoard.updateThreat(allSnakes, hazards)
+    # log('time', 'updatePredict', theBoard.getStartTime())
+    # theBoard.updatePredict(allSnakes)
+    # log('time', 'updateThreat', theBoard.getStartTime())
+    # theBoard.updateThreat(allSnakes, hazards)
+    log('time', 'updateMarkov', theBoard.getStartTime())
+    theBoard.updateMarkov(ourSnek, allSnakes, foods)
     log('time', 'updateDijkstra', theBoard.getStartTime())
     theBoard.updateDijkstra(ourSnek)
     log('time', 'updateGradient', theBoard.getStartTime())
