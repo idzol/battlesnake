@@ -26,7 +26,7 @@ strategyDepth = 5   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
 
 # Strategy - control board 
-controlMinLength = 10
+controlMinLength = 25
 controlLargerBy = 3
 
 # Strategy - kill radius 

@@ -223,4 +223,22 @@ def findClosestItem(foods, start):
   
   return copy.copy(foodlist)
 
+
+def isClosest(a, b, others):
+    # Return true if you are closest point 
+
+    closest = []
+    us_dist = distanceToPoint(a, b)
+
+    for o in others:
+      them_dist = distanceToPoint(o, b)
+      if (them_dist < us_dist):
+          closest = o
+
+    if (a == closest):
+      return True 
+
+    else: 
+      return False 
+
 # == DEPRECATE / DELETE == 

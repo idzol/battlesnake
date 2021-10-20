@@ -43,7 +43,7 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     interruptlist = []
 
     numsnakes = len(snakes)
-    minlength = CONST.controlMinLength
+    minlength = CONST.growLength
     larger = CONST.controlLargerBy
     
     reason = []
@@ -173,6 +173,8 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
     i = 0
     
     found = False
+    lastGasp = False
+
     while not found:
       # Reset every turn 
       target = []
@@ -190,7 +192,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
         strategy = strategylist.pop(0)
         reason.append('strategy from last turn')
 
-      else:
+      elif(not lastGasp):
         # strategyinfo - default strategy 
         # if 'default' in strategyinfo:
         #   strategy = strategyinfo['default']
@@ -198,6 +200,14 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
         strategylist = copy.copy(strategylist_default)
         strategy = strategylist.pop(0)
         reason.append('default strategy invoked')
+        lastGasp = True 
+      
+      else: 
+        # Terminate search 
+        route = [] 
+        target = [] 
+        reason.append('last strategy reached')
+        break 
 
       log('strategy', str(strategy), str(reason), str(strategylist), str(strategyinfo))
 
@@ -417,6 +427,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
       log('time', 'Strategy::RoutePadding', st)
 
       if (len(route)):
+          # Route found -- try to find a safe way out 
+
+          eatingNext = False
+          if route[0] in foods:
+            # Check if eating next turn to adjust route tables 
+            eatingNext = True 
+
           # Insert start 
           route.insert(0, start)  
           route = copy.copy(fn.getPointsInRoute(route))
@@ -425,7 +442,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           log('strategy-route', "ROUTE", str(start), str(route), str(target))
           
           # Pad out route to N moves 
-          fullroute, found = bo.routePadding(route)
+          fullroute, found = bo.routePadding(route, eatingNext)
           log('strategy-route', "ROUTE PADDING", str(fullroute), str(found))
     
       if(found): 
@@ -570,7 +587,7 @@ def makeMove(bo: board, sn: snake) -> str:
 
 # == HELPERS == 
 
-def largestSnake(bo, snakes, minlength=CONST.controlMinLength, larger=CONST.controlLargerBy):
+def largestSnake(bo, snakes, minlength=CONST.growLength, larger=CONST.controlLargerBy):
     # if larger than enemy
     you = bo.getIdentity()
     you_len = snakes[you].getLength() 
