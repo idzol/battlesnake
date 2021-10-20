@@ -28,16 +28,17 @@ from boardClass import board
     # .. 
     
 # Changes strategy (state machine) based on external influence 
-def checkInterrupts(bo:board, snakes):
+def checkInterrupts(bo:board, sn:snake, snakes):
 
     # Return your snake 
     you = bo.getIdentity()
-    sn = snakes[you]
+    # sn = snakes[you]
+    
     health = sn.getHealth() 
-    aggro = sn.getAggro()
-    path = sn.getRoute()
     length = sn.getLength()
-
+    # aggro = sn.getAggro()
+    # path = sn.getRoute()
+    
     strategylist, strategyinfo = sn.getStrategy() 
     interruptlist = []
 
@@ -199,7 +200,10 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
         reason.append('default strategy invoked')
 
       log('strategy', str(strategy), str(reason), str(strategylist), str(strategyinfo))
-            
+
+      # Test a particular strategy 
+      # strategy = ['Eat', '']
+
       if(strategy[0] == 'Kill'):
           if (strategy[1] == 'Collide'):
             # HEAD ON COLLISION 
@@ -302,7 +306,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           # No food -- change strategy
           # Sort by closest food
           if(len(foodsort)):
-              target = findBestFood(foods, bo, sn, snakes)
+              target = findBestFood(foodsort, bo, sn, snakes)
               if(not len(target)):
                   # Try next food 
                   foodsort.pop(0)
@@ -398,7 +402,7 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
       log('time', 'Strategy::Route', st)
       
       # If no target or no route , try next strategy    
-      if 'numpy' in str(type(target)) and bo.inBounds(target):
+      if 'numpy' in str(type(target)):
           # Target is an area 
           log('strategy-route', "TARGET", str(strategy), str(target))
           route, weight = bo.fuzzyRoute(start, target, length)
@@ -842,6 +846,11 @@ def findBestFood(foods, bo, us, snakes):
     foodsort = copy.copy(foods)
     target = []
    
+    f = foodsort[0] 
+    target = copy.copy(f) 
+    print("EAT STRATEGY", f, foods) 
+    return f 
+
     # 1) Closest food 
     # Abandon closest if enemy snakes are closer & larger 
     while not len(target) and len(foodsort): 
@@ -852,7 +861,6 @@ def findBestFood(foods, bo, us, snakes):
       
       # Check we can route to location 
       r, w = bo.route(start, f)
-      
       if (len(r)): 
         # Route exists 
         reason = 'route exists'

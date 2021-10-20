@@ -48,6 +48,7 @@ class snake:
 
         self.futures = [None] * CONST.lookAhead
         self.markovs = [None] * CONST.lookAhead
+        self.markovbase = [None] * CONST.lookAhead
         
 
     def setMarkov(self, m, t):
@@ -58,7 +59,15 @@ class snake:
       m = self.markovs[t]
       return copy.copy(m)
 
-   
+
+    def setMarkovBase(self, m, t):
+      self.markovbase[t] = copy.copy(m) 
+
+
+    def getMarkovBase(self, t):
+      m = self.markovbase[t]
+      return copy.copy(m)
+
     def setFuture(self, b, t=0):
         future = { 
           'body':copy.copy(b)

@@ -102,8 +102,3 @@ class board():
                 self.gradient[a1[0], a1[1]] = self.dijkstra[0][a1[0], a1[1]]
 
 
-bo = board()
-path = [2, 2]
-route = bo.findLargestPath([path])
-print("ROUTE", route)
-print(str(bo.trails))

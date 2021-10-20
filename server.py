@@ -110,8 +110,6 @@ def handle_move():
     global allSnakes
     global codeTime  
 
-    # Start clock
-    theBoard.setStartTime()
 
     # Load game data (support for multi games)
     data = request.get_json()
@@ -131,10 +129,19 @@ def handle_move():
           ourSnek.__init__()          
     else: 
         pass 
-
-    log('time', '== Start Move ==', theBoard.getStartTime())
-    turn = data['turn']
     
+    # Start clock
+    theBoard.setStartTime()
+
+    turn = data['turn']
+    log('move-start', game_id, turn)
+    log('time', '== Start Move ==', theBoard.getStartTime())
+
+    # FIX: disappearing identity ..  KeyError: ''
+    identity = data['you']['id']
+    theBoard.setIdentity(identity)
+    
+
     # Update board (theBoard) and clear counters 
     theBoard.resetCounters()
 
@@ -184,7 +191,7 @@ def handle_move():
     # log('time', 'updateThreat', theBoard.getStartTime())
     # theBoard.updateThreat(allSnakes, hazards)
     log('time', 'updateMarkov', theBoard.getStartTime())
-    theBoard.updateMarkov(ourSnek, allSnakes, foods)
+    theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
     log('time', 'updateDijkstra', theBoard.getStartTime())
     theBoard.updateDijkstra(ourSnek)
     log('time', 'updateGradient', theBoard.getStartTime())
@@ -201,7 +208,7 @@ def handle_move():
 
     # Check strategy interrupts     
     log('time', 'checkInterrupts', theBoard.getStartTime())
-    checkInterrupts(theBoard, allSnakes)
+    checkInterrupts(theBoard, ourSnek, allSnakes)
     
     log('time', 'stateMachine', theBoard.getStartTime())
     # Progress state machine, set route
