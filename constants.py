@@ -4,8 +4,8 @@ timePanic = 250
 
 # Log level 
 logFile = "games.log"
-logLevelConsole = 4
-logLevelPrint = 4
+logLevelConsole = 5
+logLevelPrint = 5
 
 # Snake variables
 healthHigh = 100

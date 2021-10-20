@@ -24,6 +24,7 @@ messages = {
     'healthcheck':[1,"INFO", "Healthcheck - OK"],
     'start':[1,"START", " %s"],
     'end':[1,"END", " %s"],
+    'move-start':[1,"MOVE", "%s:%s"],
     'move':[1,"MOVE", " %s"],
     'shout':[1,"SHOUT", " %s"],
     
@@ -40,7 +41,7 @@ messages = {
     # Routing 
     'route':[4,"-->ROUTE"," %s r:%s w:%s"],
     'route-fromto':[4,"-->FROM TO", " %s %s"],
-    'route-return':[4,"-->ROUTE", " %s %s"],
+    'route-return':[4,"-->ROUTE RETURN", " %s %s"],
     'paths':[5,"-->PATH", " %s"],
     'path-target':[5,"-->TARGET", " %s"], 
     'route-dijkstra-sum':[5,"-->DSUM"," %s-%s-%s path:%s = %d"],
