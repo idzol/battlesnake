@@ -47,22 +47,19 @@ class board():
 
     # enclosed = {}  # Dict of enclosed space volume by direction
 
-    recursion_route = 0
-    turn = 0
 
     def __init__(self, height=0, width=0):
 
         # globals
-        # height = data['board']['height']
-        # width = data['board']['width']
-        self.identity = "" 
+        self.startTime = time.time()
+        
         self.height = height
         self.width = width
-
+        self.identity = "" 
+        
         self.land = np.zeros((height, width), np.intc)
         self.mask = np.ones((height, width), np.intc)
 
-        self.startTime = time.time()
         self.win = 0
         self.loss = 0
 
@@ -73,16 +70,15 @@ class board():
         self.dijkstra = [None] * CONST.lookAheadPath
         self.markovs = [None] * CONST.lookAheadPath
 
-
-
-        self.hurry = False
+        self.turn = 0
+        
+        self.resetCounters()
         
 
     def resetCounters(self):
         # Reset start of each turn 
-        self.turn = 0
-        self.hurry = False
         self.recursion_route = 0
+        self.hurry = False
         # self.gradients = {}
 
 

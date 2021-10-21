@@ -23,6 +23,7 @@ messages = {
     # Server 
     'healthcheck':[1,"INFO", "Healthcheck - OK"],
     'start':[1,"START", " %s"],
+    'start complete':[1,"START", " %s"],
     'end':[1,"END", " %s"],
     'move-start':[1,"MOVE", "%s:%s"],
     'move':[1,"MOVE", " %s"],

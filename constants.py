@@ -2,8 +2,8 @@
 timeLow = 50
 timePanic = 250
 
-production = False
-silent = False
+production = True
+silent = True
 
 # Log level 
 logFile = "games.log"
@@ -21,8 +21,8 @@ if (production):
   maxRecursion = 2000
 
 else:
-  lookAheadEnemy = 3    # Enemy prediction 
-  lookAheadPath = 15    # Path prediction 
+  lookAheadEnemy = 2    # Enemy prediction 
+  lookAheadPath = 5    # Path prediction 
   maxRecursion = 1000
 
 

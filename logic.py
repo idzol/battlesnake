@@ -566,7 +566,15 @@ def makeMove(bo: board, sn: snake) -> str:
             log('exception','makeMove',str(e))
 
 
-    # 4) Still no route - Wipe markovs & try again
+    # 4) Still no route - Use self.enclosd available moves 
+    # if (not len(p) or not bo.inBounds(p)):
+    #   route_method = 'route_dijkstra'
+    #   for d in CONST.directions:
+    #     moves_avail = bo.enclosed[move] 
+    #     ..
+
+
+    # 5) Still no route - Wipe markovs & try again
     # if (not len(p) or not bo.inBounds(p)):
     #   route_method = 'route_findLargest_clear'
     #   bo.resetRouting()
@@ -579,22 +587,6 @@ def makeMove(bo: board, sn: snake) -> str:
     #     except Exception as e:
     #       log('exception', 'makeMove', str(e))
 
-
-    # 5) Still no route - Use self.enclosd available moves 
-    # if (not len(p) or not bo.inBounds(p)):
-    #   route_method = 'route_dijkstra'
-    #   for d in CONST.directions:
-    #     moves_avail = bo.enclosed[move] 
-    #     ..
-
-    # TODO -- cleanup 
-    # route_failure = '' 
-    # if (not len(p)):
-    #   route_failure = 'no path'  
-    # elif(not bo.inBounds(p)):
-    #   route_failure = 'path - not in bounds'  
-    # elif(p in sn.getBody()):
-    #   route_failure = 'path - body collision'
 
     #  # Translate move 
     # if(route_failure):
