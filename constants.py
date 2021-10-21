@@ -2,17 +2,10 @@
 timeLow = 50
 timePanic = 250
 
-production = True
-
 # Log level 
 logFile = "games.log"
-if (production):
-  logLevelConsole = 1
-  logLevelPrint = 1
-else: 
-  logLevelConsole = 5
-  logLevelPrint = 5
-
+logLevelConsole = 5
+logLevelPrint = 5
 
 # Snake variables
 healthHigh = 100
@@ -47,24 +40,16 @@ growLength = 25
 foodThreat = 3
 
 # Routing variables 
-# maxSearchDepth = 3
-# maxOwnPaths = 100
-# maxPredictTurns = 4
+maxSearchDepth = 3
+maxOwnPaths = 100
+maxPredictTurns = 4
 maxRecursion = 2000
-
-# TODO: Automate variables 
-if (production):
-  lookAheadEnemy = 5    # Enemy prediction 
-  lookAheadPath = 10    # Path prediction 
-
-else:
-  lookAheadEnemy = 3    # Enemy prediction 
-  lookAheadPath = 5    # Path prediction 
+lookAhead = 10
 
 # Routing threshold - collision probability
-routeThreshold = 99   # Ignore if route larger 
-pointThreshold = 10   # Ignore if any step larger
-minProbability = 1    # Markov probability 
+routeThreshold = 99   # Ignore route if larger 
+pointThreshold = 25   # Ignore point if larger
+
 
 routeSolid = 500
 routeHazard = 15 
