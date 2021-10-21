@@ -3,16 +3,44 @@ timeLow = 50
 timePanic = 250
 
 production = True
+silent = True 
 
 # Log level 
 logFile = "games.log"
 if (production):
-  logLevelConsole = 1
-  logLevelPrint = 1
+  logLevelConsole = 2
+  logLevelPrint = 2
 else: 
   logLevelConsole = 5
   logLevelPrint = 5
 
+
+# Routing variables 
+maxRecursion = 2000
+
+# TODO: Adjust variables based on snake length
+if (production):
+  lookAheadEnemy = 5    # Enemy prediction 
+  lookAheadPath = 20    # Path prediction 
+  maxRecursion = 2000
+
+else:
+  lookAheadEnemy = 3    # Enemy prediction 
+  lookAheadPath = 15    # Path prediction 
+  maxRecursion = 1000
+
+# Routing threshold - collision probability
+routeThreshold = 99   # Ignore if route larger 
+pointThreshold = 25   # Ignore if any step larger
+minProbability = 1    # Markov probability 
+
+routeSolid = 500
+routeHazard = 15 
+routeCell = 1
+
+# Game phases
+lengthMidGame = 10
+lengthEndGame = 20 
 
 # Snake variables
 healthHigh = 100
@@ -45,30 +73,6 @@ interceptMin = 40
 # Strategy - eat / grow 
 growLength = 25
 foodThreat = 3
-
-# Routing variables 
-# maxSearchDepth = 3
-# maxOwnPaths = 100
-# maxPredictTurns = 4
-maxRecursion = 2000
-
-# TODO: Automate variables 
-if (production):
-  lookAheadEnemy = 5    # Enemy prediction 
-  lookAheadPath = 10    # Path prediction 
-
-else:
-  lookAheadEnemy = 3    # Enemy prediction 
-  lookAheadPath = 5    # Path prediction 
-
-# Routing threshold - collision probability
-routeThreshold = 99   # Ignore if route larger 
-pointThreshold = 10   # Ignore if any step larger
-minProbability = 1    # Markov probability 
-
-routeSolid = 500
-routeHazard = 15 
-routeCell = 1
 
 # Strategy 
 # defaultstrategy = ['Eat', '']

@@ -25,6 +25,13 @@ class snakeTest(snake):
 
     pass 
 
+global perf
+
+perf = {}
+perf['pathProbability_markov_step'] = 0
+perf['pathProbability_markov'] = 0
+perf['predictMove_step'] = 0
+perf['updateMarkov_step'] = 0
 
 class boardTest(board):
 
@@ -32,10 +39,8 @@ class boardTest(board):
       # TODO: Assumes no solids, otherwise requires a version of route with gradient = 1..
       w = self.width
       h = self.height
-      
-      time_
+      markovs = []
 
-      markovs = []   
       turns = min(turns, CONST.lookAheadPath)
       for t in range(0, turns):
         
@@ -73,14 +78,7 @@ class boardTest(board):
             sn.setMarkov(copy.copy(markov), t)
             sn.setMarkovBase(copy.copy(markov), t)
             # Update markov probability 
-            
-            # log('time', '== Markov Step ' + str(t) + ' A ==',  self.getStartTime())
-            a = time.time()
-
             self.updateMarkov_step(sn, copy.deepcopy(snakes), foods, t)
-
-            b = time.time()
-            print("updateMarkov_step", int(1000 * (b - a)))
 
             # snakes_updated.append(sn)
             snakes[sid] = copy.deepcopy(sn)
@@ -113,6 +111,8 @@ class boardTest(board):
 
     def updateMarkov_step(self, target, snakes:dict, foods:list, turn=1): 
 
+        global perf
+        perf['updateMarkov_step'] += 1
         # Output probability path for target.  Update markov 
 
         w = self.width
@@ -156,7 +156,6 @@ class boardTest(board):
           # Eating uncertain
           pass 
 
-        
         # Update probabiliy by direction
         if(target.getType() == 'us'):
             # No prediction logic rqd for us  
@@ -164,13 +163,7 @@ class boardTest(board):
         else: 
             # Enemy snake 
             # Recursive function until probability < X 
-            
-            self.updateMarkov_step(sn, copy.deepcopy(snakes), foods, t)
-            
-            a = time.time()
-
-            markov = bo.pathProbability_markov(head, turn)
-
+            markov = self.pathProbability_markov(head, turn)
             
             # Rewrite body over markov
             sn_dict = target.getFuture(turn)
@@ -182,10 +175,7 @@ class boardTest(board):
                   y = cell[0]
                   x = cell[1]
                   markov[y, x] = 100
-
-
-        
-
+                
         # # TODO:  Introduce logic based on other snakes  
         # for sn in snakes: 
         #   # Get heads .. 
@@ -204,6 +194,10 @@ class boardTest(board):
         # TODO:  Special logic for our snake (known path)
         
         # Get current body 
+        global perf
+        perf['predictMove_step'] += 1
+
+
         turn = min(turn, CONST.lookAheadPath - 1)
 
         snake = copy.copy(target)      
@@ -268,6 +262,9 @@ class boardTest(board):
     def pathProbability_markov(self, head, depth=CONST.lookAheadEnemy):
         # Calculates the probability assuming random walk from any location on the board (head), given obstacles (trails)
         # Returns probablility board (chance) from 0 - 100 (%)
+        global perf
+        perf['pathProbability_markov'] += 1
+
 
         w = self.width
         h = self.height
@@ -291,10 +288,13 @@ class boardTest(board):
 
     def pathProbability_markov_step(self, chance, path, prob, step, turn=1, depth=CONST.lookAheadEnemy):
 
+        global perf
+        perf['pathProbability_markov_step'] += 1
+
         # Exit if path exceeds depth limit 
         if (len(path) > depth): 
           return chance 
-
+        
         dy = int(step[0])
         dx = int(step[1])
         s = self.trails
@@ -379,6 +379,7 @@ bo.updateMarkov(us, allSnakes, foods)
 log('time', '== Finish Markov ==', bo.getStartTime())
 
 
+
 ma = copy.copy(bo.markovs)
 
 for t in range(0, CONST.lookAheadPath):
@@ -392,3 +393,5 @@ for t in range(0, CONST.lookAheadPath):
 
       # print("SNAKE MARKOV", sn.getId(), t)
       # print(mk)
+
+print(perf)

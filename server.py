@@ -190,6 +190,9 @@ def handle_move():
     # theBoard.updatePredict(allSnakes)
     # log('time', 'updateThreat', theBoard.getStartTime())
     # theBoard.updateThreat(allSnakes, hazards)
+    
+    log('time', 'updateChance', theBoard.getStartTime())
+    theBoard.updateChance(allSnakes, theFoods)
     log('time', 'updateMarkov', theBoard.getStartTime())
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
     log('time', 'updateDijkstra', theBoard.getStartTime())

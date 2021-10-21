@@ -439,11 +439,11 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
           route = copy.copy(fn.getPointsInRoute(route))
           
           # If route valid 
-          log('strategy-route', "ROUTE", str(start), str(route), str(target))
+          log('strategy-route', "ROUTE", str(start), str(route))
           
           # Pad out route to N moves 
           fullroute, found = bo.routePadding(route, eatingNext)
-          log('strategy-route', "ROUTE PADDING", str(fullroute), str(found))
+          log('strategy-route', "ROUTE PADDING", str(start), str(fullroute))
     
       if(found): 
           # Route found
@@ -521,7 +521,6 @@ def makeMove(bo: board, sn: snake) -> str:
       route_method = 'route_findLargestPath'
       route = bo.findLargestPath([start])
       if len(route) > 1:
-        
         # TODO: Cleanup routes -- some include start, others don't
         # Remove head (if exists)
         if (route[0] == start): 
@@ -533,7 +532,21 @@ def makeMove(bo: board, sn: snake) -> str:
           log('exception', 'makeMove', str(e))
 
 
-    # 2) Still no route - Use lowest gradient
+    # 2) Still no route - Chase a tail
+    if (not len(p) or not bo.inBounds(p)):
+      route_method = 'route_chaseTail'
+      for d in CONST.directions:
+        # Check each direction 
+        t = list( map(add, start, CONST.directionMap[d]) )
+        if (bo.inBounds(t)):
+          # Find tail
+          w = bo.trails[t[0],t[1]]
+          if w == 1:
+            p = copy.copy(t)
+            wmin = copy.copy(w) 
+    
+
+    # 3) Still no route - Use lowest gradient
     if (not len(p) or not bo.inBounds(p)):
       route_method = 'route_dijkstra'
       wmin = CONST.routeThreshold
@@ -552,7 +565,21 @@ def makeMove(bo: board, sn: snake) -> str:
             log('exception','makeMove',str(e))
 
 
-    # 3) Still no route - Use self.enclosd available moves 
+    # 4) Still no route - Wipe markovs & try again
+    # if (not len(p) or not bo.inBounds(p)):
+    #   route_method = 'route_findLargest_clear'
+    #   bo.resetRouting()
+    #   route = bo.findLargestPath([start])
+    #   if len(route) > 1:
+    #     if (route[0] == start): 
+    #       route.pop(0)
+    #     try:
+    #       p = route.pop(0)
+    #     except Exception as e:
+    #       log('exception', 'makeMove', str(e))
+
+
+    # 5) Still no route - Use self.enclosd available moves 
     # if (not len(p) or not bo.inBounds(p)):
     #   route_method = 'route_dijkstra'
     #   for d in CONST.directions:
@@ -787,7 +814,11 @@ def enemyEnclosed(bo, us, snakes):
         # Calculate which squares we can get to 
         board_closest = bo.closestDist(head, [enemy_head])
         # Assess enemy path 
-        board_chance = bo.pathProbability(enemy_head)
+        board_chance = sn.getChance()
+        # print("BOARD CHANCE", board_chance)
+                    # bo.pathProbability(enemy_head)
+        
+        # Find interecept between closest point & snake chance
         targets = findInterceptPath(head, board_closest, board_chance)
 
         # print(str(board_closest))

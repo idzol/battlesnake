@@ -16,129 +16,64 @@ from logger import log
 import constants as CONST
 import functions as fn
 
-import sys
-
-# Set recursion limit
-# TODO: Replace with loop if possible ..
-sys.setrecursionlimit(10000)
+from snakeClass import snake
+from boardClass import board
 
 
-class board():
+class boardTest(board):
 
-    width = 11
-    height = 11
-    trails = np.zeros([height, width], np.intc)
-    trails[3] = 10
-    trails[:, 3] = 10
-
-    def inBounds(self, a):
-        # Check a point (a = [y,x]) is in map bounds
-
-        # Invalid point -- return false
-        if (not len(a)):
-            return False
-
-        h = self.height
-        w = self.width
-
-        try:
-            if (0 <= a[0] < h) and (0 <= a[1] < w):
-                return True
-            else:
-                return False
-
-        except Exception as e:
-            log('exception', 'inBounds', str(e))
-
-        return False
-
-    def findLargestPath(self, route, turn=1, depth=CONST.lookAhead):
-        # Iterate through closed space to check volume
-        # **TODO: Include own path as layer in future updateTrails
-        # TODO: Introduce panic timers if routing too long
-        # TODO: Introduce threat from other snakes into s[dy, dx] -> s[turn][dy, dx] udating predict matrix
-        # TODO:  Return best path vs any path (similar to introducing snake threat)
-
-        # print("FINDPATH", str(path), str(turn))
-        if (len(route)):
-            start = copy.copy(route[-1])
-
-        else:
-            return []
-
-        s = copy.copy(self.trails)
-
-        # Look in all directions
-        for d in CONST.directions:
-            newturn = copy.copy(turn) 
-            step = list(map(add, start, CONST.directionMap[d]))
-            path = copy.copy(route)
-            newpath = []
-            dy = step[0]
-            dx = step[1]
-            
-            # Check next path is in bounds, available and not already visited**
-            print("NEWSTEP", step)
-            if(self.inBounds(step) and \
-                    turn >= s[dy, dx]):
-
-                newturn = newturn + 1
-
-                path.append(step)
-                newpath = self.findLargestPath_step(step, turn, depth, path)
-                
-                print("NEWPATH", newpath)
-                if (len(newpath) >= depth):
-                    # Max path found - Exit search
-                    break
-
-        return copy.copy(newpath)
+    pass 
+    # def __init__():
 
 
-    def findLargestPath_step(self,
-                             route,
-                             turn=1,
-                             depth=CONST.lookAhead,
-                             path=[]):
+data = {'game': {'id': '609d47ca-e773-49f9-b3f4-2c52afa4a05c', 'ruleset': {'name': 'solo', 'version': 'v1.0.22', 'settings': {'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': {'shrinkEveryNTurns': 0}, 'squad': {'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}, 'timeout': 500, 'source': ''}, 'turn': 4, 'board': {'height': 11, 'width': 11, 'snakes': [], 'food': [], 'hazards': []}, 'you': {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}}
 
-        # If path meets depth, end recursion
-        if (len(path) >= depth):
-            return path
+h = 11
+w = 11 
 
-        start = copy.copy(route)
-        pathnew = copy.copy(path)
+us = snake()
+us2 = snake()
+them = snake()
 
-        # Basic route table
-        s = copy.copy(self.trails)
+us.setHead([3,3])
+us.setBody([[3,2], [3,1], [3,0], [2,0]])
+us2.setHead([6,2])
+us2.setBody([[6,1], [6,0], [5,0], [4,0]])
+them.setHead([7,7])
+them.setBody([[7,6], [7,5]])
 
-        # Look in all directions
-        for d in CONST.directions:
+sn_body = us.getBody()
+enemy_body = them.getBody()
 
-            step = list(map(add, start, CONST.directionMap[d]))
-            dy = step[0]
-            dx = step[1]
+us.setType('us')
+us.setId('ourSnek')
+us2.setId('enemySnek1')
+them.setId('enemySnek2')
+them.setBody([[7,6], [7,5]])
 
-            # Check next path is in bounds, available and not already visited**
-            print("STEP", step, path)
-            if(self.inBounds(step) and \
-                    turn >= s[dy, dx] and \
-                    not step in path):
+allSnakes = {
+  'ourSnek1':us,
+  'enemySnek1':us2,
+  'enemySnek2':them
+}
 
-                # Add to dirns
-                turn = turn + 1
-                path.append(copy.copy(step))
-                pathnew = self.findLargestPath_step(step, turn, depth, path)
-                
-                # print("LARGEST STEP", str(pathnew), str(path), str(step))
+foods = [[1, 1]]
 
-            if (len(pathnew) > depth):
-                break
+bo = boardTest()
 
-        return copy.copy(pathnew)
+# trails = np.zeros([h, w], np.intc)
+# trails[3] = 10
+# trails[:, 3] = 10
+# bo.trails = trails 
+# print(str(bo.trails))
 
-
-bo = board()
 path = [2, 2]
+
+bo.updateBoards(data, allSnakes) 
+bo.updateChance(allSnakes, foods)
+bo.updateMarkov(us, allSnakes, foods)
+
+
 route = bo.findLargestPath([path])
+
 print("ROUTE", route)
-print(str(bo.trails))

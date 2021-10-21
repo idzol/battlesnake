@@ -103,6 +103,11 @@ def log(src, *vars):
     
     global messages
 
+    # Performance optimisation - turn off logging 
+    if(CONST.silent):
+        return 
+
+
     llc = CONST.logLevelConsole
     llp = CONST.logLevelPrint
     logfile = CONST.logFile
@@ -139,10 +144,12 @@ def log(src, *vars):
   
     # General print function 
     else:          
-        try:
-          output = msg[1] + ": " + msg[2] % vars
-        except Exception as e:       
-          log('exception', 'log#3', str(vars[0]) + str(e))
+        output = msg[1] + ": " + msg[2] % vars
+        
+        # try:
+        #   output = msg[1] + ": " + msg[2] % vars
+        # except Exception as e:       
+        #   log('exception', 'log#3', str(vars[0]) + str(e))
   
 
     # Print to console 

@@ -14,6 +14,7 @@ class snake:
     def __init__(self, data=""):
 
         depth = CONST.lookAheadPath
+        depth_enemy = CONST.lookAheadEnemy
         # self.predict = [None] * (depth + 1)
         
         self.interruptlist = []
@@ -46,27 +47,37 @@ class snake:
         self.shout = ""
         # self.setLocation(data)
 
+        # Enemy prediction 
         self.futures = [None] * depth
         self.markovs = [None] * depth
-        self.markovbase = [None] * depth
+        self.markovbase = [None] * depth        
+        self.chance = [None] * depth_enemy # Shorter prediction 
         
 
     def setMarkov(self, m, t=0):
       self.markovs[t] = copy.copy(m) 
 
-
     def getMarkov(self, t=0):
       m = self.markovs[t]
       return copy.copy(m)
 
-
     def setMarkovBase(self, m, t):
       self.markovbase[t] = copy.copy(m) 
-
 
     def getMarkovBase(self, t):
       m = self.markovbase[t]
       return copy.copy(m)
+
+    def setChance(self, c, t=0):
+      lmax = len(self.chance) - 1
+      t = min(t, lmax)
+      self.chance[t] = copy.copy(c)
+
+    def getChance(self, t=CONST.lookAheadEnemy - 1):
+      lmax = len(self.chance) - 1
+      t = min(t, lmax)
+      c = self.chance[t]
+      return copy.copy(c)
 
     def setFuture(self, b, t=0):
         future = { 
