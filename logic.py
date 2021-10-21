@@ -151,7 +151,7 @@ def checkInterrupts(bo:board, sn:snake, snakes):
 def stateMachine(bo:board, sn: snake, snakes: list, foods: list): 
     # Returns target (next move) based on inputs 
 
-    depth = CONST.lookAhead
+    depth = CONST.strategyDepth
     
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
