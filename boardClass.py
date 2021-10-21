@@ -52,8 +52,6 @@ class board():
 
     def __init__(self, height=0, width=0):
 
-        depth = CONST.lookAheadPath
-        
         # globals
         # height = data['board']['height']
         # width = data['board']['width']
@@ -65,14 +63,20 @@ class board():
         self.mask = np.ones((height, width), np.intc)
 
         # Routing limits
-        # self.maxdepth = CONST.maxSearchDepth
+        self.maxdepth = CONST.maxSearchDepth
 
         self.startTime = time.time()
         self.win = 0
         self.loss = 0
 
-        self.dijkstra = [None] * depth
-        self.markovs = [None] * depth
+        # self.threat = [None] * CONST.lookAhead
+        # self.predict = [None] * CONST.lookAhead
+        # self.gradient = [None] * CONST.maxPredictTurns
+
+        self.dijkstra = [None] * CONST.lookAhead
+        self.markovs = [None] * CONST.lookAhead
+
+
 
         self.hurry = False
         
@@ -196,7 +200,6 @@ class board():
         # Enclosed - xx
         # Solid - xx
         # Combine - Array of all layers (snakes, walls, items)
-        depth = CONST.lookAheadPath
 
         # Snake Head
         hy = data['you']['head']['y']
@@ -220,26 +223,38 @@ class board():
         self.solid = rs * np.ceil(by / (by + 1) + bs / (bs + 1))
         self.combine = by + bs + bi
 
-        # Meta boards        
+        # Meta boards
+        depth = CONST.lookAhead
+        
         en = self.enclosedSpacev2(head)
         self.enclosed = copy.copy(en)  # TODO: move to snake object ..
 
         # Routing Boards - init (blank)
+        # predict = []
+        # threat = []
         markovs = []
         dijkstra = []
-
-        # Route calculation 
         for t in range(0, depth):
-            dijkstra.append(np.zeros([height, width], np.intc))
-            # Enemy prediction 
+            # predict.append(np.zeros([height, width], np.intc))
+            # threat.append(np.zeros([height, width], np.intc))
             markovs.append(np.zeros([height, width], np.intc))
+            dijkstra.append(np.zeros([height, width], np.intc))
 
+            # self.updateGradient() -- only update when rqd for routing
         self.markovs = copy.copy(markovs)
         self.dijkstra = copy.copy(dijkstra)
 
-        # TODO: Clear boards?
-        return True
 
+        # self.predict = predict
+        # self.threat = threat
+
+        # Other meta-boards
+        # bt = self.updateThreat(data, snakes) -- needs snakes
+        # self.updateDijkstra(fn.XYToLoc(data['you']['head']))
+        # gr = self.updateGradient() -- only update when rqd for routing
+
+        # TODO: Clear boards ..
+        return True
 
     def updateBoardYou(self, data):
         # Array of snek (101-head, 100-body)
@@ -473,6 +488,7 @@ class board():
           pass 
 
         # Update probabiliy by direction
+        # Update probabiliy by direction
         if(target.getType() == 'us'):
             # No prediction logic rqd for us  
             pass
@@ -496,7 +512,7 @@ class board():
                 markov[y, x] = 100
 
             
-        # # TODO:  Introduce logic based on other snakes  
+        # # TODO:  Introduce logic based on other snakes   
         # for sn in snakes: 
         #   # Get heads .. 
         #   pass 
@@ -514,7 +530,7 @@ class board():
         # TODO:  Special logic for our snake (known path)
         
         # Get current body 
-        turn = min(turn, CONST.lookAheadPath - 1)
+        turn = min(turn, CONST.lookAhead - 1)
 
         snake = copy.copy(target)      
         sn_future = snake.getFuture(turn)
@@ -547,8 +563,7 @@ class board():
               prob_pt = [probs[0][i], probs[1][i]]
               prob = markov[prob_pt[0], prob_pt[1]]
               
-              if prob == 100:
-              # if prob > prob_max:
+              if prob > prob_max:
                 prob_max = copy.copy(prob)
                 prob_max_pt = copy.copy(prob_pt)
                 
@@ -568,8 +583,8 @@ class board():
         
         # Add new head
         new_body = copy.copy(body)
-        # if (len(new_head)):
-        #     new_body.insert(0, new_head)
+        if (len(new_head)):
+            new_body.insert(0, new_head)
 
         # Update body
         return new_body
@@ -577,7 +592,7 @@ class board():
 
     def updateDijkstra(self, sn):
 
-        depth = CONST.lookAheadPath
+        depth = CONST.lookAhead
 
 
         w = self.width
@@ -627,7 +642,7 @@ class board():
             self.gradient[a[0], a[1]] = 0
 
         # Max number of turns / boards in prediction matrix
-        tmax = CONST.lookAheadPath - 1
+        tmax = CONST.lookAhead - 1
         if (turn > tmax):
             turn = tmax
 
@@ -759,7 +774,7 @@ class board():
         if (turn >= s[dy, dx]):
 
             # Add to enclosure
-            chance[dy, dx] = chance[dy, dx] + copy.copy(prob)
+            chance[dy, dx] = chance[dy, dx] + prob
             dirn_avail = self.findEmptySpace(path, step, turn + 1)
             path_new = copy.copy(path)
             path_new.append(step)
@@ -789,6 +804,8 @@ class board():
  
 
 # == ROUTING ==
+
+# TODO: Fuzzy Routing, ie. get close to an object)
 
     def fuzzyRoute(self, start, targetmap, length):
         # Send shape - return best path to any point in shape
@@ -1024,7 +1041,7 @@ class board():
 
     def dijkstraPath(self, path, turn=0):
         # Sum dijkstra map between two points
-        tmax = CONST.lookAheadPath - 1
+        tmax = CONST.lookAhead - 1
 
         result = 0
 
@@ -1052,7 +1069,7 @@ class board():
         return copy.copy(result), copy.copy(largest_point)
 
 
-    def routePadding(self, route, eating=False, depth=CONST.lookAheadPath):
+    def routePadding(self, route, eating=False, depth=CONST.lookAhead):
         # Make sure there is always a path with N moves (eg. route_complex + random walk)
         # Else return []
 
@@ -1093,7 +1110,7 @@ class board():
         route.pop(0)
         return copy.copy(route), copy.copy(found)
 
-    def findLargestPath(self, route, turn=0, eating=False, depth=CONST.lookAheadPath):
+    def findLargestPath(self, route, turn=0, eating=False, depth=CONST.lookAhead):
         # Iterate through closed space to check volume
         # **TODO: Include own path as layer in future updateTrails
         # TODO: Introduce panic timers if routing too long
@@ -1119,7 +1136,7 @@ class board():
             dx = step[1]
             
             # Get future markov matrix 
-            turn_max = min(CONST.lookAheadPath - 1, turn)
+            turn_max = min(CONST.lookAhead - 1, turn)
             markov = copy.copy(self.markovs[turn_max])
             
             # Compensate body / tail avoidance if eating next turn 
@@ -1150,7 +1167,7 @@ class board():
     def findLargestPath_step(self,
                              route,
                              turn=0,
-                             depth=CONST.lookAheadPath,
+                             depth=CONST.lookAhead,
                              path=[]):
 
         # If path meets depth, end recursion
@@ -1162,7 +1179,6 @@ class board():
 
         # Basic route table
         s = copy.copy(self.trails)
-            
         t = min(turn, CONST.lookAheadPath - 1)
         markov = copy.copy(self.markovs[t])
 
