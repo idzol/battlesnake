@@ -13,7 +13,7 @@ class snake:
 
     def __init__(self, data=""):
 
-        depth = CONST.lookAhead
+        depth = CONST.lookAheadPath
         # self.predict = [None] * (depth + 1)
         
         self.interruptlist = []
@@ -46,16 +46,16 @@ class snake:
         self.shout = ""
         # self.setLocation(data)
 
-        self.futures = [None] * CONST.lookAhead
-        self.markovs = [None] * CONST.lookAhead
-        self.markovbase = [None] * CONST.lookAhead
+        self.futures = [None] * depth
+        self.markovs = [None] * depth
+        self.markovbase = [None] * depth
         
 
-    def setMarkov(self, m, t):
+    def setMarkov(self, m, t=0):
       self.markovs[t] = copy.copy(m) 
 
 
-    def getMarkov(self, t):
+    def getMarkov(self, t=0):
       m = self.markovs[t]
       return copy.copy(m)
 
