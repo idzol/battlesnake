@@ -72,7 +72,6 @@ def checkInterrupts(bo:board, sn:snake, snakes):
         reason.append('health was critical')
 
 
-
     # Control interrupt -- control board 
     if (health > CONST.healthLow and largestSnake(bo, snakes, minlength, larger) and numsnakes == 2):
         interruptlist.append(['Control', 'Box'])
@@ -151,7 +150,7 @@ def checkInterrupts(bo:board, sn:snake, snakes):
 def stateMachine(bo:board, sn: snake, snakes: list, foods: list): 
     # Returns target (next move) based on inputs 
 
-    depth = CONST.lookAhead
+    depth = CONST.lookAheadPath
     
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
@@ -540,6 +539,8 @@ def makeMove(bo: board, sn: snake) -> str:
         t = list( map(add, start, CONST.directionMap[d]) )
         if (bo.inBounds(t)):
           # Find tail
+          # TODO:  if sn.Eating():
+
           w = bo.trails[t[0],t[1]]
           if w == 1:
             p = copy.copy(t)

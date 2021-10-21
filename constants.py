@@ -2,8 +2,8 @@
 timeLow = 50
 timePanic = 250
 
-production = True
-silent = True 
+production = False
+silent = False
 
 # Log level 
 logFile = "games.log"
@@ -15,10 +15,6 @@ else:
   logLevelPrint = 5
 
 
-# Routing variables 
-maxRecursion = 2000
-
-# TODO: Adjust variables based on snake length
 if (production):
   lookAheadEnemy = 5    # Enemy prediction 
   lookAheadPath = 20    # Path prediction 
@@ -28,6 +24,7 @@ else:
   lookAheadEnemy = 3    # Enemy prediction 
   lookAheadPath = 15    # Path prediction 
   maxRecursion = 1000
+
 
 # Routing threshold - collision probability
 routeThreshold = 99   # Ignore if route larger 
