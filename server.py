@@ -17,21 +17,14 @@ from logic import checkInterrupts, stateMachine, makeMove
 app = Flask(__name__)
 
 # Globals 
-global theBoard 
-global ourSnek 
-global codeTime
-global allSnakes
+global games
+games = {}  
 
-
-game = {}  
-theBoard = board()
-allSnakes = {}       # dict of snake() class. id:snake
-ourSnek = snake()
-clock = {}           # time - dict
 
 # Register snake 
 @app.get("/")
 def handle_info():
+
     log("healthcheck")
     return {
         "apiversion": "1",
@@ -44,37 +37,24 @@ def handle_info():
 
 @app.post("/start")
 def handle_start():
-    global theBoard 
-    global ourSnek 
-    global allSnakes
-    global codeTime
+    global games
 
     # clock['start'] = time.time()
     data = request.get_json()
     game_id = data['game']['id']
-    
-    # TODO:  Move to logger (6)
-    # log('game-data')
-    # 'game-data':[6, "GAME"]
-    # print(str(data))
-    # return
-    
-    # print(f"START {data['game']['id']}")
-    log("start", data['game']['id'])
-    
-    # Initialise game (theBoard)
-    # TODO: Don't reinitliaise board & clear counters,eg. keep win stats 
+
+    # initialise board
     theBoard = board()
-    
-    # initialise food
+    # Initialise snakes
+    ourSnek = snake()
+    allSnakes = {}       # dict of snake() class. id:snake
+    # initialise food 
     theFoods = []
 
-    # Initialise our snake (ourSnek)
-    allSnakes = {}
-
-    # TODO: Combine ourSnek.__init with data & use reset instead . 
-    # ourSnek.reset() -- clear counters, eg. adjust strategy keep win state 
-    ourSnek.__init__()
+    log("start", data['game']['id'])
+    # print(str(data))
+    
+    # Set our identity 
     identity = data['you']['id']
     theBoard.setIdentity(identity)
     ourSnek.setId(identity)
@@ -92,24 +72,26 @@ def handle_start():
           sn.setEnemy(sndata)
           allSnakes[copy.copy(identity)] = copy.deepcopy(sn)
 
-      # TODO: check if this creates a deep copy, or pointer to same snake (multiple enemies represented as one snake)  
-
-    # initalise / reset other vars
+    # TODO:  Reset counters every turn, every game 
     # log("start-complete", data['game']['id'])
     
     # Save game data
-    game[game_id] = [theBoard, ourSnek, allSnakes]
+    games[game_id] = [theBoard, ourSnek, allSnakes]
+
+    # Initialise game 
+    games[game_id] = {
+        'board':theBoard,
+        'us':ourSnek,
+        'snakes':allSnakes
+        # 'foods':theFoods
+    }
 
     return "ok" 
 
 
 @app.post("/move")
 def handle_move():
-    global theBoard 
-    global ourSnek 
-    global allSnakes
-    global codeTime  
-
+    global games
 
     # Load game data (support for multi games)
     data = request.get_json()
@@ -117,19 +99,22 @@ def handle_move():
     
     game_id = data['game']['id']
     # Support for multiple games 
-    if game_id in game: 
+    if game_id in games: 
         try:
-          theBoard = game[game_id][0]
-          ourSnek = game[game_id][1]
-          allSnakes = game[game_id][2]
+          theBoard = games[game_id]['board']
+          ourSnek = games[game_id]['us']
+          allSnakes = games[game_id]['snakes']
         
         except Exception as e:
           log('exception', 'server::move', str(e)) 
           theBoard = board()
-          ourSnek.__init__()          
+          ourSnek = snake()
+          
     else: 
-        pass 
-    
+        # Error - Game ID not found 
+        log('exception', 'Game not found: ', game_id)
+        return 
+        
     # Start clock
     theBoard.setStartTime()
 
@@ -182,15 +167,7 @@ def handle_move():
     # Update predict & threat matrix  
     hazards = data['board']['hazards']
     theBoard.updateBoards(data, allSnakes)
-    
-    # log('time', 'predictSnakeMoves', theBoard.getStartTime())
-    # theBoard.predictSnakeMoves(allSnakes, theFoods)
-    # Initialise routing gradient 
-    # log('time', 'updatePredict', theBoard.getStartTime())
-    # theBoard.updatePredict(allSnakes)
-    # log('time', 'updateThreat', theBoard.getStartTime())
-    # theBoard.updateThreat(allSnakes, hazards)
-    
+        
     log('time', 'updateChance', theBoard.getStartTime())
     theBoard.updateChance(allSnakes, theFoods)
     log('time', 'updateMarkov', theBoard.getStartTime())
@@ -200,6 +177,7 @@ def handle_move():
     log('time', 'updateGradient', theBoard.getStartTime())
     theBoard.updateGradient(ourSnek.getHead()) 
     theBoard.updateGradientFix(ourSnek.getHead())
+    
     # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
        
     # Initialisation complete 
@@ -236,7 +214,7 @@ def handle_move():
     theBoard.showMaps()
 
     # Save game data
-    game[game_id] = [theBoard, ourSnek, allSnakes]
+    # games[game_id] = [theBoard, ourSnek, allSnakes]
     
     for key in allSnakes:
         snk = allSnakes[key]
@@ -249,24 +227,16 @@ def handle_move():
 
 @app.post("/end")
 def end():
-    global theBoard 
-    global theFoods 
-    global ourSnek 
-    global codeTime
-  
+    global games
     data = request.get_json()
-    
-    # TODO: Dump game data to log 
-    # Record win / loss 
-    # data['you']['health'] = 0 
-    # data['you']['head'] = out of bounds ..  
+
+    # TODO: Dump game data to log. Record win / loss 
     
     # Delete game data 
     game_id = data['game']['id']
-    game[game_id] = None
+    games.pop(game_id, None)
     
     log("end", data['game']['id'])
-
     return "ok"
 
 
@@ -276,3 +246,4 @@ if __name__ == "__main__":
     print("INFO: Starting Battlesnake Server...")
     port = int(os.environ.get("PORT", "8080"))
     app.run(host="0.0.0.0", port=port, debug=True)
+
