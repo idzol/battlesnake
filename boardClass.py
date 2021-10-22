@@ -878,7 +878,7 @@ class board():
             return [], CONST.routeThreshold
 
         # Gradient to destination
-        weight = self.gradient[b[0], b[1]]
+        weight = route_table[b[0], b[1]]
         if (weight > CONST.routeThreshold):
             # no path
             return [], CONST.routeThreshold
@@ -926,7 +926,7 @@ class board():
                     if (path[0] == path[2]):
                         burn = path[1]
                         # Burn
-                        self.gradient[burn[0], burn[1]] = CONST.routeThreshold
+                        route_table[burn[0], burn[1]] = CONST.routeThreshold
                         # Reset variables
                         path = []
                         bnew = copy.copy(b)
