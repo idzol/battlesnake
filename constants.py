@@ -10,8 +10,8 @@ silent = False
 # Log level 
 logFile = "games.log"
 if (production):
-  logLevelConsole = 2
-  logLevelPrint = 2
+  logLevelConsole = 4
+  logLevelPrint = 4
 else: 
   logLevelConsole = 4
   logLevelPrint = 4
@@ -19,8 +19,8 @@ else:
 
 if (production):
   lookAheadEnemy = 3    # Enemy prediction 
-  lookAheadPath = 10    # Path prediction 
-  maxRecursion = 500
+  lookAheadPath = 20    # Path prediction 
+  maxRecursion = 1000
 
 else:
   lookAheadEnemy = 4    # Enemy prediction 

@@ -865,7 +865,13 @@ class board():
 
     def route_complex(self, a, b, length=0):
         # Returns path or point. [] if no path or error
-       
+
+        # TODO: route_complex_step to use turn  
+        # tmax = min(t, CONST.lookAheadEnemy - 1)
+        markov = copy.copy(self.markovs[0])
+        gradient = copy.copy(self.gradient)
+        route_table = np.maximum(markov, gradient)
+
         h = self.height
         w = self.width
         if (not self.inBounds(a) or not self.inBounds(b)):
@@ -886,7 +892,9 @@ class board():
             while 1:
                 # find lowest gradient route & add to path
                 # print("ROUTE COMPLEX STEP FXN", str(bnew), str(a))
-                r, grad = self.route_complex_step(bnew, a)
+
+
+                r, grad = self.route_complex_step(bnew, a, route_table)
 
                 # No path found / error or dead end
                 # If deadend, abandon route
@@ -928,17 +936,13 @@ class board():
 
         return path, weight
 
-    def route_complex_step(self, a, b, t=0):
+    def route_complex_step(self, a, b, route_table, t=0):
         # Return next point in complex path based on least weight. [] if no path or error
-        log('route-complex-step', a, b)
-
+        # log('route-complex-step', a, b)
         # Define walls
-        gmin = CONST.pointThreshold
-        c = []
-        tmax = min(t, CONST.lookAheadEnemy - 1)
-        markov = copy.copy(self.markovs[tmax])
-        gradient = copy.copy(self.gradient)
-
+        gradient = CONST.pointThreshold
+        route = []
+        
         # Look in each direction
         for d in CONST.directions:
             a1 = list(map(add, a, CONST.directionMap[d]))
@@ -946,20 +950,18 @@ class board():
             # Check direction is in bounds
             if (self.inBounds(a1)):
                 # Check markov & gradient.  Why?  Gradient may not be complete in timer panic.  Check largest in case wall 
-                g1 = gradient[a1[0], a1[1]]
-                m1 = markov[a1[0], a1[1]]
-                rmax = min(g1, m1)
-
+                r1 = route_table[a1[0], a1[1]]
+                
                 # Find minimum gradient & update next step
-                if (rmax < gmin):
-                    gmin = g1
-                    c = a1
+                if (r1 < gradient):
+                    gradient = r1
+                    route = a1
 
                 # End found -- terminate process
                 if (a1 == b):
                     break
 
-        return c, gmin
+        return route, gradient
 
     def dijkstraPath(self, path, turn=0):
         # Sum dijkstra map between two points
