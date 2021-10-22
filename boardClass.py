@@ -17,7 +17,6 @@ import constants as CONST
 import functions as fn
 
 import sys
-
 # Set recursion limit
 # TODO: Replace with loop if possible ..
 sys.setrecursionlimit(50000)
@@ -26,27 +25,7 @@ sys.setrecursionlimit(50000)
 class board():
 
     ## == INIT ==
-
     legend = CONST.legend  # Import map values
-
-    # distance = []  # Array of distance
-    # you = []  # Array of snek (101-head, 100-body)
-    # you_route = []  # Array of snek (minus head)
-
-    # snakes = []  # Array of other snek (201-head, 200-body)
-    # items = []  # Array of items (300-food, 301-hazard)
-
-    # solid = []  # Array of all solids (snakes, walls)
-    # combine = []  # Array of all layers (snakes, walls, items)
-    # trails = []  # Array of all trails where N = time to expiry
-
-    # gradient = []  # Array of gradient normalised to turn 0
-
-    # gradients = {}  # List of previous gradients for future calc
-    # 'cell':[turn,gradient]
-
-    # enclosed = {}  # Dict of enclosed space volume by direction
-
 
     def __init__(self, height=0, width=0):
 
@@ -352,9 +331,8 @@ class board():
         for snid in snakes:
           sn = snakes[snid]
           head = sn.getHead()
-
+          
           if (sn.getId() != us):
-
             for turn in range(0, turns):
               chance = self.pathProbability(head, turn + 1)
               sn.setChance(chance, turn)
@@ -383,36 +361,62 @@ class board():
               # First move -- establish initial markov (t = 0) 
               sn_body = sn.getHeadBody()
               sn.setFuture(sn_body, 0)
-              
+              body = copy.copy(sn_body)
+
             else:
               # Predict current move (t) based on last markov (t) 
               # Set future location ) 
-              sn_body = self.predictMove_step(sn, foods, t - 1)
-              sn.setFuture(sn_body, t)
+              # sn_body = self.predictMove_step(sn, foods, t - 1)
+              sn_body = sn.getFuture(t - 1)
+              body = sn_body['body']
+              if (len(body) > 1):
+                body.pop(-1)
               
-            for cell in sn_body: 
-                if(self.inBounds(cell)):
-                  # Paint markov matrix for turn t + 1
-                  y = cell[0]
-                  x = cell[1]
-                  markov[y, x] = 100
-            
-            # Set markov
-            # print("SNAKE MARKOV BASE", sn.getId(), t)# print(markov)
-
-            sn.setMarkov(copy.copy(markov), t)
-            sn.setMarkovBase(copy.copy(markov), t)
+              sn.setFuture(body, t)
+              
             # Update markov probability 
-            self.updateMarkov_step(sn, copy.deepcopy(snakes), foods, t)
+            # =========================
+            for cell in body: 
+                if(self.inBounds(cell)):
+                    # Paint markov matrix for turn t + 1
+                    y = cell[0]
+                    x = cell[1]
+                    markov[y, x] = 100
+            sn.setMarkovBase(copy.copy(markov), t)
+            # Set markov + chance
+            if (not len(body)):
+                # Set blank markov 
+                # markov = np.zeros([w, h], np.intc)
+                sn.setMarkov(markov, t)
 
-            # snakes_updated.append(sn)
-            snakes[sid] = copy.deepcopy(sn)
+            else: 
+                
+                # Update probabiliy by direction
+                if(sn.getType() == 'us'):
+                    # No prediction logic rqd for us  
+                    pass
+
+                else: 
+                    # Draw markov   
+                    chance = sn.getChance(t)
+                    try:
+                      markov = markov + chance
+
+                    except Exception as e:
+                      # Get markov from one before 
+                      # markov = sn.getMarkov(t - 1)
+                      log('exception', 'updateMarkov', str(e))
+                
+                # # TODO:  Introduce logic based on food  / other snakes 
+                sn.setMarkov(copy.copy(markov), t)
+            
+            # ===================
+            # snakes[sid] = copy.deepcopy(sn)
 
         # TODO: Calculate second iteration of probability, based on first round of markov models
         # for sn in snakes:
         #     self.updateMarkov_step(sn, snakes, foods, t)
             
-      
       # Sum all snakes into final markov matrix
       for sn in snakes:
         for t in range(0, turns - 1): 
@@ -435,152 +439,69 @@ class board():
       # self.markovs = copy.copy(markovs)     
 
 
-    def updateMarkov_step(self, target, snakes:dict, foods:list, turn=1): 
-
-        # Output probability path for target.  Update markov 
-
-        w = self.width
-        h = self.height
-            
-        # Target snake
-        markov = target.getMarkov(turn)
-        body_dict = target.getFuture(turn)
+    # def predictMove_step(self, target, foods, turn=0):
+    #     # Based on markov for one snake, calculate most likely path -- eg. food, killcut, other
+    #     # TODO:  Special logic for our snake (known path)
         
-        # No body (too far in future)
-        body = body_dict['body']
-        if (not len(body)):
-            # Set blank markov 
-            markov = np.zeros([w, h], np.intc)
-            target.setMarkov(markov, turn)
-            return 
+    #     # Get current body 
+    #     turn = min(turn, CONST.lookAheadPath - 1)
 
-        # Head 
-        head = body[0]
-        # Tail 
-        tail = body[-1]
-
-        # Direciton  & Eating      
-        eating = False
-        if(len(body) >= 3):
-          a = body[0]
-          b = body[1]
-          if (a == b):
-              # TODO: work out where duplicate coming from.. 
-              # ie. [[9, 8], [9, 8], [10, 8] ... ]
-              b = body[2]
-          
-          dirn = fn.translateDirection(b, a)
-          # print(target.getName(), a, b, body, dirn)
-          if (body[-1] == body[-2]):
-            eating = True 
-
-        else:
-          # Direction uncertain
-          dirn = 'none'
-          # Eating uncertain
-          pass 
-
-        # Update probabiliy by direction
-        # Update probabiliy by direction
-        if(target.getType() == 'us'):
-            # No prediction logic rqd for us  
-            pass
-        else: 
-            # Enemy snake 
-            markov = target.getChance(turn)
-
-            # Rewrite body over markov
-            sn_dict = target.getFuture(turn)
-            sn_body = sn_dict['body']
-
-            # Clear tail if not eating 
-            if(not eating):
-              sn_body.pop(-1)
-
-            for cell in sn_body: 
-              if(self.inBounds(cell)):
-                # Paint markov matrix for turn t + 1
-                y = cell[0]
-                x = cell[1]
-                markov[y, x] = 100
-
-            
-        # # TODO:  Introduce logic based on other snakes   
-        # for sn in snakes: 
-        #   # Get heads .. 
-        #   pass 
-
-        # # TODO:  Introduce logic based on food  
-        # for fo in foods:
-        #   # Get
-        #   pass  
-
-        target.setMarkov(markov, turn)
-
-
-    def predictMove_step(self, target, foods, turn=0):
-        # Based on markov for one snake, calculate most likely path -- eg. food, killcut, other
-        # TODO:  Special logic for our snake (known path)
-        
-        # Get current body 
-        turn = min(turn, CONST.lookAheadPath - 1)
-
-        snake = copy.copy(target)      
-        sn_future = snake.getFuture(turn)
+    #     snake = copy.copy(target)      
+    #     sn_future = snake.getFuture(turn)
               
-        body = sn_future['body']
-        if (not (len(body))):
-          return body
+    #     body = sn_future['body']
+    #     if (not (len(body))):
+    #       return body
         
-        # Get current markov 
-        markov = snake.getMarkov(turn)
+    #     # Get current markov 
+    #     markov = snake.getMarkov(turn)
                   
-        # Select path based on probability (start with highest)
-        new_head = []
-        if(snake.getType() == 'us'):
-            # Special logic for us - we know the way 
-            route = snake.getRoute()
-            if (turn < len(route)):
-              new_head = route[turn]
-            else:
-              new_head = []
-              pass
+    #     # Select path based on probability (start with highest)
+    #     new_head = []
+    #     if(snake.getType() == 'us'):
+    #         # Special logic for us - we know the way 
+    #         route = snake.getRoute()
+    #         if (turn < len(route)):
+    #           new_head = route[turn]
+    #         else:
+    #           new_head = []
+    #           pass
 
-        else:  
-            # Enemy snake             
-            probs = np.nonzero((markov < 100) & (markov > 0))
-            prob_max = 0
-            prob_max_pt = []
+    #     else:  
+    #         # Enemy snake             
+    #         probs = np.nonzero((markov < 100) & (markov > 0))
+    #         prob_max = 0
+    #         prob_max_pt = []
 
-            for i in range(0, len(probs[0] - 1)):
-              prob_pt = [probs[0][i], probs[1][i]]
-              prob = markov[prob_pt[0], prob_pt[1]]
+    #         for i in range(0, len(probs[0] - 1)):
+    #           prob_pt = [probs[0][i], probs[1][i]]
+    #           prob = markov[prob_pt[0], prob_pt[1]]
               
-              if prob > prob_max:
-                prob_max = copy.copy(prob)
-                prob_max_pt = copy.copy(prob_pt)
+    #           if prob > prob_max:
+    #             prob_max = copy.copy(prob)
+    #             prob_max_pt = copy.copy(prob_pt)
                 
-            if (self.inBounds(prob_max_pt)):
-                # Make this new head
-                # markov[prob_max_pt[0], prob_max_pt[1]] = 100
-                new_head = copy.copy(prob_max_pt)
+    #         if (self.inBounds(prob_max_pt)):
+    #             # Make this new head
+    #             # markov[prob_max_pt[0], prob_max_pt[1]] = 100
+    #             new_head = copy.copy(prob_max_pt)
 
         
-        # If eating -- add Tail 
-        if snake.getEating(): 
-          tail = body[-1]
-          body.append(tail)
+    #     # If eating -- add Tail 
+    #     if snake.getEating(): 
+    #       tail = body[-1]
+    #       body.append(tail)
 
-        # Reduce body length by one
-        body.pop(-1)
+    #     # Reduce body length by one
+    #     body.pop(-1)
         
-        # Add new head
-        new_body = copy.copy(body)
-        if (len(new_head)):
-            new_body.insert(0, new_head)
+    #     # Add new head
+    #     new_body = copy.copy(body)
+    #     if (len(new_head)):
+    #         new_body.insert(0, new_head)
 
-        # Update body
-        return new_body
+    #     # Update body
+    #     return new_body
 
 
     def updateDijkstra(self, sn):
@@ -648,19 +569,22 @@ class board():
         if (self.hurry or rr > CONST.maxRecursion):
             return
 
-        if (rr > 0 and not (rr % 1000)):
-            # TODO: Remove limit to N recursions 
-            st = self.getStartTime()
-            log('time', 'Gradient 1000', st)
-            log('timer-hurry')
-            # self.hurry = True
-
+        if (rr > 0 and not (rr % 100)):
+            
             # Timer exceeded
+            st = self.getStartTime()
             diff = 1000 * (time.time() - st)
             if diff > CONST.timePanic:
                 log('timer-hurry')
                 self.hurry = True
 
+            # Log every N iterations 
+            if not (rr % 1000):
+                log('time', 'Gradient 1000', st)
+                log('timer-hurry')
+                # self.hurry = True
+
+            
         # Iterate through four directions
         for d in CONST.directions:
 
@@ -1011,6 +935,9 @@ class board():
         # Define walls
         gmin = CONST.pointThreshold
         c = []
+        tmax = min(t, CONST.lookAheadEnemy - 1)
+        markov = copy.copy(self.markovs[tmax])
+        gradient = copy.copy(self.gradient)
 
         # Look in each direction
         for d in CONST.directions:
@@ -1018,10 +945,13 @@ class board():
 
             # Check direction is in bounds
             if (self.inBounds(a1)):
-                g1 = self.gradient[a1[0], a1[1]]
+                # Check markov & gradient.  Why?  Gradient may not be complete in timer panic.  Check largest in case wall 
+                g1 = gradient[a1[0], a1[1]]
+                m1 = markov[a1[0], a1[1]]
+                rmax = min(g1, m1)
 
-                # Find the minimum gradient & update next step
-                if (g1 < gmin):
+                # Find minimum gradient & update next step
+                if (rmax < gmin):
                     gmin = g1
                     c = a1
 
@@ -1128,7 +1058,9 @@ class board():
             dx = step[1]
             
             # Get future markov matrix 
-            turn_max = min(CONST.lookAheadPath - 1, turn)
+            # Use maximum lookahead 
+            # TODO: Use full dynamic range  
+            turn_max = min(turn, CONST.lookAheadEnemy - 1)
             markov = copy.copy(self.markovs[turn_max])
             
             # Compensate body / tail avoidance if eating next turn 
@@ -1171,7 +1103,7 @@ class board():
 
         # Basic route table
         s = copy.copy(self.trails)
-        t = min(turn, CONST.lookAheadPath - 1)
+        t = min(turn, CONST.lookAheadEnemy - 1)
         markov = copy.copy(self.markovs[t])
 
         # Look in all directions
@@ -1865,12 +1797,16 @@ class board():
         # log('map', 'SOLID', self.solid)
         log('map', 'GRADIENT', self.gradient)
         log('map', 'TRAILS', self.trails)
+        t = CONST.lookAheadEnemy - 1
         log('map', 'MARKOV0', self.markovs[0])
         log('map', 'MARKOV1', self.markovs[1])
         log('map', 'MARKOV2', self.markovs[2])
-        log('map', 'DIJKSTRA0', self.dijkstra[0])
-        log('map', 'DIJKSTRA0', self.dijkstra[1])
-        log('map', 'DIJKSTRA0', self.dijkstra[2])
+        log('map', 'MARKOV MAX', self.markovs[t])
+        log('map', 'DIJKSTRA 0', self.dijkstra[0])
+        # log('map', 'DIJKSTRA1', self.dijkstra[1])
+        # log('map', 'DIJKSTRA2', self.dijkstra[2])
+        #  t = CONST.lookAheadEnemy - 1
+        
         # Visual maps
         log('map', 'COMBINE', self.combine)
 

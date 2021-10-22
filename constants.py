@@ -1,9 +1,11 @@
 # Time variable 
-timeLow = 50
+timeStart = 100
+timeMid = 200
+timeEnd = 250
 timePanic = 250
 
-production = True
-silent = True
+production = False
+silent = False
 
 # Log level 
 logFile = "games.log"
@@ -11,8 +13,8 @@ if (production):
   logLevelConsole = 2
   logLevelPrint = 2
 else: 
-  logLevelConsole = 5
-  logLevelPrint = 5
+  logLevelConsole = 4
+  logLevelPrint = 4
 
 
 if (production):
@@ -21,9 +23,9 @@ if (production):
   maxRecursion = 2000
 
 else:
-  lookAheadEnemy = 2    # Enemy prediction 
-  lookAheadPath = 5    # Path prediction 
-  maxRecursion = 1000
+  lookAheadEnemy = 4    # Enemy prediction 
+  lookAheadPath = 10   # Path prediction 
+  maxRecursion = 500
 
 
 # Routing threshold - collision probability
