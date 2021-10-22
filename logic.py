@@ -73,7 +73,7 @@ def checkInterrupts(bo:board, sn:snake, snakes):
 
 
     # Control interrupt -- control board 
-    if (health > CONST.healthLow and largestSnake(bo, snakes, minlength, larger) and numsnakes == 2):
+    if (health > CONST.healthLow and largestSnake(bo, snakes) and length >= CONST.lengthMidGame and numsnakes == 2):
         interruptlist.append(['Control', 'Box'])
         for sndata in snakes: 
           sid = snakes[sndata].getId() 
@@ -83,9 +83,9 @@ def checkInterrupts(bo:board, sn:snake, snakes):
         reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
 
 
-    if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
+    if (largestSnake(bo, snakes) and health > CONST.healthMed and length < CONST.lengthMidGame):
         interruptlist.append(['Idle', 'Centre'])
-        reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
+        reason.append('largest snake by '+str(larger)+' length and larger by '+str(larger))
 
     # Growth interrupt when small
     if (health < CONST.healthHigh and length < CONST.growLength): 
@@ -155,7 +155,13 @@ def stateMachine(bo:board, sn: snake, snakes: list, foods: list):
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
     strategylist, strategyinfo = sn.getStrategy()
-    strategylist_default = [['Eat', ''], ['Idle', 'Centre']]
+    strategylist_default = [['Eat', ''], ['Idle', 'Centre'], ['Survive', '']]
+    #  OPTIMISE: process route from last turn 
+    #  if (strategyinfo['last'] == strategy) :
+    #   if (routeSafe):
+    #     break 
+    # 
+    # ['Idle', 'Centre']
     #  ['Control', 'Space']
     #  ['Idle', 'Wall']
     
@@ -532,21 +538,19 @@ def makeMove(bo: board, sn: snake) -> str:
 
 
     # 2) Still no route - Chase a tail
-    if (not len(p) or not bo.inBounds(p)):
+    if (not len(p) or not bo.inBounds(p) and not sn.getEating()):
       route_method = 'route_chaseTail'
       for d in CONST.directions:
         # Check each direction 
         t = list( map(add, start, CONST.directionMap[d]) )
         if (bo.inBounds(t)):
           # Find tail
-          # TODO:  if sn.Eating():
-
+          
           w = bo.trails[t[0],t[1]]
           if w == 1:
             p = copy.copy(t)
             wmin = copy.copy(w) 
     
-
     # 3) Still no route - Use lowest gradient
     if (not len(p) or not bo.inBounds(p)):
       route_method = 'route_dijkstra'
@@ -607,13 +611,10 @@ def makeMove(bo: board, sn: snake) -> str:
 
 # == HELPERS == 
 
-def largestSnake(bo, snakes, minlength=CONST.growLength, larger=CONST.controlLargerBy):
+def largestSnake(bo, snakes,  larger=CONST.controlLargerBy):
     # if larger than enemy
     you = bo.getIdentity()
     you_len = snakes[you].getLength() 
-    if you_len < minlength:
-        return False 
-
     largest = True 
     for identity in snakes:
       sn = snakes[identity]

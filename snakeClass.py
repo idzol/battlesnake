@@ -51,7 +51,8 @@ class snake:
         self.futures = [None] * depth
         self.markovs = [None] * depth
         self.markovbase = [None] * depth        
-        self.chance = [None] * depth_enemy # Shorter prediction 
+        self.chance = [None] * depth_enemy 
+        # Shorter prediction 
         
 
     def setMarkov(self, m, t=0):
@@ -85,13 +86,12 @@ class snake:
         }
         self.futures[t] = copy.copy(future)
 
-
     def getFuture(self, turn=0):
       future = copy.copy(self.futures[turn])
       if (future == None):
         return []
       else: 
-        return future
+        return copy.copy(future)
 
 
     def setAll(self, data):

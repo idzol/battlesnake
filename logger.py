@@ -16,10 +16,6 @@ import constants as CONST
 
 global messages
 messages = {
-    # Time 
-    'time':[2, "TIME"],
-    'timer-hurry':[2, "TIME", "Move time reached CONST.timePanic"],
-
     # Server 
     'healthcheck':[1,"INFO", "Healthcheck - OK"],
     'start':[1,"START", " %s"],
@@ -29,30 +25,32 @@ messages = {
     'move':[1,"MOVE", " %s"],
     'shout':[1,"SHOUT", " %s"],
     
-    # Board 
-    'updateboardsnakes-warn':[6, "WARN", "Enemy snake head not defined. %s"],
-
-    'predict-update':[6, "->INFO", "%s"],
-    'predict-new':[6,"->PREDICT POINT", "%s: %s: %s"],
-    'predict-erase':[6,"->PREDICT ERASE", "%s: %s: %s"],
+    # Time 
+    'time':[2, "TIME"],
+    'timer-hurry':[2, "TIME", "Move time reached CONST.timePanic"],
     
-    'enclosed':[6,"->ENCLOSED", "%s %s"],
-    'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
+    # Exceptions 
+    'exception':[2, "WARN","%s: %s"],
 
-    # Routing 
-    'route':[4,"-->ROUTE"," %s r:%s w:%s"],
-    'route-fromto':[4,"-->FROM TO", " %s %s"],
-    'route-return':[4,"-->ROUTE RETURN", " %s %s"],
-    'paths':[5,"-->PATH", " %s"],
-    'path-target':[5,"-->TARGET", " %s"], 
-    'route-dijkstra-sum':[5,"-->DSUM"," %s-%s-%s path:%s = %d"],
-    'route-findclosestwall':[5,"-->WALLPATH"," %s %s"],
-    'route-leastline-dsum':[5,"-->LDSUM"," %s %s-%s = %d"],
-    'route-gradient':[5,"-->PATH", " Gradient %s"],
-    'route-complex-step':[5,"-->ROUTE COMPLEX", "from: %s to: %s"],
-    'route-complex-path':[5,"-->ROUTE COMPLEX", "path: %s"],
-
+    # Snake
+    'snake-showstats':[3, "SNAKE", """
+  Health: %d
+  Hunger: %d
+  Aggro: %d
+  Head: %s
+  Target: %s
+  Route: %s
+  Strategy: %s
+  Last Move: %s"""],
+  
+    # Routing - Summary 
     'make-move':[3,"->MAKE MOVE"," start:%s target:%s next:%s move:%s status:%s"],
+    'route':[3,"-->ROUTE"," %s r:%s w:%s"],
+
+    # Map 
+    'map':[3, "%s"],
+    'map-predict':[6, "%s"],
+    'map-debug':[6, "%s"],
 
     # Strategy 
     'interrupt':[4,"->INTERRUPT","\nInterrupts:%s \nReasons:%s"],
@@ -70,30 +68,29 @@ messages = {
     'strategy-findwall':[4,"-->FINDWALL", " Target %s"],
     'strategy-trackwall':[4,"-->TRACKWALL", " w:%s h:%s l:%s d:%s r:%s p:%s - Target %s"],
 
-    # Map 
-    'map':[3, "%s"],
-    'map-predict':[6, "%s"],
-    'map-debug':[6, "%s"],
+    # Routing - Detail
+    'route-fromto':[5,"-->FROM TO", " %s %s"],
+    'route-return':[5,"-->ROUTE RETURN", " %s %s"],
+    'paths':[5,"-->PATH", " %s"],
+    'path-target':[5,"-->TARGET", " %s"], 
+    'route-dijkstra-sum':[5,"-->DSUM"," %s-%s-%s path:%s = %d"],
+    'route-findclosestwall':[5,"-->WALLPATH"," %s %s"],
+    'route-leastline-dsum':[5,"-->LDSUM"," %s %s-%s = %d"],
+    'route-gradient':[5,"-->PATH", " Gradient %s"],
+    'route-complex-step':[5,"-->ROUTE COMPLEX", "from: %s to: %s"],
+    'route-complex-path':[5,"-->ROUTE COMPLEX", "path: %s"],
 
-    # Snake
-    'snake-showstats':[3, "SNAKE", """
-  Health: %d
-  Hunger: %d
-  Aggro: %d
-  Head: %s
-  Target: %s
-  Route: %s
-  Strategy: %s
-  Last Move: %s"""],
-  
-    # Functions 
-    # 'findbestpath-usage':[4,"WARN", "findBestPath(self, a, b) - dict received when list array expected"],
+    # Board - Misc )
+    'updateboardsnakes-warn':[6, "WARN", "Enemy snake head not defined. %s"],
+    'itemclass-typewarning':[6, "WARN","item(t,p) expects location as dict"],
+
+    'predict-update':[6, "->INFO", "%s"],
+    'predict-new':[6,"->PREDICT POINT", "%s: %s: %s"],
+    'predict-erase':[6,"->PREDICT ERASE", "%s: %s: %s"],
     
-    # Items 
-    'itemclass-typewarning':[4, "WARN","item(t,p) expects location as dict"],
-    
-    # Exceptions 
-    'exception':[2, "WARN","%s: %s"],
+    'enclosed':[6,"->ENCLOSED", "%s %s"],
+    'enclosed-sum':[6,"->ENCLOSED SUM", "%s"],
+
     
 
 }
