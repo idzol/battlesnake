@@ -4,8 +4,8 @@ timeMid = 200
 timeEnd = 250
 timePanic = 250
 
-production = False
-silent = False
+production = True
+silent = True
 
 # Log level 
 logFile = "games.log"
