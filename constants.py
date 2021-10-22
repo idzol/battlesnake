@@ -5,7 +5,7 @@ timeEnd = 250
 timePanic = 250
 
 production = True
-silent = True
+silent = False
 
 # Log level 
 logFile = "games.log"
