@@ -19,8 +19,8 @@ else:
 
 if (production):
   lookAheadEnemy = 4    # Enemy prediction 
-  lookAheadPath = 15    # Path prediction 
-  maxRecursion = 1000
+  lookAheadPath = 10    # Path prediction 
+  maxRecursion = 500
 
 else:
   lookAheadEnemy = 4    # Enemy prediction 
