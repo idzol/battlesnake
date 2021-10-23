@@ -1,9 +1,9 @@
+
 from typing import List, Dict
 
 import math
 import operator
 from operator import add
-
 import random as rand
 import numpy as np
 # import pandas as pd
@@ -16,8 +16,18 @@ from logger import log
 import constants as CONST
 import functions as fn
 
-from snakeClass import snake
+# from snakeClass import snake
+
 from boardClass import board
+from snakeClass import snake
+
+global perf
+
+perf = {}
+perf['pathProbability_markov_step'] = 0
+perf['pathProbability_markov'] = 0
+perf['predictMove_step'] = 0
+perf['updateMarkov_step'] = 0
 
 class snakeTest(snake):
     pass 
@@ -25,28 +35,42 @@ class snakeTest(snake):
 
 class boardTest(board):
     pass 
-    # def __init__():
+
+
+def killPath(bo, snakes, radius=CONST.killRadius):
+    # Find smaller snakes within a kill radius 
+    you = bo.getIdentity()
+    you_len = snakes[you].getLength() 
+    you_head = snakes[you].getHead() 
+    collide_target = []
+
+    # TODO:  Change from radius to shape 
+    for identity in snakes:
+      sn = snakes[identity]
+      if sn.getType() != "us":
+        enemy_len = sn.getLength()
+        enemy_head = sn.getHead()
+        dist = fn.distanceToPoint(you_head, enemy_head)
+
+        # If larger & within kill zone 
+        if (you_len > enemy_len) and (dist <= radius):
+          # enemy_dirn = sn.getDirection()
+          dirns = bo.findEmptySpace(sn.getHead())
+          dist_max = radius + 2
+          for d in dirns: 
+              collide = list( map(add, enemy_head, CONST.directionMap[d]) )
+              dist =  fn.distanceToPoint(enemy_head, collide)
+              if dist < dist_max:
+                collide_target = collide 
+                dist_max = dist
+
+    return collide_target      
     
-    def selectBestPath(self, routes):
-
-    if weight < CONST.threshold 
-    
-    min route ..?
-
-
-      selectBestPath()
-      eg. > Total route 
-      eg. No route
-      eg. Chase tail
-      eg. Kill path (100%) vs route padded path 
-      eg. Certain collision (Body) vs probability 
-      eg. Some probabiliy vs no probability 
-         (make sure we're still focused on headon collision)
-
-
 
 data = {'game': {'id': '609d47ca-e773-49f9-b3f4-2c52afa4a05c', 'ruleset': {'name': 'solo', 'version': 'v1.0.22', 'settings': {'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': {'shrinkEveryNTurns': 0}, 'squad': {'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}, 'timeout': 500, 'source': ''}, 'turn': 4, 'board': {'height': 11, 'width': 11, 'snakes': [], 'food': [], 'hazards': []}, 'you': {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}}
 
+# Snakes -- {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}
+# Food -- {'x': 2, 'y': 6}, {'x': 5, 'y': 5}
 
 us = snakeTest()
 us2 = snakeTest()
@@ -96,6 +120,10 @@ bo.updateMarkov(us, allSnakes, foods)
 bo.updateDijkstra(us)
 log('time', '== Finish Boards ==', bo.getStartTime())
 
-path = [2, 2]
-route = bo.findLargestPath([path])
-print("ROUTE", route)
+ma = copy.copy(bo.markovs)
+
+kill = killPath(bo, allSnakes)
+print("KILL TARGET", kill)
+
+print("COMBINE")
+print(str(bo.combine))

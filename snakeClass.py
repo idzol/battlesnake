@@ -28,6 +28,7 @@ class snake:
         self.tail = []  
         self.target = []  
         self.route = []     # Vector notation
+        self.routes = []    # Previous routes (with info)
         self.path = []      # Point notation
         self.routeHistory = []
         
@@ -106,6 +107,7 @@ class snake:
         self.setEating()
         # Save location to history 
         self.savePath()
+        self.clearRoutes()
         
         # Set attributes
         self.setHealth(health)
@@ -126,12 +128,15 @@ class snake:
         self.setType("enemy")
         self.setId(data['id'])
         
+        # Set whether eating 
         self.setEating() 
         # Set new location 
         self.setLocation(data)
 
         # Save location to history 
         self.savePath()
+        # Clear routes from last turn 
+        self.clearRoutes()
     
         self.setLength(data['length'])
         # self.setHealth(health)
@@ -172,6 +177,20 @@ class snake:
         # print("SNAKE PATH", str(self.getType()), str(pts))
         self.path = copy.copy(pts)
                 
+    def clearRoutes(self):
+        self.routes = []
+
+    def addRoutes(self, start, target, route, weight, routetype):
+        self.routes.append({
+          'start':start,
+          'target':target,
+          'route':route,
+          'weight':weight,
+          'routetype':routetype
+        })
+
+    def getRoutes(self):
+        return copy.copy(self.routes)
 
     def getPath(self):        
         return copy.copy(self.path)
@@ -190,7 +209,18 @@ class snake:
         h = self.getHead()
         rth = self.routeHistory
         rth.insert(0, h)
-        self.routeHistory = rth
+        self.routeHistory = copy.copy(rth)
+
+
+    def setHistory(self, h):
+        # Return path history
+        self.routeHistory = copy.copy(h)
+
+
+    def getHistory(self):
+        # Return path history
+        rth = copy.copy(self.routeHistory)
+        return rth
 
 
     def getDirection(self):

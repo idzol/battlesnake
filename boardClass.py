@@ -168,7 +168,7 @@ class board():
 
 # == BOARDS ==
 
-    def updateBoards(self, data, snakes):
+    def updateBoards(self, data, us, snakes, foods):
         # Enclosed - xx
         # Solid - xx
         # Combine - Array of all layers (snakes, walls, items)
@@ -184,16 +184,18 @@ class board():
         self.setDimensions(width, height)
         self.setTurn(data['turn'])
 
-        # Update boards
-        by = self.updateBoardYou(data)
-        bs = self.updateBoardSnakes(data)
-        bi = self.updateBoardItems(data)
-        tr = self.updateTrails(snakes)
+        self.updateBoardObjects(us, snakes, foods)
+        # # Update boards
+        # by = self.updateBoardYou(data)
+        # bs = self.updateBoardSnakes(data)
+        # bi = self.updateBoardItems(data)
 
-        # Combined boards
-        rs = CONST.routeSolid
-        self.solid = rs * np.ceil(by / (by + 1) + bs / (bs + 1))
-        self.combine = by + bs + bi
+        # # Combined boards
+        # rs = CONST.routeSolid
+        # self.solid = rs * np.ceil(by / (by + 1) + bs / (bs + 1))
+        # self.combine = by + bs + bi
+
+        tr = self.updateTrails(snakes)
 
         # Meta boards
         depth = CONST.lookAheadPath
@@ -228,85 +230,80 @@ class board():
         # TODO: Clear boards ..
         return True
 
-    def updateBoardYou(self, data):
-        # Array of snek (101-head, 100-body)
+
+    def updateBoardObjects(self, us, snakes, foods):     
         w = self.width
         h = self.height
-        self.you = np.zeros((h, w), np.intc)
 
-        body = data['you']['body']
+        # SNAKES 
+        snakeboard = np.zeros((h, w), np.intc)
+        for skid in snakes:
+
+            sk = snakes[skid]
+            if sk.getType() != 'us':
+                # print (str(sk))
+                body = sk.getBody()
+                for pt in body:
+                    px = pt[1]
+                    py = pt[0]
+
+                    snakeboard[py, px] = CONST.legend['enemy-body']
+
+                try:
+                    head = sk.getHead()
+                    px = head[1]
+                    py = head[0]
+                    # self.snakes[h-py-1, px] = self.legend['enemy-head']
+                    snakeboard[py, px] = CONST.legend['enemy-head']
+
+                except Exception as e:
+                    log('exception', 'updateBoardSnakes', str(e))
+
+        # YOU 
+        youboard = np.zeros((h, w), np.intc)
+
+        body = us.getBody()
         for pt in body:
-            px = pt['x']
-            py = pt['y']
-            self.you[py, px] = CONST.legend['you-body']
+            px = pt[1]
+            py = pt[0]
+            youboard[py, px] = CONST.legend['you-body']
 
         try:
-            head = data['you']['head']
-            px_head = head['x']
-            py_head = head['y']
-            self.you[py_head, px_head] = CONST.legend['you-head']
+            head = us.getHead()
+            px_head = head[1]
+            py_head = head[0]
+            youboard[py_head, px_head] = CONST.legend['you-head']
 
         except Exception as e:
             log('exception', 'updateBoardsYou',
                 'INFO: Your snake head not defined. ' + str(e))
 
-        return self.you
+        # ITEMS 
+        itemboard = np.zeros((h, w), np.intc)
+        for fd in foods:
 
-    def updateBoardSnakes(self, data):
-        # Array of snek (201-head, 200-body)
-        w = self.width
-        h = self.height
-        self.snakes = np.zeros((h, w), np.intc)
-
-        yid = data['you']['id']
-        sks = data['board']['snakes']
-
-        for sk in sks:
-            # ignore my snake
-            if (sk['id'] != yid):
-
-                # print (str(sk))
-                body = sk['body']
-                for pt in body:
-                    px = pt['x']
-                    py = pt['y']
-                    # self.snakes[h-py-1, px] = self.legend['enemy-body']
-                    self.snakes[py, px] = CONST.legend['enemy-body']
-
-                try:
-                    head = sk['head']
-                    px = head['x']
-                    py = head['y']
-                    # self.snakes[h-py-1, px] = self.legend['enemy-head']
-                    self.snakes[py, px] = CONST.legend['enemy-head']
-
-                except Exception as e:
-                    log('exception', 'updateBoardSnakes', str(e))
-
-        return self.snakes
-
-    def updateBoardItems(self, data):
-        # Array of items (300-food, 301-hazard)
-        w = self.width
-        h = self.height
-        self.items = np.zeros((h, w), np.intc)
-
-        fds = data['board']['food']
-        hds = data['board']['hazards']
-
-        for fd in fds:
-            px = fd['x']
-            py = fd['y']
+            px = fd[1]
+            py = fd[0]
             # self.items[h-py-1, px] = self.legend['food']
-            self.items[py, px] = self.legend['food']
+            itemboard[py, px] = self.legend['food']
 
-        for hd in hds:
-            px = hd['x']
-            py = hd['y']
-            # self.items[h-py-1, px] = self.legend['hazard']
-            self.items[py, px] = self.legend['hazard']
+        # for hd in hds:
+        #     px = hd[1]
+        #     py = hd[0]
+        #     # self.items[h-py-1, px] = self.legend['hazard']
+        #     itemboard[py, px] = self.legend['hazard']
 
-        return copy.copy(self.items)
+        rs = CONST.routeSolid
+
+        # Update boards 
+        self.you = copy.copy(youboard)
+        self.snakes = copy.copy(snakeboard)
+        self.items = copy.copy(itemboard)
+        self.solid = rs * np.ceil(youboard / (youboard + 1) + snakeboard / (snakeboard + 1))
+        self.combine = youboard + snakeboard + itemboard
+        
+        return copy.copy(self.combine)
+
 
     def updateDistance(self, data):
 
@@ -326,16 +323,16 @@ class board():
     def updateChance(self, snakes, foods):
 
         turns = CONST.lookAheadEnemy
-        us = self.getIdentity()
+        # us = self.getIdentity()
 
         for snid in snakes:
           sn = snakes[snid]
           head = sn.getHead()
           
-          if (sn.getId() != us):
-            for turn in range(0, turns):
-              chance = self.pathProbability(head, turn + 1)
-              sn.setChance(chance, turn)
+          # if (sn.getId() != us):
+          for turn in range(0, turns):
+            chance = self.pathProbability(head, turn + 1)
+            sn.setChance(chance, turn)
 
 
     def updateMarkov(self, us, snakes:dict, foods:list, turns=CONST.lookAheadPath): 
@@ -691,7 +688,7 @@ class board():
 
             # Add to enclosure
             chance[dy, dx] = chance[dy, dx] + prob
-            dirn_avail = self.findEmptySpace(path, step, turn + 1)
+            dirn_avail = self.findEmptySpace(step, path, turn + 1)
             path_new = copy.copy(path)
             path_new.append(step)
         
@@ -723,7 +720,7 @@ class board():
 
 # TODO: Fuzzy Routing, ie. get close to an object)
 
-    def fuzzyRoute(self, start, targetmap, length):
+    def fuzzyRoute(self, start, targetmap, save=None):
         # Send shape - return best path to any point in shape
         # a = [1, 1]
         # b = np.zeros([h, w], np.intc)
@@ -734,8 +731,7 @@ class board():
         
         a = copy.copy(start)
         b = copy.copy(targetmap)
-        l = copy.copy(length)
-
+        
         r = np.zeros([h, w], np.intc)
         r = r + b
         r[a[0], a[1]] = 1
@@ -748,7 +744,7 @@ class board():
         for i in range(0, len(targets[0] - 1)):
             t = [targets[0][i], targets[1][i]]
             try:
-                r, w = self.route(a, t, l)
+                r, w = self.route(a, t, save)
                 if w < wmin:
                     rt = r
             except Exception as e:
@@ -758,7 +754,7 @@ class board():
         return rt, wmin
 
 
-    def route(self, start, dest, length=0, threshold = CONST.routeThreshold):
+    def route(self, start, dest, save=None, threshold = CONST.routeThreshold):
 
         a = copy.copy(start)
         b = copy.copy(dest)
@@ -805,7 +801,7 @@ class board():
 
             # (3) Complex route
             # log('time', 'Route Complex', self.getStartTime())
-            route, weight = self.route_complex(a, b, length)
+            route, weight = self.route_complex(a, b)
             if len(route):
                 routetype = 'route_complex'
                 break
@@ -814,9 +810,14 @@ class board():
                 routetype = 'route_none'
                 break
 
+        if (save): 
+            save.addRoutes(start, dest, route, weight, routetype)
+            # self.clearRoutes()
+
         # Return sorted path/points or [] if no path
         log('route', routetype, route, weight)
         return route, weight
+
 
     def route_basic(self, a, b):
 
@@ -863,7 +864,7 @@ class board():
             # Return blank path / max route  
             return [], w
 
-    def route_complex(self, a, b, length=0):
+    def route_complex(self, a, b):
         # Returns path or point. [] if no path or error
 
         # TODO: route_complex_step to use turn  
@@ -874,6 +875,9 @@ class board():
 
         h = self.height
         w = self.width
+
+        # self.isRoutePoint(step, turn, path)
+
         if (not self.inBounds(a) or not self.inBounds(b)):
             return [], CONST.routeThreshold
 
@@ -948,7 +952,11 @@ class board():
             a1 = list(map(add, a, CONST.directionMap[d]))
 
             # Check direction is in bounds
+
+            # CHECK: monitor for improvements   
             if (self.inBounds(a1)):
+            # if (self.isRoutePoint(a1, t)):
+
                 # Check markov & gradient.  Why?  Gradient may not be complete in timer panic.  Check largest in case wall 
                 r1 = route_table[a1[0], a1[1]]
                 
@@ -993,7 +1001,7 @@ class board():
         return copy.copy(result), copy.copy(largest_point)
 
 
-    def routePadding(self, route, eating=False, depth=CONST.lookAheadPath):
+    def routePadding(self, route, foods, depth=CONST.lookAheadPath):
         # Make sure there is always a path with N moves (eg. route_complex + random walk)
         # Else return []
 
@@ -1021,7 +1029,7 @@ class board():
             turn = len(path)
             print("ROUTE PAD#1", str(path))
             original = copy.copy(path)
-            path = self.findLargestPath(original, turn, eating, depth)
+            path = self.findLargestPath(original, turn, foods, depth)
             if len(path) >= depth:
                 # Max path found
                 found = True
@@ -1034,7 +1042,37 @@ class board():
         route.pop(0)
         return copy.copy(route), copy.copy(found)
 
-    def findLargestPath(self, route, turn=0, eating=False, depth=CONST.lookAheadPath):
+
+    def isRoutePoint(self, step, turn, path=[]):
+
+        # Get step
+        dy = step[0]
+        dx = step[1]
+
+        # Get markov 
+        t = min(turn, CONST.lookAheadEnemy - 1)
+        markov = copy.copy(self.markovs[t])
+
+        # Get tails 
+        s = copy.copy(self.trails)
+
+        # Route logic 
+        if (self.inBounds(step)):
+          if ((s[dy, dx] == 0) and 
+              ((markov[dy, dx] < CONST.pointThreshold) or 
+              (t >= s[dy, dx] and 
+              markov[dy, dx] < CONST.pointThreshold)) and 
+              not (step in path)):
+
+            return True
+
+        else: 
+
+          return False 
+
+
+
+    def findLargestPath(self, route, turn=0, foods=[], depth=CONST.lookAheadPath):
         # Iterate through closed space to check volume
         # **TODO: Include own path as layer in future updateTrails
         # TODO: Introduce panic timers if routing too long
@@ -1048,33 +1086,33 @@ class board():
         else:
             return []
 
-        s = copy.copy(self.trails)
-
         # Look in all directions
         for d in CONST.directions:
             newturn = copy.copy(turn)
             step = list(map(add, start, CONST.directionMap[d]))
             path = copy.copy(route)
             newpath = []
-            dy = step[0]
-            dx = step[1]
             
-            # Get future markov matrix 
-            # Use maximum lookahead 
-            # TODO: Use full dynamic range  
-            turn_max = min(turn, CONST.lookAheadEnemy - 1)
-            markov = copy.copy(self.markovs[turn_max])
+            # Eating next turn:  Compensate body / tail avoidance if eating next turn 
+            # TODO: Update trails rather than turn (ie. turn affects markov?) 
+            # Check if food is in past moves
             
-            # Compensate body / tail avoidance if eating next turn 
-            turn_eating = copy.copy(turn)
-            if (eating):
-              turn_eating = turn - 1
+            try:
+              # print("FOOD ADJUST", turn_adjust, foods, step)
+              # print("FOOD ADJUST", turn, foods, route)
+              turn_adjust = turn - len(list(filter(lambda x: x in foods, route)))
+              # Check if food is in future moves
+              turn_adjust = turn_adjust - len(list(filter(lambda x: x in foods, step)))
+            except:
+              turn_adjust = copy.copy(turn)
+            
+            
+            # Check enemy food 
+            # TODO 
 
             # Check next path is in bounds, available and not already visited**
-            if(self.inBounds(step) and \
-                    turn_eating >= s[dy, dx] and 
-                    markov[dy, dx] < CONST.pointThreshold):
-
+            if(self.isRoutePoint(step, turn_adjust)):
+    
                 newturn = newturn + 1
 
                 path.append(step)
@@ -1103,25 +1141,15 @@ class board():
         start = copy.copy(route)
         pathnew = copy.copy(path)
 
-        # Basic route table
-        s = copy.copy(self.trails)
-        t = min(turn, CONST.lookAheadEnemy - 1)
-        markov = copy.copy(self.markovs[t])
-
         # Look in all directions
         for d in CONST.directions:
 
             step = list(map(add, start, CONST.directionMap[d]))
-            dy = step[0]
-            dx = step[1]
 
             # Check next path is in bounds. 
             # Probability of collision less than threshold 
             # available and not already visited**
-            if(self.inBounds(step) and \
-                    turn >= s[dy, dx] and
-                    markov[dy, dx] < CONST.pointThreshold and \
-                    not step in path):
+            if(self.isRoutePoint(step, turn, path)):
 
                 # Add to dirns
                 turn = turn + 1
@@ -1769,7 +1797,7 @@ class board():
 
         return closest
 
-    def findEmptySpace(self, path, dirn, turn=1):
+    def findEmptySpace(self, point, path=[], turn=1):
         # Iterate through closed space to check volume
 
         s = self.trails
@@ -1778,7 +1806,7 @@ class board():
 
         for d in CONST.directions:
 
-            dnext = list(map(add, dirn, CONST.directionMap[d]))
+            dnext = list(map(add, point, CONST.directionMap[d]))
             dy = dnext[0]
             dx = dnext[1]
 
@@ -1812,3 +1840,87 @@ class board():
         # Visual maps
         log('map', 'COMBINE', self.combine)
 
+# === DELETE ===
+
+    # def updateBoardYou(self, data):
+    #     # DEPRECATE: Replace with -- updateBoardClass
+    #     # Array of snek (101-head, 100-body)
+    #     w = self.width
+    #     h = self.height
+    #     self.you = np.zeros((h, w), np.intc)
+
+    #     body = data['you']['body']
+    #     for pt in body:
+    #         px = pt['x']
+    #         py = pt['y']
+    #         self.you[py, px] = CONST.legend['you-body']
+
+    #     try:
+    #         head = data['you']['head']
+    #         px_head = head['x']
+    #         py_head = head['y']
+    #         self.you[py_head, px_head] = CONST.legend['you-head']
+
+    #     except Exception as e:
+    #         log('exception', 'updateBoardsYou',
+    #             'INFO: Your snake head not defined. ' + str(e))
+
+    #     return self.you
+
+    # def updateBoardSnakes(self, data):
+    #     # DEPRECATE: Replace with -- updateBoardClass
+    #     # Array of snek (201-head, 200-body)
+    #     w = self.width
+    #     h = self.height
+    #     self.snakes = np.zeros((h, w), np.intc)
+
+    #     yid = data['you']['id']
+    #     sks = data['board']['snakes']
+
+    #     for sk in sks:
+    #         # ignore my snake
+    #         if (sk['id'] != yid):
+
+    #             # print (str(sk))
+    #             body = sk['body']
+    #             for pt in body:
+    #                 px = pt['x']
+    #                 py = pt['y']
+    #                 # self.snakes[h-py-1, px] = self.legend['enemy-body']
+    #                 self.snakes[py, px] = CONST.legend['enemy-body']
+
+    #             try:
+    #                 head = sk['head']
+    #                 px = head['x']
+    #                 py = head['y']
+    #                 # self.snakes[h-py-1, px] = self.legend['enemy-head']
+    #                 self.snakes[py, px] = CONST.legend['enemy-head']
+
+    #             except Exception as e:
+    #                 log('exception', 'updateBoardSnakes', str(e))
+
+    #     return self.snakes
+
+    # def updateBoardItems(self, data):
+    #     # DEPRECATE: Replace with -- updateBoardClass
+    #     # Array of items (300-food, 301-hazard)
+    #     w = self.width
+    #     h = self.height
+    #     self.items = np.zeros((h, w), np.intc)
+
+    #     fds = data['board']['food']
+    #     hds = data['board']['hazards']
+
+    #     for fd in fds:
+    #         px = fd['x']
+    #         py = fd['y']
+    #         # self.items[h-py-1, px] = self.legend['food']
+    #         self.items[py, px] = self.legend['food']
+
+    #     for hd in hds:
+    #         px = hd['x']
+    #         py = hd['y']
+    #         # self.items[h-py-1, px] = self.legend['hazard']
+    #         self.items[py, px] = self.legend['hazard']
+
+    #     return copy.copy(self.items)

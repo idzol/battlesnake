@@ -373,12 +373,13 @@ CONST.minProbability = 1
 
 bo.setStartTime()
 
+log('time', '== Start Update ==', bo.getStartTime())
+bo.updateBoards(data, us, allSnakes, foods) 
+log('time', '== Update Chance==', bo.getStartTime())
+bo.updateChance(allSnakes, foods)
 log('time', '== Update Markov ==', bo.getStartTime())
-bo.updateBoards(data, allSnakes) 
 bo.updateMarkov(us, allSnakes, foods)
 log('time', '== Finish Markov ==', bo.getStartTime())
-
-
 
 ma = copy.copy(bo.markovs)
 

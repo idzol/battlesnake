@@ -10,6 +10,12 @@ import constants as CONST
 
 # import ast 
 
+# import test_eat
+# import test_functions
+# import test_gradient
+# import test_markov 
+# import test_route
+
 import functions as fn 
 from logic import checkInterrupts, stateMachine, translatePath, getClosestItem, getItemByName
 

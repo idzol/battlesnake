@@ -1,7 +1,7 @@
 import logging
 import os
 
-from logger import log
+from logger import log, logdata
 # import math
 
 from flask import Flask
@@ -95,7 +95,7 @@ def handle_move():
 
     # Load game data (support for multi games)
     data = request.get_json()
-    # print(str(data))
+    logdata(data)
     
     game_id = data['game']['id']
     # Support for multiple games 
@@ -165,9 +165,9 @@ def handle_move():
     allSnakes = aliveSnakes
     
     # Update predict & threat matrix  
-    hazards = data['board']['hazards']
-    theBoard.updateBoards(data, allSnakes)
-        
+    # TODO:  Review hazard logic & routing
+    # hazards = data['board']['hazards']
+    theBoard.updateBoards(data, ourSnek, allSnakes, theFoods)
     log('time', 'updateChance', theBoard.getStartTime())
     theBoard.updateChance(allSnakes, theFoods)
     log('time', 'updateMarkov', theBoard.getStartTime())

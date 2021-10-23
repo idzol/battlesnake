@@ -4,11 +4,13 @@ timeMid = 200
 timeEnd = 250
 timePanic = 250
 
-production = True
+production = False
 silent = False
 
 # Log level 
-logFile = "games.log"
+logFile_console = "console.log"
+logFile_gamedata = "games.log"
+
 if (production):
   logLevelConsole = 4
   logLevelPrint = 4
@@ -18,7 +20,7 @@ else:
 
 
 if (production):
-  lookAheadEnemy = 3    # Enemy prediction 
+  lookAheadEnemy = 5    # Enemy prediction 
   lookAheadPath = 20    # Path prediction 
   maxRecursion = 1000
 
@@ -30,7 +32,7 @@ else:
 
 # Routing threshold - collision probability
 routeThreshold = 99   # Ignore if route larger 
-pointThreshold = 25   # Ignore if any step larger
+pointThreshold = 20   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
 routeSolid = 500
