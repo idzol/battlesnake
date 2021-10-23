@@ -97,6 +97,35 @@ messages = {
 
 # Logger
 
+def logdata(data):
+
+    logfile = CONST.logFile_gamedata
+
+    if(CONST.silent):
+        return 
+
+    else:
+        gameid = data['game']['id'] 
+        turn = data['turn'] 
+        name = data['game']['ruleset']['name'] 
+        royale = data['game']['ruleset']['settings']['royale']['shrinkEveryNTurns']
+        # gametype = data['game']['ruleset']['settings']['foodSpawnChance']
+        # gametype = data['game']['ruleset']['settings']['minimumFood']
+        # gametype = data['game']['ruleset']['settings']['hazardDamagePerTurn']
+        timeout = data['game']['timeout']
+
+        gameinfo = "%s:%s:%s:%s:%s" % (str(gameid), str(turn), str(name), str(royale), str(timeout))
+
+        # json.dumps(a)
+        output = str(data)
+
+        # Print to log 
+        t = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        f = open(logfile, "a")
+        f.write(t+"\t"+gameinfo+"\n"+output+"\n")
+        f.close()
+
+
 def log(src, *vars):
     
     global messages
@@ -108,7 +137,7 @@ def log(src, *vars):
 
     llc = CONST.logLevelConsole
     llp = CONST.logLevelPrint
-    logfile = CONST.logFile
+    logfile = CONST.logFile_console
     
     msg = messages[src]
  

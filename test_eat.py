@@ -1,333 +1,293 @@
-import random as rand
 
-# from typing import Dict
-import numpy as np
+from typing import List, Dict
 
+import math
+import operator
 from operator import add
-from collections import OrderedDict
-      
-import time as time 
-import copy as copy 
+import random as rand
+import numpy as np
+# import pandas as pd
+# import random as rand
+import copy as copy
 
-import functions as fn
+import time as time
 from logger import log
 
 import constants as CONST
+import functions as fn
 
-from snakeClass import snake
+# from snakeClass import snake
+
 from boardClass import board
+from snakeClass import snake
 
-# === STATE MACHINE ===
-# Core decision making engine
+global perf
 
-    # Eat -- focus on maximising snake size and restoring health
-    # Attack -- larger size, full health, stay close to head, intercept food, look for kill
-    # Kill -- opportunity to kill (eg. head to head collision)
-    # Defend -- smaller snake .. 
-    # Survive -- limited moves left 
-    # .. 
-    
-# Changes strategy (state machine) based on external influence 
-def checkInterrupts(bo:board, snakes):
+perf = {}
+perf['pathProbability_markov_step'] = 0
+perf['pathProbability_markov'] = 0
+perf['predictMove_step'] = 0
+perf['updateMarkov_step'] = 0
 
-    # Return your snake 
-    you = bo.getIdentity()
-    sn = snakes[you]
-    health = sn.getHealth() 
-    aggro = sn.getAggro()
-    path = sn.getRoute()
-    length = sn.getLength()
-
-    strategylist, strategyinfo = sn.getStrategy() 
-    interruptlist = []
-
-    numsnakes = len(snakes)
-    minlength = CONST.controlMinLength
-    larger = CONST.controlLargerBy
-    
-    reason = []
-
-    # Kill interrupt -- larger than 
-    t = killPath(bo, snakes)
-    if (len(t)):
-        interruptlist.insert(0, ['Kill', 'Collide'])
-        strategyinfo['killpath'] = t
-        reason.append('killpath was identified')
-
-    # Kill interrupt -- cut off path 
-    t = enemyEnclosed(bo, sn, snakes)
-    if (len(t)):
-        interruptlist.append(['Kill', 'Cutoff'])
-        strategyinfo['killcut'] = t
-        reason.append('enclosed enemy was identified')
-
-    # t = foodNearby(bo, sn, snakes)
-    # if (len(t)):
-    #   interruptlist.insert(0, ['Eat', ''])
-
-    # Critical health interrupt -- get food
-    if (health < CONST.healthCritical):
-        interruptlist.insert(0, ['Eat', ''])
-        reason.append('health was critical')
+class snakeTest(snake):
+    pass 
 
 
+class boardTest(board):
+    pass 
 
-    # Control interrupt -- control board 
-    if (health > CONST.healthLow and largestSnake(bo, snakes, minlength, larger) and numsnakes == 2):
-        interruptlist.append(['Control', 'Box'])
-        for sndata in snakes: 
-          sid = snakes[sndata].getId() 
-          if sid != you:
-            strategyinfo['enemy'] = snakes[sndata]
-
-        reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
-
-
-    if (largestSnake(bo, snakes, minlength, larger) and health > CONST.healthMed):
-        interruptlist.append(['Idle', 'Centre'])
-        reason.append('largest snake by '+str(minlength)+' length and larger by '+str(larger))
-
-    # Growth interrupt when small
-    if (health < CONST.healthHigh and length < CONST.growLength): 
-        interruptlist.append(['Eat', ''])
-        reason.append('health is less than high and length less than '+str(CONST.growLength))
-
-    # # No threats & high health
-    # if (health >= CONST.healthLow): 
-    #     interruptlist.append(['Idle', 'Centre'])
-    #     reason.append('health is high')
-
-    # Health interrupt general 
-    if (health < CONST.healthLow): 
-        interruptlist.append(['Eat', ''])
-        reason.append('health is less than high')
-
-    # Survive interuupt 
-    if (numMovesAvailable(bo, sn) < length):
-        interruptlist.append(['Survive', ''])
-        reason.append('less than X moves available')
-
-    # Interrupt triggered
-    if (len(interruptlist)):     
-        log('interrupt', str(interruptlist), str(reason))
-
-    sn.setStrategy(strategylist, strategyinfo) 
-    sn.setInterrupt(interruptlist) 
-    # return (strategy, strategyinfo)
-
-        # PREDICTION 
-        # One path - certainty 100% 
+    def updateBoardClass(self, us, snakes, foods):
         
-        # GENERAL 
-        # [intent] - moves that reduce # enemy paths
+        w = self.width
+        h = self.height
+
+        # SNAKES 
+        snakeboard = np.zeros((h, w), np.intc)
+        for skid in snakes:
+
+            sk = snakes[skid]
+            if sk.getType() != 'us':
+                # print (str(sk))
+                body = sk.getBody()
+                for pt in body:
+                    px = pt[1]
+                    py = pt[0]
+
+                    snakeboard[py, px] = CONST.legend['enemy-body']
+
+                try:
+                    head = sk.getHead()
+                    px = head[1]
+                    py = head[0]
+                    # self.snakes[h-py-1, px] = self.legend['enemy-head']
+                    snakeboard[py, px] = CONST.legend['enemy-head']
+
+                except Exception as e:
+                    log('exception', 'updateBoardSnakes', str(e))
+
+        # YOU 
+        youboard = np.zeros((h, w), np.intc)
+
+        body = us.getBody()
+        for pt in body:
+            px = pt[1]
+            py = pt[0]
+            youboard[py, px] = CONST.legend['you-body']
+
+        try:
+            head = us.getHead()
+            px_head = head[1]
+            py_head = head[0]
+            youboard[py_head, px_head] = CONST.legend['you-head']
+
+        except Exception as e:
+            log('exception', 'updateBoardsYou',
+                'INFO: Your snake head not defined. ' + str(e))
+
+        # ITEMS 
+        itemboard = np.zeros((h, w), np.intc)
+        for fd in foods:
+
+            px = fd[1]
+            py = fd[0]
+            # self.items[h-py-1, px] = self.legend['food']
+            itemboard[py, px] = self.legend['food']
+
+        # for hd in hds:
+        #     px = hd[1]
+        #     py = hd[0]
+        #     # self.items[h-py-1, px] = self.legend['hazard']
+        #     itemboard[py, px] = self.legend['hazard']
+
+        rs = CONST.routeSolid
+        self.you = copy.copy(youboard)
+        self.snakes = copy.copy(snakeboard)
+        self.items = copy.copy(itemboard)
+        self.solid = rs * np.ceil(youboard / (youboard + 1) + snakeboard / (snakeboard + 1))
+        self.combine = youboard + snakeboard + itemboard
         
-        # SURVIVE 
-        # [intent] - paths that have most options 
-        # pathTree() -> path branches by length
+        return copy.copy(self.combine)
 
-        # TRAPS 
-        # Crawl Wall 
-        # [10,9],  wall 
-        # [0,1] -> [1,w] -> [h, w-1] -> [h-1, 0]
-      
-        # STALK 
-        # Stay within 2 - 8 squares 
-        # Find food 
-        # Stay within 2... 
-
-        # WALL OF DOOM 
-        # patrol A - B - C ...
-        # simple mode 
-        # if dist > 2 to body, +1 each turn  
-
-        # Collision & enemy larger
-        # elif (pathThreat(bo, start, path, aggro)): 
-        #     strategy = ['Idle', 'Wall']
-        #     interrupt = True 
-
-
-
-bo = board() 
-sn = snake()
-snakes = ()
-foods = [[1, 1], [2, 2]]
-
-depth = CONST.lookAhead   
-foodsort = fn.findClosestItem(foods, start)
-
-
-# No food -- change strategy
-# Sort by closest food
-if(len(foodsort)):
-    target = findBestFood(foods, bo, sn, snakes)
-    if(not len(target)):
-        # Try next food 
-        foodsort.pop(0)
-        strategylist.insert(0, strategy)
-    
 
 def findBestFood(foods, bo, us, snakes): 
-    # Check if bigger snakes are closer to the food 
-    #  # REWRITE .. 
-    #  Eat strategy
-    #     Closest 
-    #     # Work out how many food we can get to before enemy 
-    #     Faster than enemies  
-    #     Multiples 
-    #        Most items 
-    #     Safest 
-    #        Big snakes 
-    #        Corners 
-    #     Waiting 
-    #        Least threat quadrant 
-    #     etc..
 
+    # How many moves until we believe a target
+    targetConfidence = 2 
+    # Check if food under threat (ie. snake enroute) 
+    foodthreat = {}
+    # Init dict - empty => null 
+    for food in foods: 
+        foodthreat[str(food)] = []
 
     start = us.getHead()
     length = us.getLength()
-
+    
     foodsort = copy.copy(foods)
     target = []
-   
-    # 1) Closest food 
-    # Abandon closest if enemy snakes are closer & larger 
-    while not len(target) and len(foodsort): 
+    
+    # FIX:  Temporary - return closest 
+    # f = foodsort[0] 
+    # target = copy.copy(f) 
+    # print("EAT STRATEGY", f, foods) 
+    # return f 
 
-      # Gen next food  
-      f = foodsort.pop(0) 
-      target = copy.copy(f) 
-      
-      # Check we can route to location 
-      r, w = bo.route(start, f)
-      
-      if (len(r)): 
-        # Route exists 
-        reason = 'route exists'
-        usdist = len(fn.getPointsInRoute(r))
+    # Check which sneks are targeting which food  
+    for snid in snakes:
+        # Get snake
+        sn = snakes[snid] 
+        head = sn.getHead()
+        if sn.getType() != 'us': 
+            # Reset target
+            sn.setTarget([])
+            # Check each food 
+            for food in foods:
+              history = sn.getHistory()
+              history.insert(0, sn.getHead())
+              a = []
+              # If last three paths to food are descending
+              if (len(history) > targetConfidence): 
+                for i in range(0, targetConfidence + 1):
+                  a.append(fn.distanceToPoint(food, history[i]))
 
-        # Check each snake to see if larger / closer snake  
-        # Find furthest food from other snakes 
-        for sid in snakes:
-          fsnake = snakes[sid]
-          ftype = fsnake.getType()
-          flen = fsnake.getLength()   
-          if (ftype == 'enemy'):
-            fhead = fsnake.getHead()
-            # Append to heads -- used later if no path found 
-            fdist = fn.distanceToPoint(fhead, f)
+              # Check ascending - ie. recent locations are closser 
+              dist_sort = copy.copy(a)
+              dist_sort.sort() 
+                  
+              
+              if (a == dist_sort):
+                  # Check if closer than existing target 
+                  target_last = sn.getTarget()
+                  dist_last = bo.height + bo.width
+                  if (len(target_last)):
+                    dist_last = fn.distanceToPoint(history[0], target_last)
 
-            # Enemy is same / larger and equal / closer 
-            if (fdist < CONST.foodThreat and fdist <= usdist and flen > length):
-              # Ignore , live to fight another day 
-              reason = 'enemy larger & very close'
-              target = []
+                  # Check new target is closer 
+                  if a[0] < dist_last or not len(target_last):
+                    dist_enemy = copy.copy(a[0])
+                    len_enemy = sn.getLength()
+                    foodthreat[str(food)].append({'length':len_enemy, 'dist':dist_enemy})
+                    sn.setTarget(food)
+                    print("FOOD TARGET", sn.getId(), sn.getTarget())
+                    
+    # Check foods for the closest without threat 
+    target = []
+    for food in foods: 
+        # Route exists   
+        r, w = bo.route(start, food)
+        if (len(r)): 
 
-            # Enemy is closer 
-            elif(fdist < usdist):  
-              reason = 'enemy is closer'
-              # Ignore , enemy will beat us there 
-              target = []
+            reason = 'route exists'
+            dist = len(fn.getPointsInRoute(r))
+        
+            # Threat, enemy closer & smaller - pursue??
+            # Threat, enemy closer 
+            abandon = False 
+            if str(food) in foodthreat:
+                # t = [len_enemy, dist_enemy]
+                threats = foodthreat[str(food)]
+                for t in threats:
+                    print("FOOD", food, t)
 
-      else:
-        reason = 'no route'
+                    len_enemy = t['length']
+                    dist_enemy = t['dist']
+                    
+                    # Check other snakes targeting food 
+                    if (len(t)):
+                        if dist_enemy < dist:
+                            abandon = True
+                            reason = 'abandon - enemy closer'
+                            
+                        elif len_enemy >= length and dist_enemy <= dist:
+                            abandon = True
+                            reason = 'abandon - enemy larger & same dist' 
 
-    # 2) Uncontested food 
-    # Find food furthest from enemy snakes 
-    # TODO: Check if covered by above
+            if not (abandon):
+                # Exit search (ie. for food in foods)
+                target = food 
+                break
+                
+        else:
+            reason = 'no route'
+        
+        return copy.copy(target)
 
-    # 3) Empty space -- Maximise control and wait for next food spawn.  See ['Control', 'Space']
- 
-    # print("EAT AVOID")
-    # print(str(fsnake), str(ftype), str(flen), str(fdist))
-    print("EAT STRATEGY", target, reason) 
-    return copy.copy(target)
+    #  Ignore Food in corners
+    #  * IF enemy approacing AND dist < N (closeby)
 
- 
-def controlSpace(bo, us, snakes):
- 
-    start = us.getHead()
-    target = [] 
-
-    # Find all enemy heads 
-    heads = []
-    # Find distance to closest head 
-    dist_min = bo.width * bo.height
-
-    for sid in snakes:
-      fsnake = snakes[sid]
-      ftype = fsnake.getType()   
-      if (ftype == 'enemy'):
-        fhead = fsnake.getHead()
-        heads.append(fhead)
-        distance = fn.distanceToPoint(fhead, start)
-        dist_min = min(dist_min, distance)
-
-    # Look for each location 
-    control_max = 0
-    dist_final = []
-    for d in CONST.directions: 
-        # maximise board control - stepwise max 
-        step = list(map(add, start, CONST.directionMap[d]))
-        if (bo.inBounds(step)):
-          # Return board control matrix 
-          dist = bo.closestDist(step, heads)
-          control = np.sum(dist)
-
-          # Save location wtih max control 
-          if control > control_max:
-              control_max = control
-              target = copy.copy(step) 
-              dist_final = copy.copy(dist)
-              # board_dist = copy.copy(dist)
-
-          if dist_min < CONST.foodThreat: 
-              # If too close to enemy, abandon 
-              target = [] 
-
-
-    # Board max - brute force search   
-    # control_max = 0
-    # for h in range(0, height):
-    #     for w in range(0, width):
-    #       start = [h, w]
-    #       dist = bo.closestDist(start, heads)
-    #       control = np.sum(dist)
-    #       # Save location wtih max control 
-    #       if control > control_max:
-    #           control_max = control
-    #           target = copy.copy(start) 
-    #           # board_dist = copy.copy(dist) 
-
+    # Empty space -- Maximise control and wait for next food spawn. 
+    #  * See ['Control', 'Space']
+    print("EAT STRATEGY", food, reason)        
     return copy.copy(target)
 
 
-# == GET / SET == 
+data = {'game': {'id': '609d47ca-e773-49f9-b3f4-2c52afa4a05c', 'ruleset': {'name': 'solo', 'version': 'v1.0.22', 'settings': {'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': {'shrinkEveryNTurns': 0}, 'squad': {'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}, 'timeout': 500, 'source': ''}, 'turn': 4, 'board': {'height': 11, 'width': 11, 'snakes': [], 'food': [], 'hazards': []}, 'you': {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}}
 
-data = {'game': {'id': '609d47ca-e773-49f9-b3f4-2c52afa4a05c', 'ruleset': {'name': 'solo', 'version': 'v1.0.22', 'settings': {'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': {'shrinkEveryNTurns': 0}, 'squad': {'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}, 'timeout': 500, 'source': ''}, 'turn': 4, 'board': {'height': 11, 'width': 11, 'snakes': [{'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}], 'food': [{'x': 2, 'y': 6}, {'x': 5, 'y': 5}], 'hazards': []}, 'you': {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}}
+# Snakes -- {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}
+# Food -- {'x': 2, 'y': 6}, {'x': 5, 'y': 5}
 
-identity = data['you']['id']
+us = snakeTest()
+us2 = snakeTest()
+them = snakeTest()
 
-# Set up snake 
-us = snake()
-us.__init__()
-bo.setIdentity(identity)
-us.setId(identity)
-us.setType("us")
+us.setHead([3,3])
+us.setBody([[3,2], [3,1], [3,0], [2,0]])
+us.setHistory([[3,2], [3,1], [3,0], [2,0]])
+us2.setHead([6,3])
+us2.setBody([[6,2], [6, 1], [6,0], [5,0], [4,0]])
+# us2.setHistory([[6,1], [6,0], [5,0], [4,0]])
+us2.setHistory([[6,2], [6,1], [6,0], [5,0], [4,0]])
 
-# Set up other snakes 
-# allSnakes[copy.copy(identity)] = ourSnek
-snakes = data['board']['snakes']
-for sndata in snakes: 
-    if sndata['id'] != ourSnek.getId():
-      sn = snake() 
-      identity = sndata['id']
-      sn.setId(identity)
-      sn.setType("enemy")
-      sn.setEnemy(sndata)
-      allSnakes[copy.copy(identity)] = copy.deepcopy(sn)
+them.setHead([7,7])
+them.setBody([[7,6], [7,5]])
+# them.setHistory([[7,6], [7,5]])
+them.setHistory([[7,6], [7,5], [7,4]])
 
-bo = board()
-path = [2, 2]
-route = bo.findLargestPath([path])
-print("ROUTE", route)
-print(str(bo.trails))
+sn_body = us.getBody()
+enemy_body = them.getBody()
+
+us.setType('us')
+us.setId('ourSnek')
+us2.setId('enemySnek1')
+them.setId('enemySnek2')
+them.setBody([[7,6], [7,5]])
+
+allSnakes = {
+  'ourSnek1':us,
+  'enemySnek1':us2,
+  'enemySnek2':them
+}
+
+# foods = [[6,6]]
+foods = [[2,2], [4,4], [6,6]]
+
+bo = boardTest()
+
+CONST.minProbability = 1
+
+bo.setStartTime()
+
+log('time', '== Update Boards ==', bo.getStartTime())
+bo.updateBoards(data, us, allSnakes, foods) 
+# sboard, fboard = bo.updateBoardClass(self, snakes, foods)
+# combine = bo.updateBoardObjects(us, allSnakes, foods)
+
+bo.updateChance(allSnakes, foods)
+bo.updateMarkov(us, allSnakes, foods)
+bo.updateDijkstra(us)
+log('time', '== Finish Boards ==', bo.getStartTime())
+
+ma = copy.copy(bo.markovs)
+
+food = findBestFood(foods, bo, us, allSnakes)
+
+print("COMBINE")
+print(str(bo.combine))
+print("FOOD")
+print(food)
+
+  #  Eat 
+
+  #     * if snek targeting AND larger 
+  #     * then abandon 
+
+  #     * Food strat (corner)
