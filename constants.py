@@ -4,8 +4,8 @@ timeMid = 200
 timeEnd = 250
 timePanic = 250
 
-production = True
-silent = True
+production = False
+silent = False
 
 # Log level 
 logFile_console = "console.log"
