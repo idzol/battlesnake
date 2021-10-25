@@ -1,22 +1,19 @@
-# Time variable 
-timeStart = 100
-timeMid = 200
-timeEnd = 250
-timePanic = 250
-
 production = False
 silent = False
+logfile = True 
 
-# Log level 
-logFile_console = "console.log"
-logFile_gamedata = "games.log"
+logfile_console = "console.log"
+logfile_game = "game.log"
 
 if (production):
-  logLevelConsole = 4
-  logLevelPrint = 4
+  logLevelStdout = 4
+  logLevelStderr = 4
+  snakename = "idzol"
+        
 else: 
-  logLevelConsole = 4
-  logLevelPrint = 4
+  logLevelStdout = 4
+  logLevelStderr = 4
+  snakename = "idzol-dev"
 
 
 if (production):
@@ -28,6 +25,13 @@ else:
   lookAheadEnemy = 4    # Enemy prediction 
   lookAheadPath = 10   # Path prediction 
   maxRecursion = 500
+
+
+# Time variable 
+timeStart = 100
+timeMid = 200
+timeEnd = 250
+timePanic = 250
 
 
 # Routing threshold - collision probability

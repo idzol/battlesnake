@@ -9,9 +9,9 @@ import numpy as np
 # import pandas as pd
 # import random as rand
 import copy as copy
+import time as time 
 
-import time as time
-from logger import log
+# from logClass import log
 
 import constants as CONST
 import functions as fn
@@ -27,11 +27,10 @@ class board():
     ## == INIT ==
     legend = CONST.legend  # Import map values
 
-    def __init__(self, height=0, width=0):
+    def __init__(self, logger, height=0, width=0):
 
-        # globals
-        self.startTime = time.time()
-        
+        self.logger = logger
+
         self.height = height
         self.width = width
         self.identity = "" 
@@ -53,6 +52,9 @@ class board():
         
         self.resetCounters()
         
+    def setLogger(self, l):
+      # Reference 
+      self.logger = l
 
     def resetCounters(self):
         # Reset start of each turn 
@@ -158,13 +160,6 @@ class board():
     def setTurn(self, t):
         self.turn = t
 
-    # Start time of every move
-    def setStartTime(self):
-        self.startTime = time.time()
-
-    # Get start time of move -- used for logging
-    def getStartTime(self):
-        return self.startTime
 
 # == BOARDS ==
 
@@ -257,7 +252,7 @@ class board():
                     snakeboard[py, px] = CONST.legend['enemy-head']
 
                 except Exception as e:
-                    log('exception', 'updateBoardSnakes', str(e))
+                    self.logger.error('exception', 'updateBoardSnakes', str(e))
 
         # YOU 
         youboard = np.zeros((h, w), np.intc)
@@ -275,7 +270,7 @@ class board():
             youboard[py_head, px_head] = CONST.legend['you-head']
 
         except Exception as e:
-            log('exception', 'updateBoardsYou',
+            self.logger.error('exception', 'updateBoardsYou',
                 'INFO: Your snake head not defined. ' + str(e))
 
         # ITEMS 
@@ -402,7 +397,7 @@ class board():
                     except Exception as e:
                       # Get markov from one before 
                       # markov = sn.getMarkov(t - 1)
-                      log('exception', 'updateMarkov', str(e))
+                      self.logger.error('exception', 'updateMarkov', str(e))
                 
                 # # TODO:  Introduce logic based on food  / other snakes 
                 sn.setMarkov(copy.copy(markov), t)
@@ -534,7 +529,7 @@ class board():
                 
                 
             except Exception as e:
-                print('exception', 'updateDijkstra#1', str(e))
+                self.logger.error('exception', 'updateDijkstra#1', str(e))
 
         self.dijkstra = copy.copy(dijksmap)
 
@@ -569,16 +564,16 @@ class board():
         if (rr > 0 and not (rr % 100)):
             
             # Timer exceeded
-            st = self.getStartTime()
+            st = self.logger.getStartTime()
             diff = 1000 * (time.time() - st)
             if diff > CONST.timePanic:
-                log('timer-hurry')
+                self.logger.message('timer-hurry')
                 self.hurry = True
 
             # Log every N iterations 
             if not (rr % 1000):
-                log('time', 'Gradient 1000', st)
-                log('timer-hurry')
+                self.logger.timer('Gradient 1000')
+                self.logger.message('timer-hurry')
                 # self.hurry = True
 
             
@@ -748,7 +743,7 @@ class board():
                 if w < wmin:
                     rt = r
             except Exception as e:
-                log('exception', 'fuzzyRoute', str(e))
+                self.logger.error('exception', 'fuzzyRoute', str(e))
                 pass
 
         return rt, wmin
@@ -763,8 +758,8 @@ class board():
         weight = -1
         routetype = ''
 
-        log('route-fromto', a, b)
-        # log('time', 'Route', self.getStartTime())
+
+        self.logger.log('route', 'from:to', a, b)        # log('time', 'Route', self.getStartTime())
 
         # If start / finish not defined, return blank
         if (not len(a) or not len(b) or a == b):
@@ -815,7 +810,7 @@ class board():
             # self.clearRoutes()
 
         # Return sorted path/points or [] if no path
-        log('route', routetype, route, weight)
+        self.logger.log('route', routetype, route, weight)
         return route, weight
 
 
@@ -855,7 +850,7 @@ class board():
                 w = csum
                 r = c
 
-        log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
+        self.logger.log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
 
         if (len(r)):
             # Route found 
@@ -1027,14 +1022,14 @@ class board():
         if (turns_found):
             # Confirm any path exists.  Pad path to N turns using random walk
             turn = len(path)
-            print("ROUTE PAD#1", str(path))
+            self.logger.log("route pad", str(path))
             original = copy.copy(path)
             path = self.findLargestPath(original, turn, foods, depth)
             if len(path) >= depth:
                 # Max path found
                 found = True
 
-            print("ROUTE PAD#2", str(path), str(len(path)), str(depth))
+            self.logger.log("route pad", str(path), str(len(path)), str(depth))
 
         # Return path (list) & wheth max depth found (boolean)
         # route = route + path
@@ -1187,7 +1182,7 @@ class board():
             r = self.leastWeightLine(start, walls)
             # print("B")
 
-        log('route-findclosestwall', str(walls), r)
+        self.logger.log('route-findclosestwall', str(walls), r)
         return r
 
     def findClosestNESW(self, start):
@@ -1450,7 +1445,7 @@ class board():
                 return False
 
         except Exception as e:
-            log('exception', 'inBounds', str(e))
+            self.logger.error('exception', 'inBounds', str(e))
 
         return False
 
@@ -1611,7 +1606,7 @@ class board():
                 best = psum
                 r = p
 
-        log('route-leastline-dsum', str(points), str(a), str(r), best)
+        self.logger.log('route-leastline-dsum', str(points), str(a), str(r), best)
 
         return r
 
@@ -1736,7 +1731,7 @@ class board():
             enclsum[d] = sum(sum(enclosed[d])) - 1
             # print(d, str(enclosed[d]))
 
-        log('enclosed-sum', str(enclsum))
+        self.logger.log('enclosed-sum', str(enclsum))
         return copy.copy(enclsum)
 
     def enclosedSpace_step(self, encl, dirn, turn=1):
@@ -1820,25 +1815,25 @@ class board():
         return dirns_avail
 
     def showMaps(self):
-
+      
         # Routing maps
         # log('map', 'PREDICT', self.predict[0])
         # log('map', 'THREAT', self.threat[0])
         # log('map', 'SOLID', self.solid)
-        log('map', 'GRADIENT', self.gradient)
-        log('map', 'TRAILS', self.trails)
+        self.logger.maps('GRADIENT', self.gradient)
+        self.logger.maps('TRAILS', self.trails)
         t = CONST.lookAheadEnemy - 1
-        log('map', 'MARKOV0', self.markovs[0])
-        log('map', 'MARKOV1', self.markovs[1])
-        log('map', 'MARKOV2', self.markovs[2])
-        log('map', 'MARKOV MAX', self.markovs[t])
-        log('map', 'DIJKSTRA 0', self.dijkstra[0])
+        self.logger.maps('MARKOV0', self.markovs[0])
+        self.logger.maps('MARKOV1', self.markovs[1])
+        self.logger.maps('MARKOV2', self.markovs[2])
+        self.logger.maps('MARKOV MAX', self.markovs[t])
+        self.logger.maps('DIJKSTRA 0', self.dijkstra[0])
         # log('map', 'DIJKSTRA1', self.dijkstra[1])
         # log('map', 'DIJKSTRA2', self.dijkstra[2])
         #  t = CONST.lookAheadEnemy - 1
         
         # Visual maps
-        log('map', 'COMBINE', self.combine)
+        self.logger.maps('COMBINE', self.combine)
 
 # === DELETE ===
 

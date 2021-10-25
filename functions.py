@@ -7,7 +7,7 @@
 import numpy as np
 import copy as copy 
 
-from logger import log
+from logClass import log
 
 
 def translateDirection(a, b): 
@@ -35,7 +35,8 @@ def translateDirection(a, b):
           move = 'up' 
 
     except Exception as e:
-        log('exception', 'translateDirection' + str(a) + ':' + str(b), str(e)) 
+        logger = log()
+        logger.error('exception', 'translateDirection' + str(a) + ':' + str(b), str(e)) 
           
         move = ""
         #     # Should never happen 
@@ -55,7 +56,8 @@ def comparePoints(a, b, t="array"):
 
 def distanceToPoint(a, b):
     if(isinstance(a,dict) or isinstance(b,dict)):
-      print("ERROR: distanceToPoint(a,b) expecting array list, received dict)")
+      logger = log()
+      logger.error("ERROR: distanceToPoint(a,b) expecting array list, received dict)")
       return -1 
 
     try:
@@ -71,7 +73,8 @@ def distanceToPoint(a, b):
       return d
 
     except Exception as e:
-      log('exception', distanceToPoint, str(e))  
+      logger = log()
+      logger.error('exception', distanceToPoint, str(e))  
       return -1
 
 
@@ -156,23 +159,24 @@ def getPointsInRoute(route, a=[]):
     return pts
 
 
-def printMap(m):
-    # Invert coordinate system 
-    # Iterate through map array backwards
-    try: 
-      h = len(m)
-      w = len(m[0])
+# def printMap(m):
+#     # Invert coordinate system 
+#     # Iterate through map array backwards
+#     try: 
+#       h = len(m)
+#       w = len(m[0])
 
-      md = np.zeros([h,w],np.intc)
+#       md = np.zeros([h,w],np.intc)
 
-      for y in range(0, h):
-        for x in range(0, w): 
-          md[h-y-1,x] = m[y,x]
+#       for y in range(0, h):
+#         for x in range(0, w): 
+#           md[h-y-1,x] = m[y,x]
 
-      print(md)
+#       print(md)
     
-    except Exception as e:
-      log('exception', 'printMap', str(e))
+#     except Exception as e:
+#       logger = log()
+#       logger.error('exception', 'printMap', str(e))
 
 
 def XYToLoc(pt):
@@ -187,13 +191,6 @@ def XYToLoc(pt):
 
     else:
       return [-1,-1]
-
-
-def raiseError(e):
-    # error_status = True 
-    # error_text = e
-    print("ERROR: " + str(e))
-    return True
 
 
 def findClosestItem(foods, start):
@@ -217,7 +214,8 @@ def findClosestItem(foods, start):
           x = int(x)
           foodlist.append([y, x])
       except Exception as e:
-          log('exception', 'findClosestItem', str(e))
+          logger = log()
+          logger.error('exception', 'findClosestItem', str(e))
 
   # print(str(foodlist))
   
