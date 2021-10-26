@@ -100,7 +100,9 @@ class log():
 
     def dump(self, data):
         
-        if(CONST.silent):
+        logging = CONST.logging
+
+        if(logging['silent']):
             return 
 
         if(not len(data)):
@@ -109,19 +111,22 @@ class log():
         logfile = CONST.logfile_game
         # gid = data['game']['id'] 
         # turn = data['turn']
-      
-        # stdout_print = sys.stdout
-        # stdout_print.write("%s\n" % str(data))
 
-        if (logfile):
+        if (logging['file']):
             f = open(logfile, "a")
             f.write(str(data) + "\n")
             f.close()
 
+        # if (logging['console']):
+        #   stdout_print = sys.stdout
+        #   stdout_print.write("%s\n" % str(data))
+
 
     def print(self, data={}):
-        
-        if(CONST.silent):
+      
+        logging = CONST.logging
+           
+        if(logging['silent']):
             return 
 
         stdout_print = sys.stdout        
@@ -152,13 +157,15 @@ class log():
               'error': self.error
           }
 
-        json_output = json.dumps(output)
-        stdout_print.write("%s\n" % json_output)
+        if(logging['json']):
+          json_output = json.dumps(output)
+          stdout_print.write("%s\n" % json_output)
 
-        if (logfile):
-            f = open(logfile, "a")
-            f.write(json_output+"\n")
-            f.close()
+
+        if(logging['file']):
+          f = open(logfile, "a")
+          f.write(json_output+"\n")
+          f.close()
 
         self.dump(data)
 
@@ -203,8 +210,10 @@ class log():
     def log(self, key, *values): 
 
         global messages
+        
+        logging = CONST.logging
 
-        if(CONST.silent):
+        if(logging['silent']):
             return 
 
         value = str(values)
@@ -222,6 +231,10 @@ class log():
         else:  
             # Not list -- shouldn't happen 
             self.info[key] = [value] 
+
+        if logging['console']:
+            stdout_print = sys.stdout
+            stdout_print.write("%s: %s\n" % (key, value))
 
   
     def message(self, msg, *vars):
@@ -242,6 +255,7 @@ class log():
         self.console.append(message[1])
         stdout_print.write("%s: %s\n" % (message[1], str(vars)))
 
+
     def winloss(self, data):
         name = CONST.snakename
         result = "LOSS"
@@ -249,44 +263,49 @@ class log():
         snakes = data['board']['snakes']
         for snake in snakes: 
             # sn = snakes[sid]
-            if sn['name'] == name:
+            if snake['name'] == name:
               result = "WIN"
 
         return copy.copy(result)
 
+
     def end(self, data): 
         stderr_print = sys.stderr
+        stdout_print = sys.stdout
 
-        names = []
-        snakes = data['snakes']
-        result = "WIN"
-        
-        names = []
-
-
+        result = self.winloss(data)
+    
         gid = data['game']['id']
         turn = data['turn']
 
+        # TODO: one or the other .. 
+        stdout_print.write("%s: %s:%s \n" % (result, gid, turn))
         stderr_print.write("%s: %s:%s \n" % (result, gid, turn))
 
 
     def error(self, warn, callback='', detail=''):
 
-        logfile = CONST.logfile
+        logging = CONST.logging
+        logfile = CONST.logfile_error
 
-        stderr_print = sys.stderr
         error_text = "%s: %s: %s" % (warn, callback, detail)
         error = self.log('error', error_text)
 
-        if (logfile):
+        if (logging['file']):
             f = open(logfile, "a")
             f.write(error_text + "\n")
             f.close()
 
+        # if (logging['console']):
+        stderr_print = sys.stderr
+        stderr_print.write(error_text + "\n")
+
 
     def timer(self, marker):
+        
+        logging = CONST.logging 
 
-        if(CONST.silent):
+        if(logging['silent']):
             return 
 
         # t = strftime("%Y-%m-%d %H:%M:%S", gmtime())
@@ -302,8 +321,8 @@ class log():
 
 
     def maps(self, name, data): 
-          # TODO:  CONST.maps on -- print maps to console, json to file
-          # TODO   if (maps) -- print json to console  
+
+          logging = CONST.logging 
 
           m = copy.copy(data) 
           h = len(m)
@@ -315,4 +334,11 @@ class log():
               md[h-y-1,x] = m[y,x]
                 
           output = str(md)
-          self.log(name, output)
+          
+          if logging['console']:
+            stdout_print = sys.stdout
+            stdout_print.write("%s: %s\n" % (name, output))
+
+          else:
+            self.log(name, output)
+

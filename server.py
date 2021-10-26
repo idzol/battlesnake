@@ -211,7 +211,7 @@ def handle_move():
 
     # Translate target to move 
     logger.timer('makeMove')
-    move = makeMove(theBoard, ourSnek)    
+    move = makeMove(theBoard, ourSnek, allSnakes)    
     move = ourSnek.getMove()
     shout = ourSnek.setShout(turn)
     logger.timer('Path complete')
@@ -249,6 +249,7 @@ def end():
     
     logger.message('end', data['game']['id'])
     logger.print(data)
+    logger.end(data)
     
     return "ok"
 

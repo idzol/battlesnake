@@ -11,7 +11,7 @@ import numpy as np
 import copy as copy
 import time as time 
 
-# from logClass import log
+from logClass import log
 
 import constants as CONST
 import functions as fn
@@ -27,7 +27,7 @@ class board():
     ## == INIT ==
     legend = CONST.legend  # Import map values
 
-    def __init__(self, logger, height=0, width=0):
+    def __init__(self, logger=log(), height=0, width=0):
 
         self.logger = logger
 
@@ -203,6 +203,7 @@ class board():
         # threat = []
         markovs = []
         dijkstra = []
+  
         for t in range(0, depth):
             # predict.append(np.zeros([height, width], np.intc))
             # threat.append(np.zeros([height, width], np.intc))
@@ -620,9 +621,11 @@ class board():
         h = self.height
         trails = np.zeros([w, h], np.intc)
 
-        for snid in snakes:
-
-            sn = snakes[snid]
+        self.trailsSnake = {}
+        for sid in snakes:
+          
+            snake = np.zeros([w, h], np.intc)
+            sn = snakes[sid]
             body = sn.getHeadBody()
             l = len(body)
 
@@ -633,9 +636,14 @@ class board():
             # Mark each point
             for pt in body:
                 trails[pt[0], pt[1]] = l
+                snake[pt[0], pt[1]] = l
                 # Descending from head = N to tail = 1
                 l = l - 1
 
+            # Individual snakes (used for eating)
+            self.trailsSnake[sid] = copy.copy(snake)
+
+        # All trails 
         self.trails = copy.copy(trails)
         return trails
 
@@ -663,8 +671,8 @@ class board():
         # print(str(dirn_avail))
         
         # Avoid edges if possible .. 
-        edges = self.paintArea('edges')
-        chance = chance + 5 * edges 
+        # edges = self.paintArea('edges')
+        # chance = chance + 5 * edges 
 
         return chance
 
@@ -996,7 +1004,7 @@ class board():
         return copy.copy(result), copy.copy(largest_point)
 
 
-    def routePadding(self, route, foods, depth=CONST.lookAheadPath):
+    def routePadding(self, route, snakes, foods, depth=CONST.lookAheadPath):
         # Make sure there is always a path with N moves (eg. route_complex + random walk)
         # Else return []
 
@@ -1024,7 +1032,7 @@ class board():
             turn = len(path)
             self.logger.log("route pad", str(path))
             original = copy.copy(path)
-            path = self.findLargestPath(original, turn, foods, depth)
+            path = self.findLargestPath(original, snakes, turn, foods, depth)
             if len(path) >= depth:
                 # Max path found
                 found = True
@@ -1067,7 +1075,71 @@ class board():
 
 
 
-    def findLargestPath(self, route, turn=0, foods=[], depth=CONST.lookAheadPath):
+    def isRoutePointv2(self, start, turn, eating={}, path=[]):
+
+        w = self.width
+        h = self.height
+
+        step = copy.copy(start)
+        # Get step
+        dy = step[0]
+        dx = step[1]
+
+        # Get markov 
+        
+        t = min(turn, CONST.lookAheadEnemy - 1)
+        markov = copy.copy(self.markovs[t])
+
+        # Get tails 
+        trails = copy.copy(self.trailsSnake)
+        board = np.zeros([w, h], np.intc)
+
+        for sid in trails:
+          # Adjust trails for each snake based on eating
+          if sid in eating.keys(): 
+              board += np.where(trails[sid], trails[sid] + eating[sid], trails[sid])  
+
+          else: 
+              board += trails[sid]
+    
+        # print("DEBUG", dx, dy, t, step, path)
+        # Route logic 
+        if (self.inBounds(step)):
+          if ((board[dy, dx] == 0) and 
+              ((markov[dy, dx] < CONST.pointThreshold) or 
+              (t >= board[dy, dx] and 
+              markov[dy, dx] < CONST.pointThreshold)) and 
+              not (step in path)):
+
+            return (True, copy.copy(markov[dy, dx]))
+            
+        return (False, CONST.pointThreshold)
+
+      
+    def findEating(self, snakes, path, foods):
+
+        eating = {}
+        for sid in snakes: 
+            
+            print(snakes)
+            if (snakes[sid].getType() == "us"): 
+
+              try:
+                # Check if food is in future moves
+                food_in_route = len(list(filter(lambda x: x in foods, path)))
+                eating[sid] = food_in_route
+              
+              except:
+                eating[sid] = 0
+
+            else:  
+                # TODO:  Logic for other enemy snakes 
+                eating[sid] = 0
+
+        return eating 
+
+
+    def findLargestPath(self, route, snakes, turn=0, foods=[], depth=CONST.lookAheadPath):
         # Iterate through closed space to check volume
         # **TODO: Include own path as layer in future updateTrails
         # TODO: Introduce panic timers if routing too long
@@ -1091,27 +1163,21 @@ class board():
             # Eating next turn:  Compensate body / tail avoidance if eating next turn 
             # TODO: Update trails rather than turn (ie. turn affects markov?) 
             # Check if food is in past moves
-            
-            try:
-              # print("FOOD ADJUST", turn_adjust, foods, step)
-              # print("FOOD ADJUST", turn, foods, route)
-              turn_adjust = turn - len(list(filter(lambda x: x in foods, route)))
-              # Check if food is in future moves
-              turn_adjust = turn_adjust - len(list(filter(lambda x: x in foods, step)))
-            except:
-              turn_adjust = copy.copy(turn)
-            
-            
-            # Check enemy food 
-            # TODO 
 
+            # TODO: Update for each enemy snake 
+            eating = self.findEating(snakes, path + [step], foods)
+              
             # Check next path is in bounds, available and not already visited**
-            if(self.isRoutePoint(step, turn_adjust)):
+            found, point = self.isRoutePointv2(step, newturn, eating)
+            
+            # Check next path is in bounds, available and not already visited**
+            if(found):
+            # self.isRoutePoint(step, turn_adjust)):
     
-                newturn = newturn + 1
+                newturn += 1
 
                 path.append(step)
-                newpath = self.findLargestPath_step(step, turn, depth, path)
+                newpath = self.findLargestPath_step(step, snakes, turn, depth, path)
 
                 if (len(newpath) >= depth):
                     # Max path found - Exit search
@@ -1125,6 +1191,7 @@ class board():
 
     def findLargestPath_step(self,
                              route,
+                             snakes, 
                              turn=0,
                              depth=CONST.lookAheadPath,
                              path=[]):
@@ -1149,7 +1216,7 @@ class board():
                 # Add to dirns
                 turn = turn + 1
                 path.append(copy.copy(step))
-                pathnew = self.findLargestPath_step(step, turn, depth, path)
+                pathnew = self.findLargestPath_step(step, snakes, turn, depth, path)
 
                 # print("LARGEST STEP", str(pathnew), str(path), str(step))
 
@@ -1731,7 +1798,7 @@ class board():
             enclsum[d] = sum(sum(enclosed[d])) - 1
             # print(d, str(enclosed[d]))
 
-        self.logger.log('enclosed-sum', str(enclsum))
+        # self.logger.log('enclosed-sum', str(enclsum))
         return copy.copy(enclsum)
 
     def enclosedSpace_step(self, encl, dirn, turn=1):

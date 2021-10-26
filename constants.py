@@ -1,19 +1,31 @@
 production = False
-silent = False
-logfile = True 
 
 logfile_console = "console.log"
 logfile_game = "game.log"
+logfile_error = "error.log"
 
 if (production):
   logLevelStdout = 4
   logLevelStderr = 4
   snakename = "idzol"
-        
+  logging = {
+    'file':False,
+    'silent':False,
+    'json':True,
+    'console':False  
+  }
+ 
 else: 
   logLevelStdout = 4
   logLevelStderr = 4
   snakename = "idzol-dev"
+  logging = {
+    'file':False,
+    'silent':False,
+    'json':False,
+    'console':True  
+  }
+
 
 
 if (production):

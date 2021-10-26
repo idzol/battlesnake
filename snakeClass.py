@@ -11,7 +11,7 @@ import functions as fn
 
 class snake:
 
-    def __init__(self, logger, data="", ):
+    def __init__(self, logger=log(), data="", ):
 
         depth = CONST.lookAheadPath
         depth_enemy = CONST.lookAheadEnemy

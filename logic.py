@@ -392,7 +392,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           
           if(strategy[1]==''):  
             # Find any way out .. 
-            route = bo.findLargestPath([start])
+            route = bo.findLargestPath([start], snakes)
             if len(route) > 1:
               # Remove start point (head)
               route.pop(0) 
@@ -440,7 +440,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           bo.logger.log('strategy-route', "ROUTE", str(start), str(route))
           
           # Pad out route to N moves 
-          fullroute, found = bo.routePadding(route, foods)
+          fullroute, found = bo.routePadding(route, snakes, foods)
           bo.logger.log('strategy-route', "ROUTE PADDING", str(start), str(fullroute))
     
       if(found): 
@@ -494,7 +494,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 # TODO:  Consider combining state machine (target) and 
 
 # Check snake target,  return next move 
-def makeMove(bo: board, sn: snake) -> str:
+def makeMove(bo: board, sn: snake, snakes) -> str:
     """
     data: https://docs.battlesnake.com/references/api/sample-move-request
     return: "up", "down", "left" or "right"
@@ -521,7 +521,7 @@ def makeMove(bo: board, sn: snake) -> str:
     #   collision with high threat 
     if (not len(p) or not bo.inBounds(p)):
       route_method = 'route_findLargestPath'
-      route = bo.findLargestPath([start])
+      route = bo.findLargestPath([start], snakes)
       if len(route) > 1:
         # TODO: Cleanup routes -- some include start, others don't
         # Remove head (if exists)
@@ -819,7 +819,7 @@ def enemyEnclosed(bo, us, snakes):
                     # bo.pathProbability(enemy_head)
         
         # Find interecept between closest point & snake chance
-        targets = findInterceptPath(head, board_closest, board_chance)
+        targets = findInterceptPath(head, bo, board_closest, board_chance)
 
         # print(str(board_closest))
         # print(str(board_chance))
@@ -833,7 +833,7 @@ def enemyEnclosed(bo, us, snakes):
     return copy.copy(targets)
 
 
-def findInterceptPath(start, board_dist, board_chance, chance=CONST.interceptMin):
+def findInterceptPath(start, bo, board_dist, board_chance, chance=CONST.interceptMin):
     # Returns a sorted list of intercept paths that 
     # a) enemy snake will route through (%chance)
     # b) we can get to before the enemy 
