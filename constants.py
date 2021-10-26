@@ -1,4 +1,4 @@
-production = False
+production = True
 
 logfile_console = "console.log"
 logfile_game = "game.log"
@@ -20,7 +20,7 @@ else:
   logLevelStderr = 4
   snakename = "idzol-dev"
   logging = {
-    'file':False,
+    'file':True,
     'silent':False,
     'json':False,
     'console':True  
