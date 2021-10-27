@@ -23,18 +23,18 @@ else:
     'file':False,
     'silent':False,
     'json':True,
-    'console':True  
+    'console':False  
   }
 
 
 
 if (production):
   lookAheadEnemy = 5    # Enemy prediction 
-  lookAheadPath = 20    # Path prediction 
+  lookAheadPath = 30    # Path prediction 
   maxRecursion = 1000
 
 else:
-  lookAheadEnemy = 4    # Enemy prediction 
+  lookAheadEnemy = 3    # Enemy prediction 
   lookAheadPath = 10   # Path prediction 
   maxRecursion = 500
 

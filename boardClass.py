@@ -400,7 +400,6 @@ class board():
                       # markov = sn.getMarkov(t - 1)
                       self.logger.error('exception', 'updateMarkov', str(e))
                 
-                # # TODO:  Introduce logic based on food  / other snakes 
                 sn.setMarkov(copy.copy(markov), t)
             
             # ===================
@@ -418,8 +417,9 @@ class board():
           for snid in snakes:
               sn = snakes[snid]
               # markov_sn = sn[identity].getMarkov()
-              # TODO: If snake -1 length but eating .. 
-              if sn.getLength() < us.getLength() and sn.getLength() < CONST.lengthMidGame:
+              if sn.getLength() < us.getLength(): 
+                # COMMENT: Removed length check which started avoiding smaller snakes end game (??)
+                # and sn.getLength() < CONST.lengthMidGame:
                 markov_sn = sn.getMarkovBase(t)
               else:
                 markov_sn = sn.getMarkov(t)
