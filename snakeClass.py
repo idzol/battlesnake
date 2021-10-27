@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from logger import log
+from logClass import log
 
 import random as rand
 import constants as CONST
@@ -11,11 +11,12 @@ import functions as fn
 
 class snake:
 
-    def __init__(self, data=""):
+    def __init__(self, logger=log(), data="", ):
 
         depth = CONST.lookAheadPath
         depth_enemy = CONST.lookAheadEnemy
-        # self.predict = [None] * (depth + 1)
+
+        self.logger = logger
         
         self.interruptlist = []
         self.strategyinfo = {}
@@ -55,6 +56,9 @@ class snake:
         self.chance = [None] * depth_enemy 
         # Shorter prediction 
         
+    def setLogger(self, l):
+      # Reference 
+      self.logger = l
 
     def setMarkov(self, m, t=0):
       self.markovs[t] = copy.copy(m) 
@@ -144,12 +148,19 @@ class snake:
 
     def showStats(self):
 
-        log('snake-showstats', self.health, self.hunger, self.aggro, self.head, self.target, self.route, str(self.strategylist), self.direction)
+        self.logger.log('snake-showstats', """
+          Health: %d
+          Head: %s
+          Target: %s
+          Route: %s
+          Strategy: %s
+          Last Move: %s""" % (self.health, self.head, self.target, self.route, str(self.strategylist), self.direction))
         
+          # self.hunger, self.aggro,
 
     def setHead(self, p):
         if (not isinstance(p, list)):
-          print("ERROR: setHead(self, p) - list expected of format [y, x]") 
+          self.logger.error('ERROR', 'setHead(self, p)', 'list expected of format [y, x]') 
         else:       
           self.head = copy.copy(p)
 
@@ -168,7 +179,7 @@ class snake:
             p = fn.getPointsInLine(a, b)
             pts.append(p.pop(0))
           except Exception as e:
-            log('exception', 'setPath', str(e))
+            self.logger.error('exception', 'setPath', str(e))
             # TODO: handle blank return from functions, eg. [] ..  
             pass
 
@@ -198,16 +209,17 @@ class snake:
         
     def setBody(self, p):
         if (not isinstance(p, list)):
-          print("ERROR: setBody(self, p) - list expected of format [[y1, x1], [y2, x2],..]") 
+          self.logger.error('ERROR', 'setBody(self, p)','list expected of format [[y1, x1], [y2, x2],..]') 
         else:
           self.body = copy.copy(p)
           self.setLength(len(p) + 1)
 
 
     def savePath(self):
-        # Save current location to route history (list)
+        # Save current location to route history 
+        # UPDATE:  Use body as path history (stateless)
         h = self.getHead()
-        rth = self.routeHistory
+        rth = self.getBody()
         rth.insert(0, h)
         self.routeHistory = copy.copy(rth)
 
@@ -336,7 +348,7 @@ class snake:
           self.body = b
 
         except Exception as e:
-          log('exception', 'setLocation', str(e))
+          self.logger.error('exception', 'setLocation', str(e))
           self.head = [-1,-1] 
           self.body = [-1,-1]
      
