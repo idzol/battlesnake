@@ -1,6 +1,7 @@
 import logging
 import os
-
+# import psutil
+        
 # import math
 
 from flask import Flask
@@ -122,7 +123,7 @@ def handle_move():
           
     else: 
         # Error - Game ID not found 
-        logger.error('exception', 'Game not found: ', game_id)
+        logger.error('exception', 'Game not found', 'no game_id - stateless?')
         return 
 
  
@@ -219,10 +220,6 @@ def handle_move():
     logger.message("move", move)
     logger.message("shout", shout)
 
-    # Print maps to console 
-    ourSnek.showStats()
-    theBoard.showMaps()
-
     # Save game data
     # games[game_id] = [theBoard, ourSnek, allSnakes]
     
@@ -230,9 +227,14 @@ def handle_move():
         snk = allSnakes[key]
         logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
 
-    logger.timer('== Move complete ==')
-    logger.print(data)
-    
+    # Fork reporting (non blocking to server response )
+    newpid = os.fork()
+    if newpid == 0:
+        # p = psutil.Process(newpid.getpid())
+        # p.set_nice(10)
+        reporting(logger, ourSnek, theBoard, data)
+
+    logger.timer('== Move complete ==')    
     return {"move": move, "shout":shout}
     
 
@@ -252,6 +254,17 @@ def end():
     logger.end(data)
     
     return "ok"
+
+
+def reporting(logger, us, board, data):
+    # Reporting thread
+    # Print log info
+
+    us.showStats()
+    board.showMaps()
+    logger.print(data)
+    print('MOVE: Reporting complete')
+    os._exit(0)  
 
 
 if __name__ == "__main__":

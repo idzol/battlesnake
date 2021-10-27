@@ -20,10 +20,10 @@ else:
   logLevelStderr = 4
   snakename = "idzol-dev"
   logging = {
-    'file':True,
+    'file':False,
     'silent':False,
-    'json':False,
-    'console':True  
+    'json':True,
+    'console':False  
   }
 
 

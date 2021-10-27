@@ -1121,7 +1121,6 @@ class board():
         eating = {}
         for sid in snakes: 
             
-            print(snakes)
             if (snakes[sid].getType() == "us"): 
 
               try:

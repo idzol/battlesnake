@@ -279,7 +279,7 @@ class log():
         turn = data['turn']
 
         # TODO: one or the other .. 
-        stdout_print.write("%s: %s:%s \n" % (result, gid, turn))
+        # stdout_print.write("%s: %s:%s \n" % (result, gid, turn))
         stderr_print.write("%s: %s:%s \n" % (result, gid, turn))
 
 
