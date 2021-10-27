@@ -278,9 +278,11 @@ class log():
         gid = data['game']['id']
         turn = data['turn']
 
-        # TODO: one or the other .. 
-        # stdout_print.write("%s: %s:%s \n" % (result, gid, turn))
-        stderr_print.write("%s: %s:%s \n" % (result, gid, turn))
+        if result == 'WIN':
+            stdout_print.write("%s: %s:%s \n" % (result, gid, turn))
+            
+        else:
+            stderr_print.write("%s: %s:%s \n" % (result, gid, turn))
 
 
     def error(self, warn, callback='', detail=''):
