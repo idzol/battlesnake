@@ -216,9 +216,10 @@ class snake:
 
 
     def savePath(self):
-        # Save current location to route history (list)
+        # Save current location to route history 
+        # UPDATE:  Use body as path history (stateless)
         h = self.getHead()
-        rth = self.routeHistory
+        rth = self.getBody()
         rth.insert(0, h)
         self.routeHistory = copy.copy(rth)
 

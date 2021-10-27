@@ -23,7 +23,7 @@ else:
     'file':False,
     'silent':False,
     'json':True,
-    'console':False  
+    'console':True  
   }
 
 

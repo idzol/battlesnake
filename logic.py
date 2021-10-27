@@ -156,16 +156,19 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     interruptlist = sn.getInterrupt() 
     strategylist, strategyinfo = sn.getStrategy()
     strategylist_default = [['Eat', ''], ['Idle', 'Centre'], ['Survive', '']]
-    #  OPTIMISE: process route from last turn 
-    #  if (strategyinfo['last'] == strategy) :
-    #   if (routeSafe):
-    #     break 
-    # 
-    # ['Idle', 'Centre']
-    #  ['Control', 'Space']
-    #  ['Idle', 'Wall']
-    
+
+    # Strategy
     strategy = []
+    reason = []
+    if len(interruptlist):
+      # interruptlist - delete every turn   
+      strategylist = interruptlist + strategylist_default
+      reason.append('interrupt was triggered')
+    
+    else:
+      strategylist = copy.copy(strategylist_default)
+    
+    # Snake 
     start = sn.getHead()
     length = sn.getLength()
     foodsort = fn.findClosestItem(foods, start)
@@ -173,46 +176,23 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     # tail = sn.getTail()
     # alltails = getSnakeTails(snakes)
 
-    # Outputs of state machine 
-    route = [] 
-    i = 0
-    
+    # State machine 
     found = False
-    lastGasp = False
-
+    i = 0  
+    
     while not found:
       # Reset every turn 
       target = []
       route = []
-      reason = []
-    
-      # Get next strategy .. 
-      if len(interruptlist):
-        # interruptlist - delete every turn   
-        strategy = interruptlist.pop(0)
-        reason.append('interrupt was triggered')
-
-      elif len(strategylist):  
-        # strategylist - keep persistent 
-        strategy = strategylist.pop(0)
-        reason.append('strategy from last turn')
-
-      elif(not lastGasp):
-        # strategyinfo - default strategy 
-        # if 'default' in strategyinfo:
-        #   strategy = strategyinfo['default']
-        # else:
-        strategylist = copy.copy(strategylist_default)
-        strategy = strategylist.pop(0)
-        reason.append('default strategy invoked')
-        lastGasp = True 
       
-      else: 
+      if (not len(strategylist)): 
         # Terminate search 
         route = [] 
         target = [] 
         reason.append('last strategy reached')
         break 
+    
+      strategy = strategylist.pop(0)
 
       bo.logger.log('strategy', str(strategy), str(reason), str(strategylist), str(strategyinfo))
 
