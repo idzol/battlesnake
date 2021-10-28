@@ -521,12 +521,14 @@ class board():
             try:
                 # Dijkstra combines solids, foods, hazards (threats)
                 dijksmap[t] = markov + 1
+
+                # This turn (t=0). 
                 # Adjust head & tail location to zero for routing
                 dijksmap[0][head[0], head[1]] = 0
                 
                 # Erase tail unless we are eating
                 if (length > 3) and not sn.getEating():
-                    dijksmap[0][tail[0], tail[1]] = 0
+                    dijksmap[0][tail[0], tail[1]] = markov[tail[0], tail[1]]
                 
                 
             except Exception as e:
@@ -561,6 +563,7 @@ class board():
 
         if (self.hurry or rr > CONST.maxRecursion):
             return
+
 
         if (rr > 0 and not (rr % 100)):
             
@@ -756,7 +759,7 @@ class board():
         return rt, wmin
 
 
-    def route(self, start, dest, save=None, threshold = CONST.routeThreshold):
+    def route(self, start, dest, save=None, threshold=CONST.routeThreshold):
 
         a = copy.copy(start)
         b = copy.copy(dest)
@@ -766,27 +769,14 @@ class board():
         routetype = ''
 
 
-        self.logger.log('route', 'from:to', a, b)        # log('time', 'Route', self.getStartTime())
+        self.logger.log('route', 'target', a, b)        # log('time', 'Route', self.getStartTime())
 
         # If start / finish not defined, return blank
         if (not len(a) or not len(b) or a == b):
             routetype = 'route_error'
             return route, weight
 
-        # Eliminate dead ends
-        # TODO:  Replaced by routePadding or route fail logic ..
-        # for d in CONST.directions:
-        #     a1 = list (map(add, a, CONST.directionMap[d]))
-        #     if(self.inBounds(a1)):
-        #       move = fn.translateDirection(a, a1)
-
-        #       # Weighted threshold based on available moves
-        #       moves_avail = self.enclosed[move]
-        #       if (moves_avail < length):
-        #           self.dijkstra[0][a1[0], a1[1]] = t * (2 - moves_avail / length)
-
-        #     log('enclosed', str(self.enclosed), str(a1))
-
+   
         # try simple, medium, complex route
         while 1:
             # (1) Simple straight line (a->b)
@@ -857,7 +847,7 @@ class board():
                 w = csum
                 r = c
 
-        self.logger.log('route-dijkstra-sum', str(a), str(c), str(b), str(path), csum)
+        self.logger.log('route', 'corner %s %s' % (str(path), csum))
 
         if (len(r)):
             # Route found 
@@ -898,18 +888,7 @@ class board():
             while 1:
                 # find lowest gradient route & add to path
                 # print("ROUTE COMPLEX STEP FXN", str(bnew), str(a))
-
-
                 r, grad = self.route_complex_step(bnew, a, route_table)
-
-                # No path found / error or dead end
-                # If deadend, abandon route
-                # move = fn.translateDirection(bnew, r)
-                # if (not len(r) or length > self.enclosed[move]):
-                #     path = []
-                #     weight = CONST.routeThreshold
-                #     break
-                # move = fn.translateDirection(bnew, r)
 
                 if (not len(r)): 
                     path = []
@@ -938,7 +917,7 @@ class board():
                         bnew = copy.copy(b)
                         pathlength = 0
 
-        # log("route", "COMPLEX", str(path), str(weight))
+        self.logger.log('route complex %s %s' % (str(path), str(weight)))
 
         return path, weight
 
@@ -1029,20 +1008,19 @@ class board():
         if (turns_found):
             # Confirm any path exists.  Pad path to N turns using random walk
             turn = len(path)
-            self.logger.log("route pad", str(path))
+            # self.logger.log("route pad", str(path))
             original = copy.copy(path)
-            path = self.findLargestPath(original, snakes, turn, foods, depth)
-            if len(path) >= depth:
-                # Max path found
-                found = True
 
+            path = self.findLargestPath(original, snakes, turn, foods, depth)
             self.logger.log("route pad", str(path), str(len(path)), str(depth))
 
         # Return path (list) & wheth max depth found (boolean)
         # route = route + path
         # Remove first point of route (head)
-        route.pop(0)
-        return copy.copy(route), copy.copy(found)
+        if len(path):
+            path.pop(0)
+    
+        return copy.copy(path)
 
 
     def isRoutePoint(self, step, turn, path=[]):
@@ -1187,6 +1165,7 @@ class board():
         else:
           return []
 
+
     def findLargestPath_step(self,
                              route,
                              snakes, 
@@ -1222,6 +1201,7 @@ class board():
                 break
 
         return copy.copy(pathnew)
+
 
 # == FINDERS ==
 
@@ -1984,3 +1964,21 @@ class board():
     #         self.items[py, px] = self.legend['hazard']
 
     #     return copy.copy(self.items)
+
+
+    # == ROUTE == enclosedSpace 
+
+     # Eliminate dead ends
+        # TODO:  Replaced by routePadding or route fail logic ..
+        # for d in CONST.directions:
+        #     a1 = list (map(add, a, CONST.directionMap[d]))
+        #     if(self.inBounds(a1)):
+        #       move = fn.translateDirection(a, a1)
+
+        #       # Weighted threshold based on available moves
+        #       moves_avail = self.enclosed[move]
+        #       if (moves_avail < length):
+        #           self.dijkstra[0][a1[0], a1[1]] = t * (2 - moves_avail / length)
+
+        #     log('enclosed', str(self.enclosed), str(a1))
+

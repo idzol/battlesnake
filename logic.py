@@ -194,6 +194,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     
       strategy = strategylist.pop(0)
 
+      target_method = ""
+      route_method = "" 
+
       bo.logger.log('strategy', str(strategy), str(reason), str(strategylist), str(strategyinfo))
 
       # Test a particular strategy 
@@ -202,13 +205,15 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       if(strategy[0] == 'Kill'):
           if (strategy[1] == 'Collide'):
             # HEAD ON COLLISION 
-            target = strategyinfo['killpath']    
+            target = strategyinfo['killpath']   
+            target_method = "killPath" 
             bo.logger.log('strategy-killpath', 'killPath', str(start), str(length), str(target))
             # Do not repeat strategy 
 
           if (strategy[1] == 'Cutoff'):
             if len(strategyinfo['killcut']):
               target = strategyinfo['killcut'].pop()
+              target_method = "killCut"
               strategylist.insert(0, strategy)
 
             else: 
@@ -224,8 +229,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           if (strategy[1]=='Space'):
 
             target = controlSpace(bo, sn, snakes)
+            target_method = "controlSpace"
             bo.logger.log('strategy-route', "CONTROL SPACE", str(start), str(target))
-           
+ 
           
           if (strategy[1]=='Box'):
             
@@ -302,6 +308,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           # Sort by closest food
           if(len(foodsort)):
               target = findBestFood(foodsort, bo, sn, snakes)
+              target_method = "findBestFood"
               if(not len(target)):
                   # Try next food 
                   foodsort.pop(0)
@@ -320,6 +327,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 
         if(strategy[1]=='Centre'): 
             target = bo.findCentre(start)
+            target_method = "findCentre"
             if (not(len(target))):
               # If already in centre .. 
               # strategylist.pop(0) 
@@ -335,6 +343,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
         # Find nearest wall 
         if(strategy[1]=='Wall'):   
             target = bo.findClosestWall(start)
+            target_method = "findClosestWall"
             if (not len(target)):
               pass 
               # Already on a wall 
@@ -362,6 +371,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
             proximity = 2
             
             target = trackWall(bo, sn, rotation, proximity)
+            target_method = "trackWall"
+
             # Repeat -- until interrupt
             strategylist.insert(0, strategy)
             bo.logger.log('strategy-trackwall', target)
@@ -373,11 +384,16 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           if(strategy[1]==''):  
             # Find any way out .. 
             route = bo.findLargestPath([start], snakes)
-            if len(route) > 1:
+            
+            if (len(route) > 1):
+              # Bypass normal logic 
+              found = True 
               # Remove start point (head)
               route.pop(0) 
-              # Target is next point
-              target = route.pop(0)
+              # Target is next point (reassess every turn)
+              target = route[0]
+              fullroute = copy.copy(route)
+              target_method = "findLargestPath"
               # strategylist.insert(0, strategy)
             
             else:
@@ -385,7 +401,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 
           if(strategy[1]=='Taunt'):
             # Chase our tail 
-            target = sn.getTail()           
+            target = sn.getTail()   
+            target_method = "getTail"        
             # Repeat -- until interrupt 
             strategylist.insert(0, strategy)
 
@@ -394,40 +411,51 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 
       # Check route
       bo.logger.timer('Strategy::Route')
-      
-      # If no target or no route , try next strategy    
-      if 'numpy' in str(type(target)):
-          # Target is an area 
-          bo.logger.log('strategy-route', "TARGET", str(strategy), str(target))
-          route, weight = bo.fuzzyRoute(start, target, sn)
-          
-      elif 'list' in str(type(target)) and bo.inBounds(target):
-          # Target is a point -- type == <class 'list'> 
-          bo.logger.log('strategy-route', "TARGET", str(strategy), str(target))
-          route, weight = bo.route(start, target, sn)
-          
 
-      bo.logger.timer('Strategy::RoutePadding')
+      if (not found):
 
-      if (len(route)):
-          # Route found -- try to find a safe way out 
+        # TODO:  Move / consolidate to one function, ie. routeToTarget 
+        # If no target or no route , try next strategy    
+        if 'numpy' in str(type(target)):
+            # Target is an area 
+            bo.logger.log('strategy', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            # route, weight = bo.route(start, target, sn)
+            route, weight = bo.fuzzyRoute(start, target, sn)
+            route_method = "fuzzyRoute"
 
-          # Insert start 
-          route.insert(0, start)  
-          route = copy.copy(fn.getPointsInRoute(route))
-          
-          # If route valid 
-          bo.logger.log('strategy-route', "ROUTE", str(start), str(route))
-          
-          # Pad out route to N moves 
-          fullroute, found = bo.routePadding(route, snakes, foods)
-          bo.logger.log('strategy-route', "ROUTE PADDING", str(start), str(fullroute))
-    
-      if(found): 
+        elif 'list' in str(type(target)) and bo.inBounds(target):
+            # Target is a point -- type == <class 'list'> 
+            bo.logger.log('strategy', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            route, weight = bo.route(start, target, sn)
+            route_method = "route"
+
+
+        bo.logger.timer('Strategy::RoutePadding')
+
+        if (len(route)):
+            # Route found -- try to find a safe way out 
+
+            # Insert start 
+            route.insert(0, start)  
+            route = copy.copy(fn.getPointsInRoute(route))
+            
+            # If route valid 
+            bo.logger.log('strategy route', "ROUTE %s %s %s %s" % (str(start), str(route), target_method, route_method))
+            
+            # Pad out route to N moves 
+            fullroute = bo.routePadding(route, snakes, foods)            
+            # Sufficient 
+            if len(fullroute) >= CONST.lookAheadPath: 
+                found = True  
+            
+            bo.logger.log('strategy route final', "ROUTE PADDING %s %s %s %s" % (str(start), str(fullroute), len(fullroute), CONST.lookAheadPath))
+
+
+      if (found): 
           # Route found
           route = copy.copy(fullroute)
-
-          bo.logger.log('strategy-update','Path found\nTarget:'+str(target)+'\nRoute:'+str(route)+'\nWeight: '+str(weight))
+          bo.logger.log('strategy found', 'Path found \nTarget:%s \nRoute:%s \nReason:%s %s \n' %
+                            (str(target), str(route), target_method, route_method))
           break
       
 
@@ -441,8 +469,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       bo.logger.timer('Strategy search')
         
       # Exceeded number of attempts 
-      if (i > depth or bo.hurry):
-          # Exit loop
+      if (not len(strategylist) or bo.hurry or i > depth):
+      #   Exit loop
           target = []
           route = []
           break
@@ -450,8 +478,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       bo.logger.log('strategy-update','route from '+str(start)+' to '+str(target)+' not found, try again. i:'+str(i))
       
       i = i + 1 
-    
-    
+        
     # Remove duplicates from strategy list 
     stl_unique = []
     for stl in strategylist: 
@@ -487,13 +514,25 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
     # 0) Route Found 
     route = sn.getRoute()
 
-    # routes = sn.getRoutes()
-    # print(str(routes))
-
     p = []
     if len(route):
+      # Preferred route 
       route_method = 'route_stateMachine'
       p = route.pop(0)
+      
+    else: 
+        # Least worst route 
+        routes = sn.getRoutes() 
+        # bo.logger.log('route' 'all %s', str(routes))
+
+        if len(routes):
+          weight = CONST.routeThreshold * 100
+          for r in routes:
+            # len(r['route'])
+            if r['weight'] < weight:
+              weight = r['weight']
+              sn.setTarget(r['target'])
+              sn.setRoute(r['route']) 
       
 
     # 1) Still no route - Use lookahead (route padding)
@@ -546,7 +585,6 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
           except Exception as e:
             bo.logger.error('exception','makeMove',str(e))
 
-
     # 4) Still no route - Use self.enclosd available moves 
     # if (not len(p) or not bo.inBounds(p)):
     #   route_method = 'route_dijkstra'
@@ -579,7 +617,7 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
 
     bo.logger.timer('After Direction')
     
-    bo.logger.log('make-move', str(start), str(finish), str(p), str(move), str(route_method))
+    bo.logger.log('make move', str(start), str(finish), str(p), str(move), str(route_method))
         
     sn.setRoute(route)
     sn.setMove(move)    

@@ -112,7 +112,7 @@ class log():
         # gid = data['game']['id'] 
         # turn = data['turn']
 
-        if (logging['file']):
+        if (logging['file'] or logging['data']):
             f = open(logfile, "a")
             f.write(str(data) + "\n")
             f.close()

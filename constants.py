@@ -1,42 +1,67 @@
-production = True
+try: 
+    f = open("env", "r")
+    lines = f.read().splitlines()
 
+    vars = []
+    # for line in lines:
+    # line.strip('\n')    
+    vars = lines[0].split(':')
+ 
+    environment = vars[0]
+    snakename = vars[1] 
+    
+
+except: 
+    environment = 'localhost'
+    snakename = 'idzol dev' 
+
+# print("ENV: '%s' '%s'" % (environment, snakename))
 logfile_console = "console.log"
 logfile_game = "game.log"
 logfile_error = "error.log"
 
-if (production):
+
+# TODO:  Performance testing 
+# Localhost performance vs production 
+lookAheadEnemy = 5    # Enemy prediction 
+lookAheadPath = 20    # Path prediction 
+maxRecursion = 3000
+
+
+if (environment == 'prod'):
+  # Production 
   logLevelStdout = 4
-  logLevelStderr = 4
-  snakename = "idzol"
   logging = {
+    'data':True,
     'file':False,
     'silent':False,
     'json':True,
     'console':False  
   }
- 
-else: 
+
+
+elif (environment == 'preprod'): 
+  # Preprod (cloud run)
   logLevelStdout = 4
-  logLevelStderr = 4
-  snakename = "idzol-dev"
   logging = {
+    'data':True,
     'file':False,
     'silent':False,
     'json':True,
     'console':False  
   }
 
-
-
-if (production):
-  lookAheadEnemy = 5    # Enemy prediction 
-  lookAheadPath = 30    # Path prediction 
-  maxRecursion = 1000
 
 else:
-  lookAheadEnemy = 3    # Enemy prediction 
-  lookAheadPath = 10   # Path prediction 
-  maxRecursion = 500
+  # Dev (localhost) 
+  logLevelStdout = 4
+  logging = {
+    'data':False,
+    'file':False,
+    'silent':False,
+    'json':False,
+    'console':True  
+  }
 
 
 # Time variable 
