@@ -1,3 +1,12 @@
+# Search for failed games & include as test cases 
+# https://console.cloud.google.com/logs/query 
+# resource.type="cloud_run_revision"
+# resource.labels.service_name="battlesnake1"
+# 8c202d0a-e493-4f3a-acc0-26b875d83c03
+# 66
+# v1.0.22
+
+
 from typing import List, Dict
 
 import math
@@ -331,6 +340,18 @@ class board():
             sn.setChance(chance, turn)
 
 
+    def updateCell(self, cell, fill, turn=0):
+        # Paint cell as routable, not routable  
+        if(self.inBounds(cell)):
+            # Paint markov matrix for turn t + 1
+            y = cell[0]
+            x = cell[1]
+            if fill:
+                self.markovs[turn][y, x] = 100
+            else: 
+                self.markovs[turn][y, x] = 0
+                
+
     def updateMarkov(self, us, snakes:dict, foods:list, turns=CONST.lookAheadPath): 
       # TODO: Assumes no solids, otherwise requires a version of route with gradient = 1..
       w = self.width
@@ -375,6 +396,7 @@ class board():
                     y = cell[0]
                     x = cell[1]
                     markov[y, x] = 100
+            
             sn.setMarkovBase(copy.copy(markov), t)
             # Set markov + chance
             if (not len(body)):
@@ -1051,8 +1073,12 @@ class board():
           return False 
 
 
-
-    def isRoutePointv2(self, start, turn, eating={}, path=[]):
+    def isRoutePointv2(self, start, turn, eating={}, path=[], enemy=False):
+        # Start - check route points from start location
+        # Turn - adjust for future turn state 
+        # Eating - adjust for past / future eating 
+        # Path - check past path points for collision
+        # Enemy - ignore markov threat when predicting enemy moves
 
         w = self.width
         h = self.height
@@ -1082,17 +1108,22 @@ class board():
         # print("DEBUG", dx, dy, t, step, path)
         # Route logic 
         if (self.inBounds(step)):
-          if ((board[dy, dx] == 0) and 
-              ((markov[dy, dx] < CONST.pointThreshold) or 
-              (t >= board[dy, dx] and 
-              markov[dy, dx] < CONST.pointThreshold)) and 
-              not (step in path)):
+          if ( # Our prediction logic 
+                (((markov[dy, dx] < CONST.pointThreshold) or 
+                (t >= board[dy, dx] and 
+                markov[dy, dx] >= CONST.routeThreshold)) and 
+                not (step in path)) or 
+                # Enemy prediction logic 
+                (enemy and 
+                t >= board[dy, dx] and 
+                not (step in path)) 
+              ):
 
             return (True, copy.copy(markov[dy, dx]))
             
         return (False, CONST.pointThreshold)
 
-      
+
     def findEating(self, snakes, path, foods):
 
         eating = {}
@@ -1204,6 +1235,49 @@ class board():
 
 
 # == FINDERS ==
+
+    def getEnemyFuture(self, snakes, turns=2):
+
+        sid_us = self.getIdentity()
+        for sid in snakes:
+                                    
+            snake = snakes[sid]
+            head = snake.getHead()
+            paths = [] 
+
+            enemy = False 
+            if sid_us != snake.getId():
+                enemy = True 
+            
+            for dirn in CONST.directions:
+                # initial step in each direction 
+                step = list(map(add, head, CONST.directionMap[dirn]))
+                found, point = self.isRoutePointv2(step, 0, {}, [], enemy)
+                if (found):    
+                    paths.append(copy.copy([step]))
+
+            # print("FUTURE", head, paths)
+
+            for turn in range(0, turns - 1):
+                # for N-1 turns look in each direction for each path
+                paths_new = []
+                for path in paths:             
+                    for dirn in CONST.directions:
+            
+                        head_n = path[-1]                     
+                        step = list(map(add, head_n, CONST.directionMap[dirn]))
+                        found, point = self.isRoutePointv2(step, turn)
+                        route = path + [step]
+                        if (found):    
+                            # New path found 
+                            paths_new.append(copy.copy(route))
+
+                # Concatenate new paths 
+                paths = paths + paths_new
+
+            # print("SNAKE", snake.getId(), paths)
+            snake.setNextSteps(paths)
+
 
     def findClosestWall(self, start):
 

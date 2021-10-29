@@ -30,7 +30,7 @@ maxRecursion = 3000
 
 if (environment == 'prod'):
   # Production 
-  logLevelStdout = 4
+  logLevel = 4
   logging = {
     'data':True,
     'file':False,
@@ -42,7 +42,7 @@ if (environment == 'prod'):
 
 elif (environment == 'preprod'): 
   # Preprod (cloud run)
-  logLevelStdout = 4
+  logLevel = 4
   logging = {
     'data':True,
     'file':False,
@@ -54,7 +54,7 @@ elif (environment == 'preprod'):
 
 else:
   # Dev (localhost) 
-  logLevelStdout = 4
+  logLevel = 4
   logging = {
     'data':False,
     'file':False,

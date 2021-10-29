@@ -48,12 +48,22 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     
     reason = []
 
+    # Enemy kills us -- playing forward X turns
+    t = enemyStrategy(bo, sn, snakes, 2)
+    if (len(t)):
+        # If enemy kill path found 
+        for path in t:
+            # Mark cell not reachable 
+            bo.updateCell(path, 1)
+            
+
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
         interruptlist.insert(0, ['Kill', 'Collide'])
         strategyinfo['killpath'] = t
         reason.append('killpath was identified')
+
 
     # Kill interrupt -- cut off path 
     t = enemyEnclosed(bo, sn, snakes)
@@ -1051,6 +1061,81 @@ def controlSpace(bo, us, snakes):
 
     return copy.copy(target)
 
+
+
+def enemyStrategy(bo, us, snakes, future=2): 
+    # (1) select possible paths for enemy
+    dirn_avoid = []
+    
+    paths = bo.getEnemyFuture(snakes, future)
+    # O(dirs * future * snakes)
+
+    oursteps = us.getNextSteps()
+    
+    sid_us = bo.getIdentity()
+    length_us = snakes[sid_us].getLength()
+    steps_us = snakes[sid_us].getNextSteps()
+    
+    for sid in snakes:
+        if sid != sid_us:     
+            snake = snakes[sid]
+            length = snake.getLength()
+            steps = snake.getNextSteps()
+
+            
+            for ourstep in steps_us:
+            # Iterate through our steps 
+                for step in steps:
+                # Check against enemy steps 
+                    safe = True
+                    reason = ""
+                        
+                    if len(step) == len(ourstep):
+                    # Look for same turn (same length)
+
+                        # print("STEPS us:%s them:%s" % (ourstep, step)) 
+            
+                        if step == ourstep:
+                            if length > length_us:
+                            # Check for collision (we are same / smaller) 
+                                safe = False 
+                                reason = "head on collision"
+
+                        else: 
+
+                            # Check moves available 
+                            turn = len(step)
+                            start = ourstep[-1]
+                            future = ourstep + step 
+                            future.remove(start)
+
+                            found = bo.findEmptySpace(start, future, turn)
+        
+                            # print("FOUND start:%s turn:%s future%s found %s" % (start, turn, future, found)) 
+                
+                            # No paths
+                            if (not found):
+                                safe = False 
+                                reason = "no path for us"
+            
+                
+                    if (not safe):
+                    # One of the enemy steps is not safe for our step.  Abandon all paths in that direction (overcautious)
+                    # TODO: less agressive if we see a path out
+
+                        # print ("STEP sid:%s us:%s them:%s reason:%s" % (sid, ourstep, step, reason))
+                        for s in steps_us:
+                            if ourstep[0] in s: 
+                                steps_us.remove(s)
+                                dirn_avoid.append(ourstep[0])
+                                # dy = ourstep[0][0]
+                                # dx = ourstep[0][1]
+                                # self.markov[dy,dx] = CONST.routeThreshold
+
+    snakes[sid_us].setNextSteps(steps_us)
+    # print("FINAL PATHS", dirn_avoid, steps_us)
+    # return directions to avoid (mark as not reachable)
+    return dirn_avoid
 
 # == DEPRECATE / DELETE == 
 
