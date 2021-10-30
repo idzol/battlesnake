@@ -23,7 +23,7 @@ class snake:
         self.strategylist = [["Eat",""]]
         
         self.interrupt = False
-
+        
         self.head = [] 
         self.body = []  
         self.tail = []  
@@ -31,6 +31,8 @@ class snake:
         self.route = []     # Vector notation
         self.routes = []    # Previous routes (with info)
         self.path = []      # Point notation
+        
+        self.steps = []     # Future possible steps 
         self.routeHistory = []
         
         self.aggro = CONST.aggroLow   # out of 100 
@@ -148,14 +150,9 @@ class snake:
 
     def showStats(self):
 
-        self.logger.log('snake-showstats', """
-          Health: %d
-          Head: %s
-          Target: %s
-          Route: %s
-          Strategy: %s
-          Last Move: %s""" % (self.health, self.head, self.target, self.route, str(self.strategylist), self.direction))
-        
+        self.logger.log('snake-showstats', "Health: %d Head: %s Target: %s  Route: %s Strategy: %s Last Move: %s" \
+                % (self.health, self.head, self.target, self.route, str(self.strategylist), self.direction))
+
           # self.hunger, self.aggro,
 
     def setHead(self, p):
@@ -191,7 +188,17 @@ class snake:
     def clearRoutes(self):
         self.routes = []
 
+    def setNextSteps(self, p):
+        # Future predict 
+        self.steps = copy.copy(p)
+
+    def getNextSteps(self):
+        # Future predict 
+        return copy.copy(self.steps)    
+    
+
     def addRoutes(self, start, target, route, weight, routetype):
+        # Complex - potential routes 
         self.routes.append({
           'start':start,
           'target':target,

@@ -1,5 +1,6 @@
 import logging
 import os
+import signal
 # import psutil
         
 # import math
@@ -39,7 +40,6 @@ def handle_info():
 
 @app.post("/start")
 def handle_start():
-    global games
 
     logger = log()
 
@@ -54,12 +54,16 @@ def handle_start():
 
 
 @app.post("/move")
-def handle_move():
-    global games
+def handle_move(testData="", testOverride=False):
 
-    # Load game data (support for multi games)
-    data = request.get_json()
-    logger = log()
+    if testData:
+        data = copy.copy(testData)
+        debug = True
+    else:
+        data = request.get_json()
+        debug = False 
+    
+    logger = log(testOverride)
           
     # logdata(data)
     
@@ -161,7 +165,7 @@ def handle_move():
 
 @app.post("/end")
 def end():
-    global games
+
     data = request.get_json()
 
     logger = log()
@@ -194,8 +198,12 @@ def reporting(logger, board, us, snakes, data):
         snk = snakes[key]
         logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
     logger.print(data)
+    logger.dump(data)
+    # print('MOVE: Reporting complete')
 
-    print('MOVE: Reporting complete')
+    # Kill PID 
+    my_pid = os.getpid()
+    os.kill(my_pid, signal.SIGINT)
     os._exit(0)  
 
 

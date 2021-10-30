@@ -48,12 +48,22 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     
     reason = []
 
+    # Enemy kills us -- playing forward X turns
+    t = enemyStrategy(bo, sn, snakes, 2)
+    if (len(t)):
+        # If enemy kill path found 
+        for path in t:
+            # Mark cell not reachable 
+            bo.updateCell(path, 1)
+            
+
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
         interruptlist.insert(0, ['Kill', 'Collide'])
         strategyinfo['killpath'] = t
         reason.append('killpath was identified')
+
 
     # Kill interrupt -- cut off path 
     t = enemyEnclosed(bo, sn, snakes)
@@ -88,9 +98,9 @@ def checkInterrupts(bo:board, sn:snake, snakes):
         reason.append('largest snake by '+str(larger)+' length and larger by '+str(larger))
 
     # Growth interrupt when small
-    if (health < CONST.healthHigh and length < CONST.growLength): 
-        interruptlist.append(['Eat', ''])
-        reason.append('health is less than high and length less than '+str(CONST.growLength))
+    # if (health < CONST.healthHigh and length < CONST.growLength): 
+    #     interruptlist.append(['Eat', ''])
+    #     reason.append('health is less than high and length less than '+str(CONST.growLength))
 
     # # No threats & high health
     # if (health >= CONST.healthLow): 
@@ -98,9 +108,9 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     #     reason.append('health is high')
 
     # Health interrupt general 
-    if (health < CONST.healthLow): 
-        interruptlist.append(['Eat', ''])
-        reason.append('health is less than high')
+    # if (health < CONST.healthLow): 
+    #     interruptlist.append(['Eat', ''])
+    #     reason.append('health is less than high')
 
     # Survive interuupt 
     if (numMovesAvailable(bo, sn) < length):
@@ -172,7 +182,6 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     start = sn.getHead()
     length = sn.getLength()
     foodsort = fn.findClosestItem(foods, start)
-    # aggro = sn.getAggro()
     # tail = sn.getTail()
     # alltails = getSnakeTails(snakes)
 
@@ -194,6 +203,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     
       strategy = strategylist.pop(0)
 
+      target_method = ""
+      route_method = "" 
+
       bo.logger.log('strategy', str(strategy), str(reason), str(strategylist), str(strategyinfo))
 
       # Test a particular strategy 
@@ -202,13 +214,15 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       if(strategy[0] == 'Kill'):
           if (strategy[1] == 'Collide'):
             # HEAD ON COLLISION 
-            target = strategyinfo['killpath']    
+            target = strategyinfo['killpath']   
+            target_method = "killPath" 
             bo.logger.log('strategy-killpath', 'killPath', str(start), str(length), str(target))
             # Do not repeat strategy 
 
           if (strategy[1] == 'Cutoff'):
             if len(strategyinfo['killcut']):
               target = strategyinfo['killcut'].pop()
+              target_method = "killCut"
               strategylist.insert(0, strategy)
 
             else: 
@@ -224,8 +238,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           if (strategy[1]=='Space'):
 
             target = controlSpace(bo, sn, snakes)
+            target_method = "controlSpace"
             bo.logger.log('strategy-route', "CONTROL SPACE", str(start), str(target))
-           
+ 
           
           if (strategy[1]=='Box'):
             
@@ -302,6 +317,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           # Sort by closest food
           if(len(foodsort)):
               target = findBestFood(foodsort, bo, sn, snakes)
+              target_method = "findBestFood"
               if(not len(target)):
                   # Try next food 
                   foodsort.pop(0)
@@ -320,6 +336,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 
         if(strategy[1]=='Centre'): 
             target = bo.findCentre(start)
+            target_method = "findCentre"
             if (not(len(target))):
               # If already in centre .. 
               # strategylist.pop(0) 
@@ -335,6 +352,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
         # Find nearest wall 
         if(strategy[1]=='Wall'):   
             target = bo.findClosestWall(start)
+            target_method = "findClosestWall"
             if (not len(target)):
               pass 
               # Already on a wall 
@@ -362,6 +380,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
             proximity = 2
             
             target = trackWall(bo, sn, rotation, proximity)
+            target_method = "trackWall"
+
             # Repeat -- until interrupt
             strategylist.insert(0, strategy)
             bo.logger.log('strategy-trackwall', target)
@@ -372,20 +392,23 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           
           if(strategy[1]==''):  
             # Find any way out .. 
-            route = bo.findLargestPath([start], snakes)
-            if len(route) > 1:
+            route = bo.routePadding([start], snakes, foods)
+            if (len(route) > 1):
+              # Bypass routing
+              found = True 
               # Remove start point (head)
-              route.pop(0) 
-              # Target is next point
-              target = route.pop(0)
-              # strategylist.insert(0, strategy)
+              # route.pop(0) 
+              # Target is last point (reassess every turn)
+              target = route[-1]
+              target_method = "routePadding"
             
             else:
               target = []
 
           if(strategy[1]=='Taunt'):
             # Chase our tail 
-            target = sn.getTail()           
+            target = sn.getTail()   
+            target_method = "getTail"        
             # Repeat -- until interrupt 
             strategylist.insert(0, strategy)
 
@@ -394,40 +417,50 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
 
       # Check route
       bo.logger.timer('Strategy::Route')
-      
-      # If no target or no route , try next strategy    
-      if 'numpy' in str(type(target)):
-          # Target is an area 
-          bo.logger.log('strategy-route', "TARGET", str(strategy), str(target))
-          route, weight = bo.fuzzyRoute(start, target, sn)
-          
-      elif 'list' in str(type(target)) and bo.inBounds(target):
-          # Target is a point -- type == <class 'list'> 
-          bo.logger.log('strategy-route', "TARGET", str(strategy), str(target))
-          route, weight = bo.route(start, target, sn)
-          
 
-      bo.logger.timer('Strategy::RoutePadding')
+      if (not found):
+        # Find route to target 
+        if 'numpy' in str(type(target)):
+            # Target is an area 
+            bo.logger.log('strategy-route', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            # route, weight = bo.route(start, target, sn)
+            route, weight = bo.fuzzyRoute(start, target, sn)
+            route_method = "fuzzyRoute"
+
+        elif 'list' in str(type(target)) and bo.inBounds(target):
+            # Target is a point -- type == <class 'list'> 
+            bo.logger.log('strategy-route', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            route, weight = bo.route(start, target, sn)
+            route_method = "route"
+
+
+        bo.logger.timer('Strategy::RoutePadding')
+
 
       if (len(route)):
-          # Route found -- try to find a safe way out 
+          # Find safe path away 
 
           # Insert start 
           route.insert(0, start)  
           route = copy.copy(fn.getPointsInRoute(route))
           
           # If route valid 
-          bo.logger.log('strategy-route', "ROUTE", str(start), str(route))
+          bo.logger.log('strategy-route-final', "ROUTE %s %s %s %s" % (str(start), str(route), target_method, route_method))
           
           # Pad out route to N moves 
-          fullroute, found = bo.routePadding(route, snakes, foods)
-          bo.logger.log('strategy-route', "ROUTE PADDING", str(start), str(fullroute))
-    
-      if(found): 
-          # Route found
-          route = copy.copy(fullroute)
+          fullroute = bo.routePadding(route, snakes, foods)            
+          # Sufficient 
+          if len(fullroute) >= CONST.lookAheadPath: 
+              found = True  
+          
+          bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s" % (str(start), str(fullroute), len(fullroute), CONST.lookAheadPath))
 
-          bo.logger.log('strategy-update','Path found\nTarget:'+str(target)+'\nRoute:'+str(route)+'\nWeight: '+str(weight))
+
+      if (found and len(route)): 
+          # Strategy found and route found 
+          route = copy.copy(fullroute)
+          bo.logger.log('strategy-found', 'Path found \nTarget:%s \nRoute:%s \nReason:%s %s \n' %
+                            (str(target), str(route), target_method, route_method))
           break
       
 
@@ -441,8 +474,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       bo.logger.timer('Strategy search')
         
       # Exceeded number of attempts 
-      if (i > depth or bo.hurry):
-          # Exit loop
+      if (not len(strategylist) or bo.hurry or i > depth):
+      #   Exit loop
           target = []
           route = []
           break
@@ -450,8 +483,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       bo.logger.log('strategy-update','route from '+str(start)+' to '+str(target)+' not found, try again. i:'+str(i))
       
       i = i + 1 
-    
-    
+        
     # Remove duplicates from strategy list 
     stl_unique = []
     for stl in strategylist: 
@@ -487,34 +519,46 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
     # 0) Route Found 
     route = sn.getRoute()
 
-    # routes = sn.getRoutes()
-    # print(str(routes))
-
     p = []
     if len(route):
+      # Preferred route 
       route_method = 'route_stateMachine'
       p = route.pop(0)
+      
+    else: 
+        # Least worst route 
+        routes = sn.getRoutes() 
+        # bo.logger.log('route' 'all %s', str(routes))
+
+        if len(routes):
+          weight = CONST.routeThreshold * 100
+          for r in routes:
+            # len(r['route'])
+            if r['weight'] < weight:
+              weight = r['weight']
+              sn.setTarget(r['target'])
+              sn.setRoute(r['route']) 
       
 
     # 1) Still no route - Use lookahead (route padding)
     # TODO: Combine lookahead & dijkstra to avoid 
     #   collision with high threat 
-    if (not len(p) or not bo.inBounds(p)):
-      route_method = 'route_findLargestPath'
-      route = bo.findLargestPath([start], snakes)
-      if len(route) > 1:
-        # TODO: Cleanup routes -- some include start, others don't
-        # Remove head (if exists)
-        if (route[0] == start): 
-          route.pop(0)
+    # if (not len(p) or not bo.inBounds(p)):
+    #   route_method = 'route_findLargestPath'
+    #   route = bo.findLargestPath([start], snakes)
+    #   if len(route) > 1:
+    #     # TODO: Cleanup routes -- some include start, others don't
+    #     # Remove head (if exists)
+    #     if (route[0] == start): 
+    #       route.pop(0)
 
-        try:
-          p = route.pop(0)
-        except Exception as e:
-          bo.logger.error('exception', 'makeMove', str(e))
+    #     try:
+    #       p = route.pop(0)
+    #     except Exception as e:
+    #       bo.logger.error('exception', 'makeMove', str(e))
 
 
-    # 2) Still no route - Chase a tail
+    # 2) Still no route - Chase any tail
     if (not len(p) or not bo.inBounds(p) and not sn.getEating()):
       route_method = 'route_chaseTail'
       for d in CONST.directions:
@@ -545,7 +589,6 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
 
           except Exception as e:
             bo.logger.error('exception','makeMove',str(e))
-
 
     # 4) Still no route - Use self.enclosd available moves 
     # if (not len(p) or not bo.inBounds(p)):
@@ -579,7 +622,7 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
 
     bo.logger.timer('After Direction')
     
-    bo.logger.log('make-move', str(start), str(finish), str(p), str(move), str(route_method))
+    bo.logger.log('make move', str(start), str(finish), str(p), str(move), str(route_method))
         
     sn.setRoute(route)
     sn.setMove(move)    
@@ -903,7 +946,7 @@ def findBestFood(foodsort, bo, us, snakes):
                     len_enemy = sn.getLength()
                     foodthreat[str(food)].append({'length':len_enemy, 'dist':dist_enemy})
                     sn.setTarget(food)
-                    bo.logger.log("food target", sn.getId(), sn.getTarget())
+                    # bo.logger.log("food target", sn.getId(), sn.getTarget())
                     
     # Check foods for the closest without threat 
     target = []
@@ -1013,6 +1056,81 @@ def controlSpace(bo, us, snakes):
 
     return copy.copy(target)
 
+
+
+def enemyStrategy(bo, us, snakes, future=2): 
+    # (1) select possible paths for enemy
+    dirn_avoid = []
+    
+    paths = bo.getEnemyFuture(snakes, future)
+    # O(dirs * future * snakes)
+
+    oursteps = us.getNextSteps()
+    
+    sid_us = bo.getIdentity()
+    length_us = snakes[sid_us].getLength()
+    steps_us = snakes[sid_us].getNextSteps()
+    
+    for sid in snakes:
+        if sid != sid_us:     
+            snake = snakes[sid]
+            length = snake.getLength()
+            steps = snake.getNextSteps()
+
+            
+            for ourstep in steps_us:
+            # Iterate through our steps 
+                for step in steps:
+                # Check against enemy steps 
+                    safe = True
+                    reason = ""
+                        
+                    if len(step) == len(ourstep):
+                    # Look for same turn (same length)
+
+                        # print("STEPS us:%s them:%s" % (ourstep, step)) 
+            
+                        if step == ourstep:
+                            if length > length_us:
+                            # Check for collision (we are same / smaller) 
+                                safe = False 
+                                reason = "head on collision"
+
+                        else: 
+
+                            # Check moves available 
+                            turn = len(step)
+                            start = ourstep[-1]
+                            future = ourstep + step 
+                            future.remove(start)
+
+                            found = bo.findEmptySpace(start, future, turn)
+        
+                            # print("FOUND start:%s turn:%s future%s found %s" % (start, turn, future, found)) 
+                
+                            # No paths
+                            if (not found):
+                                safe = False 
+                                reason = "no path for us"
+            
+                
+                    if (not safe):
+                    # One of the enemy steps is not safe for our step.  Abandon all paths in that direction (overcautious)
+                    # TODO: less agressive if we see a path out
+
+                        # print ("STEP sid:%s us:%s them:%s reason:%s" % (sid, ourstep, step, reason))
+                        for s in steps_us:
+                            if ourstep[0] in s: 
+                                steps_us.remove(s)
+                                dirn_avoid.append(ourstep[0])
+                                # dy = ourstep[0][0]
+                                # dx = ourstep[0][1]
+                                # self.markov[dy,dx] = CONST.routeThreshold
+
+    snakes[sid_us].setNextSteps(steps_us)
+    # print("FINAL PATHS", dirn_avoid, steps_us)
+    # return directions to avoid (mark as not reachable)
+    return dirn_avoid
 
 # == DEPRECATE / DELETE == 
 

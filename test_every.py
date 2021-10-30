@@ -227,9 +227,10 @@ class boardTest(board):
               
               if (found):  
                   # Add to dir
-
-                  route_n['path'].append(step_new) # !! 
-                  route_n['length'] = len(route_n['path'])
+                  path_new = copy.copy(route_n['path'])
+                  path_new.append(step_new)
+                  route_n['path'] = copy.copy(path_new) 
+                  route_n['length'] = len(path_new)
                   route_n['weight'] += point
                   route_n['point'] = max(point, route_n['point'])
 
@@ -284,9 +285,6 @@ class boardTest(board):
         # # Longest dist 
         # sort_length = sorted(adict, key=lambda x: (adict[x]['length'], adict[x]['weight']))
 
-
-
-
         paths = copy.copy(self.allpaths)
         len_max = w * h
 
@@ -323,6 +321,14 @@ class boardTest(board):
 
 
 data = {'game': {'id': '609d47ca-e773-49f9-b3f4-2c52afa4a05c', 'ruleset': {'name': 'solo', 'version': 'v1.0.22', 'settings': {'foodSpawnChance': 15, 'minimumFood': 1, 'hazardDamagePerTurn': 0, 'royale': {'shrinkEveryNTurns': 0}, 'squad': {'allowBodyCollisions': False, 'sharedElimination': False, 'sharedHealth': False, 'sharedLength': False}}}, 'timeout': 500, 'source': ''}, 'turn': 4, 'board': {'height': 11, 'width': 11, 'snakes': [], 'food': [], 'hazards': []}, 'you': {'id': 'gs_VYFDmY6qCM6MH6KJ7jKKybg3', 'name': 'idzol-dev', 'latency': '326', 'health': 96, 'body': [{'x': 1, 'y': 9}, {'x': 1, 'y': 8}, {'x': 1, 'y': 7}], 'head': {'x': 1, 'y': 9}, 'length': 3, 'shout': '', 'squad': ''}}
+
+# test_routes = [{data}, 'up', {data}, 'down']
+# for test_data in test_routes  
+#   data = data[0]
+#   expected = data[1] 
+#   # load data
+#   # make move 
+# data
 
 logger = log()
 
