@@ -791,7 +791,7 @@ class board():
         routetype = ''
 
 
-        self.logger.log('route', 'target', a, b)        # log('time', 'Route', self.getStartTime())
+        # self.logger.log('route', 'search', a, b)        # log('time', 'Route', self.getStartTime())
 
         # If start / finish not defined, return blank
         if (not len(a) or not len(b) or a == b):
@@ -829,7 +829,7 @@ class board():
             # self.clearRoutes()
 
         # Return sorted path/points or [] if no path
-        self.logger.log('route', routetype, route, weight)
+        # self.logger.log('route', routetype, route, weight)
         return route, weight
 
 
@@ -869,7 +869,7 @@ class board():
                 w = csum
                 r = c
 
-        self.logger.log('route', 'corner %s %s' % (str(path), csum))
+        # self.logger.log('route', 'corner %s %s' % (str(path), csum))
 
         if (len(r)):
             # Route found 
@@ -939,7 +939,7 @@ class board():
                         bnew = copy.copy(b)
                         pathlength = 0
 
-        self.logger.log('route complex %s %s' % (str(path), str(weight)))
+        # self.logger.log('route complex %s %s' % (str(path), str(weight)))
 
         return path, weight
 
@@ -1018,6 +1018,8 @@ class board():
         # Convert vectors to points
         if (len(route) > 1):
             path = fn.getPointsInRoute(route)
+        else: 
+            path = copy.copy(route)
 
         turns_found = len(path)
         # start = route[-1]
@@ -1028,21 +1030,50 @@ class board():
 
         # Confirm we have a path
         if (turns_found):
+
             # Confirm any path exists.  Pad path to N turns using random walk
             turn = len(path)
             # self.logger.log("route pad", str(path))
             original = copy.copy(path)
 
-            path = self.findLargestPath(original, snakes, turn, foods, depth)
-            self.logger.log("route pad", str(path), str(len(path)), str(depth))
+            sid_us = self.getIdentity()
+            us = snakes[sid_us]
+            length = us.getLength()
+
+            found = False
+
+            # Route to tail for end game control 
+            if length > CONST.lengthEndGame:
+                path, weight = self.routeToTail(us, turn, original)
+                # print("ROUTE TO TAIL", path, weight, original)
+                
+                if len(path) > 0 and weight < CONST.routeThreshold:
+                    path = original + path
+                    path = fn.getPointsInRoute(path)
+                    found = True 
+                    
+
+            if not found:
+                path = self.findLargestPath(original, snakes, turn, foods, depth)
+                # self.logger.log("route pad", str(path), str(len(path)), str(depth))
 
         # Return path (list) & wheth max depth found (boolean)
         # route = route + path
+
         # Remove first point of route (head)
         if len(path):
             path.pop(0)
     
         return copy.copy(path)
+
+
+    def routeToTail(self, snake, turn, path):
+
+        head = snake.getHead()
+        tail = snake.getTail()
+        route, weight = self.route(head, tail, snake)        
+        # self.logger.log('route-tail', route)
+        return copy.copy(route), copy.copy(weight)
 
 
     def isRoutePoint(self, step, turn, path=[]):
@@ -1301,7 +1332,7 @@ class board():
             r = self.leastWeightLine(start, walls)
             # print("B")
 
-        self.logger.log('route-findclosestwall', str(walls), r)
+        # self.logger.log('route-findclosestwall', str(walls), r)
         return r
 
     def findClosestNESW(self, start):
@@ -1725,7 +1756,7 @@ class board():
                 best = psum
                 r = p
 
-        self.logger.log('route-leastline-dsum', str(points), str(a), str(r), best)
+        # self.logger.log('route-leastline-dsum', str(points), str(a), str(r), best)
 
         return r
 

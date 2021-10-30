@@ -1,6 +1,6 @@
 
 # import random as rand
-# import constants as CONST 
+import constants as CONST 
 # from typing import Dict
 # import pandas as pd
 
@@ -238,5 +238,8 @@ def isClosest(a, b, others):
 
     else: 
       return False 
+
+import constants as CONST
+
 
 # == DEPRECATE / DELETE == 

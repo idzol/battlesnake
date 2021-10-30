@@ -150,14 +150,9 @@ class snake:
 
     def showStats(self):
 
-        self.logger.log('snake-showstats', """
-          Health: %d
-          Head: %s
-          Target: %s
-          Route: %s
-          Strategy: %s
-          Last Move: %s""" % (self.health, self.head, self.target, self.route, str(self.strategylist), self.direction))
-        
+        self.logger.log('snake-showstats', "Health: %d Head: %s Target: %s  Route: %s Strategy: %s Last Move: %s" \
+                % (self.health, self.head, self.target, self.route, str(self.strategylist), self.direction))
+
           # self.hunger, self.aggro,
 
     def setHead(self, p):

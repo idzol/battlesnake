@@ -1,5 +1,6 @@
 import logging
 import os
+import signal
 # import psutil
         
 # import math
@@ -199,6 +200,10 @@ def reporting(logger, board, us, snakes, data):
     logger.print(data)
     logger.dump(data)
     # print('MOVE: Reporting complete')
+
+    # Kill PID 
+    my_pid = os.getpid()
+    os.kill(my_pid, signal.SIGINT)
     os._exit(0)  
 
 
