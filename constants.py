@@ -56,8 +56,8 @@ else:
   # Dev (localhost) 
   logLevel = 4
   logging = {
-    'data':False,
-    'file':False,
+    'data':True,
+    'file':True,
     'silent':False,
     'json':False,
     'console':True  
@@ -65,10 +65,10 @@ else:
 
 
 # Time variable 
-timeStart = 100
-timeMid = 200
-timeEnd = 250
-timePanic = 250
+timeStart = 300
+timeMid = 350
+timeEnd = 400
+timePanic = 400
 
 
 # Routing threshold - collision probability
@@ -99,7 +99,7 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy 
-strategyDepth = 5   # max strategies to explore each turn
+strategyDepth = 100   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
 
 # Strategy - control board 

@@ -353,7 +353,7 @@ class board():
                 
 
     def updateMarkov(self, us, snakes:dict, foods:list, turns=CONST.lookAheadPath): 
-      # TODO: Assumes no solids, otherwise requires a version of route with gradient = 1..
+      
       w = self.width
       h = self.height
       markovs = []
@@ -373,7 +373,10 @@ class board():
             # Prediction for first turn
             if (not t):
               # First move -- establish initial markov (t = 0) 
-              sn_body = sn.getHeadBody()
+              
+              # BUGFIX:  check/  Body already includes head, ie. function was doubleprinting head?
+              # sn_body = sn.getHeadBody()
+              sn_body = sn.getBody()
               sn.setFuture(sn_body, 0)
               body = copy.copy(sn_body)
 
@@ -454,81 +457,13 @@ class board():
       # self.markovs = copy.copy(markovs)     
 
 
-    # def predictMove_step(self, target, foods, turn=0):
-    #     # Based on markov for one snake, calculate most likely path -- eg. food, killcut, other
-    #     # TODO:  Special logic for our snake (known path)
-        
-    #     # Get current body 
-    #     turn = min(turn, CONST.lookAheadPath - 1)
-
-    #     snake = copy.copy(target)      
-    #     sn_future = snake.getFuture(turn)
-              
-    #     body = sn_future['body']
-    #     if (not (len(body))):
-    #       return body
-        
-    #     # Get current markov 
-    #     markov = snake.getMarkov(turn)
-                  
-    #     # Select path based on probability (start with highest)
-    #     new_head = []
-    #     if(snake.getType() == 'us'):
-    #         # Special logic for us - we know the way 
-    #         route = snake.getRoute()
-    #         if (turn < len(route)):
-    #           new_head = route[turn]
-    #         else:
-    #           new_head = []
-    #           pass
-
-    #     else:  
-    #         # Enemy snake             
-    #         probs = np.nonzero((markov < 100) & (markov > 0))
-    #         prob_max = 0
-    #         prob_max_pt = []
-
-    #         for i in range(0, len(probs[0] - 1)):
-    #           prob_pt = [probs[0][i], probs[1][i]]
-    #           prob = markov[prob_pt[0], prob_pt[1]]
-              
-    #           if prob > prob_max:
-    #             prob_max = copy.copy(prob)
-    #             prob_max_pt = copy.copy(prob_pt)
-                
-    #         if (self.inBounds(prob_max_pt)):
-    #             # Make this new head
-    #             # markov[prob_max_pt[0], prob_max_pt[1]] = 100
-    #             new_head = copy.copy(prob_max_pt)
-
-        
-    #     # If eating -- add Tail 
-    #     if snake.getEating(): 
-    #       tail = body[-1]
-    #       body.append(tail)
-
-    #     # Reduce body length by one
-    #     body.pop(-1)
-        
-    #     # Add new head
-    #     new_body = copy.copy(body)
-    #     if (len(new_head)):
-    #         new_body.insert(0, new_head)
-
-    #     # Update body
-    #     return new_body
-
-
-    def updateDijkstra(self, sn):
+    def updateDijkstra(self, snakes):
 
         depth = CONST.lookAheadPath
 
         w = self.width
         h = self.height
 
-        head = sn.getHead()
-        tail = sn.getTail()
-        length = sn.getLength()
 
         dijksmap = [None] * depth
 
@@ -544,15 +479,26 @@ class board():
                 # Dijkstra combines solids, foods, hazards (threats)
                 dijksmap[t] = markov + 1
 
-                # This turn (t=0). 
-                # Adjust head & tail location to zero for routing
-                dijksmap[0][head[0], head[1]] = 0
+                for sid in snakes:
+                    sn = snakes[sid]
+                    head = sn.getHead()
+                    tail = sn.getTail()
+                    length = sn.getLength()
+                    who = sn.getType() 
+                    
+                    if who == "us":
+                        # This turn only (t=0). 
+                        # Adjust head & tail location to zero for routing
+                        dijksmap[0][head[0], head[1]] = 0
                 
-                # Erase tail unless we are eating
-                if (length > 3) and not sn.getEating():
-                    dijksmap[0][tail[0], tail[1]] = markov[tail[0], tail[1]]
-                
-                
+                    # Erase tail unless snake is eating
+                    if length > 3 : 
+                        # Check trail == 1 (when eating == 2)
+                        if self.trails[tail[0], tail[1]] == 1: 
+                            # Reset to markov value (enemy chance)
+                            dijksmap[0][tail[0], tail[1]] = markov[tail[0], tail[1]] + 1
+                        
+
             except Exception as e:
                 self.logger.error('exception', 'updateDijkstra#1', str(e))
 
@@ -583,7 +529,7 @@ class board():
         rr = self.recursion_route
         self.recursion_route = rr + 1
 
-        if (self.hurry or rr > CONST.maxRecursion):
+        if (self.hurry):
             return
 
 
@@ -592,10 +538,15 @@ class board():
             # Timer exceeded
             st = self.logger.getStartTime()
             diff = 1000 * (time.time() - st)
-            if diff > CONST.timePanic:
+            if diff > CONST.timeStart:
                 self.logger.message('timer-hurry')
+                self.logger.log('performance', 'updateGradient - timeStart exceeded')
                 self.hurry = True
 
+            if rr > CONST.maxRecursion:
+                self.logger.log('performance', 'updateGradient - max recursion reached')
+                self.hurry = True
+                
             # Log every N iterations 
             if not (rr % 1000):
                 self.logger.timer('Gradient 1000')
@@ -651,19 +602,25 @@ class board():
           
             snake = np.zeros([w, h], np.intc)
             sn = snakes[sid]
-            body = sn.getHeadBody()
-            l = len(body)
+            # BUGFIX:  check/  Body already includes head, ie. function was doubleprinting head?
+            # body = sn.getHeadBody()
+            body = sn.getBody()
+            l = len(body) + 1 
 
             # If eating tail takes one more turn
             # if sn.getEating():
             #   l = l + 1
 
             # Mark each point
+            pt_last = []
             for pt in body:
+                if pt != pt_last:
+                    l = l - 1
                 trails[pt[0], pt[1]] = l
                 snake[pt[0], pt[1]] = l
                 # Descending from head = N to tail = 1
-                l = l - 1
+                pt_last = pt
+                
 
             # Individual snakes (used for eating)
             self.trailsSnake[sid] = copy.copy(snake)
@@ -747,7 +704,7 @@ class board():
 
 # TODO: Fuzzy Routing, ie. get close to an object)
 
-    def fuzzyRoute(self, start, targetmap, save=None):
+    def fuzzyRoute(self, start, targetmap):
         # Send shape - return best path to any point in shape
         # a = [1, 1]
         # b = np.zeros([h, w], np.intc)
@@ -756,6 +713,9 @@ class board():
         w = self.width
         h = self.height
         
+        route = []
+        route_weight = CONST.routeThreshold
+ 
         a = copy.copy(start)
         b = copy.copy(targetmap)
         
@@ -764,24 +724,25 @@ class board():
         r[a[0], a[1]] = 1
 
         targets = np.nonzero(b > 0)
-        rt = []
-        wmin = CONST.routeThreshold
-
+        
         # Iterate through potential targets
         for i in range(0, len(targets[0] - 1)):
             t = [targets[0][i], targets[1][i]]
             try:
-                r, w = self.route(a, t, save)
-                if w < wmin:
-                    rt = r
+                r, w = self.route(a, t)
+                # Save best route 
+                if w < route_weight:
+                    route = r
+                    route_weight = w
+
             except Exception as e:
                 self.logger.error('exception', 'fuzzyRoute', str(e))
                 pass
 
-        return rt, wmin
+        return copy.copy(route), copy.copy(route_weight)
 
 
-    def route(self, start, dest, save=None, threshold=CONST.routeThreshold):
+    def route(self, start, dest, threshold=CONST.routeThreshold):
 
         a = copy.copy(start)
         b = copy.copy(dest)
@@ -824,9 +785,6 @@ class board():
                 routetype = 'route_none'
                 break
 
-        if (save): 
-            save.addRoutes(start, dest, route, weight, routetype)
-            # self.clearRoutes()
 
         # Return sorted path/points or [] if no path
         # self.logger.log('route', routetype, route, weight)
@@ -843,7 +801,7 @@ class board():
             path = fn.getPointsInLine(a, b)
             w, pmax = self.dijkstraPath(path)
             # If weight less than threshold, and not deadend
-            if (w < CONST.routeThreshold) and (pmax < CONST.pointThreshold):
+            if (w < CONST.routeThreshold):
                 # Return path
                 r = [b]
 
@@ -863,7 +821,7 @@ class board():
             csum, pmax = self.dijkstraPath(path)
             
              # Save path weight (total and point)
-            if (csum < CONST.routeThreshold) and (pmax < CONST.pointThreshold):
+            if (csum < CONST.routeThreshold) :
               
                 # Save route 
                 w = csum
@@ -947,7 +905,7 @@ class board():
         # Return next point in complex path based on least weight. [] if no path or error
         # log('route-complex-step', a, b)
         # Define walls
-        gradient = CONST.pointThreshold
+        gradient = CONST.routeThreshold
         route = []
         
         # Look in each direction
@@ -976,7 +934,9 @@ class board():
 
     def dijkstraPath(self, path, turn=0):
         # Sum dijkstra map between two points
-        tmax = CONST.lookAheadPath - 1
+        
+        # Check which prediction matrix to use
+        tmax = min(turn, CONST.lookAheadPath - 1)
 
         result = 0
 
@@ -988,16 +948,11 @@ class board():
 
         for p in path:
             if self.inBounds(p):
-                # Check which prediction matrix to use
-                if (turn > tmax):
-                    turn = tmax
 
                 # Add dijkstra value
-                # CHECK: Updated dt[0] to dt[turn]..
-                 # TODO:  use dist from start, to inform turn 
-                increment = int(dt[turn][p[0], p[1]])
+                increment = int(dt[tmax][p[0], p[1]])
                 result = result + increment
-                turn = turn + 1
+                tmax = tmax + 1
                 if (increment > largest_point):
                   largest_point = increment 
 
@@ -1009,11 +964,12 @@ class board():
         # Else return []
 
         path = []
+        weight = CONST.routeThreshold
         found = False
 
         # Needs minimum one point to start padding route
         if (not len(route)):
-            return path, found
+            return path, weight
 
         # Convert vectors to points
         if (len(route) > 1):
@@ -1030,78 +986,88 @@ class board():
 
         # Confirm we have a path
         if (turns_found):
-
-            # Confirm any path exists.  Pad path to N turns using random walk
-            turn = len(path)
-            # self.logger.log("route pad", str(path))
-            original = copy.copy(path)
-
+            # Get snake info 
             sid_us = self.getIdentity()
             us = snakes[sid_us]
             length = us.getLength()
+            head = us.getHead()
 
+            # Get turn based on path (past moves)
+            turn = len(path)
+
+            # Define start for path search
+            original = copy.copy(path)
+            start = original[-1]
+
+            # self.logger.log("route pad", str(path))
+            
+            # A) Padding - Route to tail for end game control 
             found = False
-
-            # Route to tail for end game control 
             if length > CONST.lengthEndGame:
-                path, weight = self.routeToTail(us, turn, original)
+                tail = us.getTail()
+                path, weight = self.route(start, tail)        
+
                 # print("ROUTE TO TAIL", path, weight, original)
                 
                 if len(path) > 0 and weight < CONST.routeThreshold:
-                    path = original + path
+                    # Add rest of body 
+                    body = (us.getBody())
+                    body.pop(-1)
+                    body.reverse()
+
+                    # Return total
+                    path = original + path + body
                     path = fn.getPointsInRoute(path)
                     found = True 
-                    
+        
+            # print("DEBUG", original, path, body)
 
+            # B) Find Largest path in random walk 
             if not found:
                 path = self.findLargestPath(original, snakes, turn, foods, depth)
-                # self.logger.log("route pad", str(path), str(len(path)), str(depth))
+                weight = len(path)
+                
+            # self.logger.log("route pad", str(path), str(len(path)), str(depth))
 
+        
         # Return path (list) & wheth max depth found (boolean)
         # route = route + path
-
         # Remove first point of route (head)
-        if len(path):
-            path.pop(0)
-    
-        return copy.copy(path)
+        while len(path):
+            if path[0] == start: 
+                path.pop(0)
+            else: 
+                break 
+            
+        return copy.copy(path), weight
 
 
-    def routeToTail(self, snake, turn, path):
+    # def isRoutePoint(self, step, turn, path=[]):
 
-        head = snake.getHead()
-        tail = snake.getTail()
-        route, weight = self.route(head, tail, snake)        
-        # self.logger.log('route-tail', route)
-        return copy.copy(route), copy.copy(weight)
+    #     # Get step
+    #     dy = step[0]
+    #     dx = step[1]
 
+    #     # Get markov 
+    #     t = min(turn, CONST.lookAheadEnemy - 1)
+    #     markov = copy.copy(self.markovs[t])
 
-    def isRoutePoint(self, step, turn, path=[]):
+    #     # Get tails 
+    #     s = copy.copy(self.trails)
 
-        # Get step
-        dy = step[0]
-        dx = step[1]
+    #     # Route logic 
+    #     if (self.inBounds(step)):
+    #       if ((s[dy, dx] == 0) and 
+    #           ((markov[dy, dx] < CONST.pointThreshold) or 
+    #           (t >= s[dy, dx] and 
+    #           markov[dy, dx] < CONST.pointThreshold)) and 
+    #           not (step in path)):
 
-        # Get markov 
-        t = min(turn, CONST.lookAheadEnemy - 1)
-        markov = copy.copy(self.markovs[t])
+    #         return True
 
-        # Get tails 
-        s = copy.copy(self.trails)
+    #     else: 
 
-        # Route logic 
-        if (self.inBounds(step)):
-          if ((s[dy, dx] == 0) and 
-              ((markov[dy, dx] < CONST.pointThreshold) or 
-              (t >= s[dy, dx] and 
-              markov[dy, dx] < CONST.pointThreshold)) and 
-              not (step in path)):
-
-            return True
-
-        else: 
-
-          return False 
+    #       return False 
 
 
     def isRoutePointv2(self, start, turn, eating={}, path=[], enemy=False):
@@ -1136,24 +1102,34 @@ class board():
           else: 
               board += trails[sid]
     
-        # print("DEBUG", dx, dy, t, step, path)
+        # DEBUG ..
+        # if step == [2, 1]:
+        #     print("DEBUG", dx, dy, turn, step, path)
+        #     print("MARKOV", markov[dy, dx])
+        #     print("BOARD", board[dy, dx])
+            
         # Route logic 
         if (self.inBounds(step)):
           if ( # Our prediction logic 
                 (((markov[dy, dx] < CONST.pointThreshold) or 
-                (t >= board[dy, dx] and 
+                (turn >= board[dy, dx] and 
                 markov[dy, dx] >= CONST.routeThreshold)) and 
                 not (step in path)) or 
                 # Enemy prediction logic 
                 (enemy and 
-                t >= board[dy, dx] and 
+                turn >= board[dy, dx] and 
                 not (step in path)) 
               ):
 
-            return (True, copy.copy(markov[dy, dx]))
+            return True     # copy.copy(markov[dy, dx])
             
-        return (False, CONST.pointThreshold)
+        return False        # CONST.pointThreshold)
 
+
+    def hasEaten(self, snakes, foods):
+        # this is taken care of in self.trails 
+        pass
+        
 
     def findEating(self, snakes, path, foods):
 
@@ -1183,8 +1159,8 @@ class board():
         # TODO: Introduce panic timers if routing too long
         # TODO: Introduce threat from other snakes into s[dy, dx] -> s[turn][dy, dx] udating predict matrix
         # TODO:  Return best path vs any path (similar to introducing snake threat)
-
-        # print("FINDPATH", str(path), str(turn))
+        
+        allpaths = []
         if (len(route)):
             start = copy.copy(route[-1])
 
@@ -1205,27 +1181,40 @@ class board():
             # TODO: Update for each enemy snake 
             eating = self.findEating(snakes, path + [step], foods)
               
-            # Check next path is in bounds, available and not already visited**
-            found, point = self.isRoutePointv2(step, newturn, eating)
+            # Check next path is in bounds, available and not already visited**            
+            found = self.isRoutePointv2(step, newturn, eating, path)
             
-            # Check next path is in bounds, available and not already visited**
+            
             if(found):
-            # self.isRoutePoint(step, turn_adjust)):
-    
+                # print("FIND LARGEST STEP", found, step, newturn, path)
+            
+                
+                # Increment turn 
                 newturn += 1
-
+                # Recursive 
                 path.append(step)
                 newpath = self.findLargestPath_step(step, snakes, turn, depth, path)
-
+                
+                allpaths.append(newpath)
                 if (len(newpath) >= depth):
-                    # Max path found - Exit search
+                    # Good path found - Exit search
+                    # TODO: Benefit of checking all paths   
                     break
 
+        # Return largest path .. 
+        # DEBUG 
+        # if step == [2, 1]:
+        # print("FINDPATH", found, step, newpath, newturn, eating)
+    
+        if len(allpaths):
+            a_sort = sorted(allpaths, key=len)
+            newpath = a_sort[-1]
+
         if len(newpath):
-          return copy.copy(newpath)
+            return copy.copy(newpath)
 
         else:
-          return []
+            return []
 
 
     def findLargestPath_step(self,
@@ -1250,7 +1239,10 @@ class board():
             # Check next path is in bounds. 
             # Probability of collision less than threshold 
             # available and not already visited**
-            if(self.isRoutePoint(step, turn, path)):
+
+            # OPTIMISE: Eating not checked -- too expensive
+            # eating = self.findEating(snakes, path + [step], foods)
+            if(self.isRoutePointv2(step, turn, path=path)):
 
                 # Add to dirns
                 turn = turn + 1
@@ -1283,7 +1275,7 @@ class board():
             for dirn in CONST.directions:
                 # initial step in each direction 
                 step = list(map(add, head, CONST.directionMap[dirn]))
-                found, point = self.isRoutePointv2(step, 0, {}, [], enemy)
+                found = self.isRoutePointv2(step, 0, {}, [], enemy)
                 if (found):    
                     paths.append(copy.copy([step]))
 
@@ -1297,7 +1289,7 @@ class board():
             
                         head_n = path[-1]                     
                         step = list(map(add, head_n, CONST.directionMap[dirn]))
-                        found, point = self.isRoutePointv2(step, turn)
+                        found = self.isRoutePointv2(step, turn)
                         route = path + [step]
                         if (found):    
                             # New path found 
@@ -1732,11 +1724,6 @@ class board():
         self.hazardIndex = hi  # [6, 7]
         self.labels = labels
 
-        # print(str(labels))
-        # print(str(si))
-        # print(str(fi))
-        # print(str(hi))
-
         return 1
 
     def leastWeightLine(self, a, points):
@@ -1974,8 +1961,8 @@ class board():
         self.logger.maps('TRAILS', self.trails)
         t = CONST.lookAheadEnemy - 1
         self.logger.maps('MARKOV0', self.markovs[0])
-        self.logger.maps('MARKOV1', self.markovs[1])
-        self.logger.maps('MARKOV2', self.markovs[2])
+        # self.logger.maps('MARKOV1', self.markovs[1])
+        # self.logger.maps('MARKOV2', self.markovs[2])
         self.logger.maps('MARKOV MAX', self.markovs[t])
         self.logger.maps('DIJKSTRA 0', self.dijkstra[0])
         # log('map', 'DIJKSTRA1', self.dijkstra[1])
@@ -2087,3 +2074,68 @@ class board():
 
         #     log('enclosed', str(self.enclosed), str(a1))
 
+
+
+    # def predictMove_step(self, target, foods, turn=0):
+    #     # Based on markov for one snake, calculate most likely path -- eg. food, killcut, other
+    #     # TODO:  Special logic for our snake (known path)
+        
+    #     # Get current body 
+    #     turn = min(turn, CONST.lookAheadPath - 1)
+
+    #     snake = copy.copy(target)      
+    #     sn_future = snake.getFuture(turn)
+              
+    #     body = sn_future['body']
+    #     if (not (len(body))):
+    #       return body
+        
+    #     # Get current markov 
+    #     markov = snake.getMarkov(turn)
+                  
+    #     # Select path based on probability (start with highest)
+    #     new_head = []
+    #     if(snake.getType() == 'us'):
+    #         # Special logic for us - we know the way 
+    #         route = snake.getRoute()
+    #         if (turn < len(route)):
+    #           new_head = route[turn]
+    #         else:
+    #           new_head = []
+    #           pass
+
+    #     else:  
+    #         # Enemy snake             
+    #         probs = np.nonzero((markov < 100) & (markov > 0))
+    #         prob_max = 0
+    #         prob_max_pt = []
+
+    #         for i in range(0, len(probs[0] - 1)):
+    #           prob_pt = [probs[0][i], probs[1][i]]
+    #           prob = markov[prob_pt[0], prob_pt[1]]
+              
+    #           if prob > prob_max:
+    #             prob_max = copy.copy(prob)
+    #             prob_max_pt = copy.copy(prob_pt)
+                
+    #         if (self.inBounds(prob_max_pt)):
+    #             # Make this new head
+    #             # markov[prob_max_pt[0], prob_max_pt[1]] = 100
+    #             new_head = copy.copy(prob_max_pt)
+
+        
+    #     # If eating -- add Tail 
+    #     if snake.getEating(): 
+    #       tail = body[-1]
+    #       body.append(tail)
+
+    #     # Reduce body length by one
+    #     body.pop(-1)
+        
+    #     # Add new head
+    #     new_body = copy.copy(body)
+    #     if (len(new_head)):
+    #         new_body.insert(0, new_head)
+
+    #     # Update body
+    #     return new_body
