@@ -49,12 +49,15 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     reason = []
 
     # Enemy kills us -- playing forward X turns
-    t = enemyStrategy(bo, sn, snakes, 2)
+    t = enemyStrategy(bo, sn, snakes)
     if (len(t)):
         # If enemy kill path found 
         for path in t:
+            pass 
             # Mark cell not reachable 
-            bo.updateCell(path, 1)
+            # WORKING:  Regression in other valid routes (server_test:12)
+            # Calculate better probability .. 
+            bo.updateCell(path, 90)
             
 
     # Kill interrupt -- larger than 
@@ -377,26 +380,22 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
               
             bo.logger.log('strategy-findwall', target)
             
-        # Track wall - clockwise or counterclockwise 
-        if(strategy[1]=='TrackWall'): 
-
-            if not 'rotation' in strategyinfo: 
-              rotation = int(2 * rand.random())
-              if (rotation):
-                  rotation = CONST.clockwise 
-              else: 
-                  rotation = CONST.counterclockwise 
-            else: 
-              rotation = strategyinfo['rotation']
-
-            proximity = 2
-            
-            target = trackWall(bo, sn, rotation, proximity)
-            target_method = "trackWall"
-
-            # Repeat -- until interrupt
-            strategylist.insert(0, strategy)
-            bo.logger.log('strategy-trackwall', target)
+        # # Track wall - clockwise or counterclockwise 
+        # if(strategy[1]=='TrackWall'): 
+        #     if not 'rotation' in strategyinfo: 
+        #       rotation = int(2 * rand.random())
+        #       if (rotation):
+        #           rotation = CONST.clockwise 
+        #       else: 
+        #           rotation = CONST.counterclockwise 
+        #     else: 
+        #       rotation = strategyinfo['rotation']
+        #     proximity = 2
+        #     target = trackWall(bo, sn, rotation, proximity)
+        #     target_method = "trackWall"
+        #     # Repeat -- until interrupt
+        #     strategylist.insert(0, strategy)
+        #     bo.logger.log('strategy-trackwall', target)
             
     
       if(strategy[0]=='Survive'):
@@ -404,31 +403,23 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           
           if(strategy[1]==''):  
             # Find any way out .. 
-            route, weight_route = bo.routePadding([start], snakes, foods)
-            # weight_route = 0
-
-            if (len(route) > 1):
+            # TODO: Move this to "target = start" & let route Padding do the lest 
+            weight_route = 0
+            route_padded, weight_padding = bo.routePadding([start], snakes, foods)  
+            if len(route_padded):
               # Bypass routing
               found = True 
               # Remove start point (head)
               # route.pop(0) 
               # Target is last point (reassess every turn)
-              target = route[-1]
+              target = route_padded[-1]
               target_method = "routePadding"
             
             else:
               target = []
 
-          if(strategy[1]=='Taunt'):
-            # Chase our tail 
-            target = sn.getTail()   
-            target_method = "getTail"        
-            # Repeat -- until interrupt 
-            strategylist.insert(0, strategy)
-
           bo.logger.log('strategy-survive. Route: %s Weight %s' % (route, weight_route))
-
-
+        
 
       # 2) Find route to target 
       if (not found):
@@ -449,32 +440,31 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
         # print("STRATEGY ROUTE WEIGHT", route, weight_route)
       
 
-      # 3) Find route padding
-      if (len(route)):
-          # Find safe path away 
+        # 3) Find route padding
+        if (len(route)):
+            # Find safe path away 
 
-          # Insert start.  
-          route.insert(0, start)  
-          
-          # OPTIMISE: This is repeated in routePadding
-          # route = copy.copy(fn.getPointsInRoute(route))
-          
-          # If route valid 
-          bo.logger.log('strategy-route-final', "ROUTE %s %s %s %s" % (str(start), str(route), target_method, route_method))
-          
-          # Pad out route to N moves 
-          largest = findLargestLength(snakes)
-          route_padded, weight_padding = bo.routePadding(route, snakes, foods, largest) 
-          
-          # Sufficient to live 
-          # TODO:  Increase route padding to largest .. 
-          # 
-          if len(route_padded) >= min(length, CONST.lookAheadPath): 
-              found = True  
+            # Insert start.  
+            route.insert(0, start)  
+            
+            # OPTIMISE: This is repeated in routePadding
+            # route = copy.copy(fn.getPointsInRoute(route))
+            
+            # If route valid 
+            bo.logger.log('strategy-route-final', "ROUTE %s %s %s %s" % (str(start), str(route), target_method, route_method))
+            
+            # Pad out route to N moves 
+            route_padded, weight_padding = bo.routePadding(route, snakes, foods) 
+            
+            # Sufficient to live 
+            # TODO:  Increase route padding to largest .. 
+            # 
+            if len(route_padded) >= min(length, CONST.lookAheadPath): 
+                found = True  
 
-          # If not - keep looking and will be prioritised later 
-          bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
-          
+            # If not - keep looking and will be prioritised later 
+            bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
+            
 
       # 4) Check target, route, route padding are safe 
       weight_total = weight_padding + weight_route
@@ -555,6 +545,8 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
     route_method = ''
     found = False 
     p = []
+
+    # print("SNAKE PATHS", sn.getRoutes())
 
     while len(route):
       # Preferred route 
@@ -784,83 +776,83 @@ def checkOpenPath(bo, a, b):
   return True 
 
 
-def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
+# def trackWall(bo, sn, rotation=CONST.clockwise, proximity=0):
     
-    w = bo.getWidth()
-    h = bo.getHeight()
-    a = sn.getHead()       # [0,0] 
-    d = sn.getDirection()  # left, right, up, down
+#     w = bo.getWidth()
+#     h = bo.getHeight()
+#     a = sn.getHead()       # [0,0] 
+#     d = sn.getDirection()  # left, right, up, down
     
-    a1 = []
+#     a1 = []
 
-    r = rotation    # cw, ccw
-    p = proximity   # 0, 1, 2..
+#     r = rotation    # cw, ccw
+#     p = proximity   # 0, 1, 2..
 
-    # TODO:  Update for proximity (ie. X squares away from)
-    for i in range(0, 4):
-        # Add one point in current direction 
-        a1 = list(map(add, a, CONST.directionMap[d]))
-        # In bounds 
-        if bo.inBounds(a1) :
-            # All other logic in routing engine .. 
-            break 
+#     # TODO:  Update for proximity (ie. X squares away from)
+#     for i in range(0, 4):
+#         # Add one point in current direction 
+#         a1 = list(map(add, a, CONST.directionMap[d]))
+#         # In bounds 
+#         if bo.inBounds(a1) :
+#             # All other logic in routing engine .. 
+#             break 
 
-        # Rotate direction & try again 
-        if(r == CONST.counterclockwise): 
-            d = CONST.ccwMap[d] 
-        else:
-            d = CONST.cwMap[d]
+#         # Rotate direction & try again 
+#         if(r == CONST.counterclockwise): 
+#             d = CONST.ccwMap[d] 
+#         else:
+#             d = CONST.cwMap[d]
     
-    # log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
-    return a1
+#     # log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
+#     return a1
 
 
-def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
-    # DEPRECATE:  Replace with route / fuzzyRoute logic which incorporates normal routing engine  
+# def trackWall2(bo, sn, rotation=CONST.clockwise, proximity=0):
+#     # DEPRECATE:  Replace with route / fuzzyRoute logic which incorporates normal routing engine  
 
-    # TODO:  Update for proximity (ie. X squares away from edge).  
-    w = bo.getWidth()
-    h = bo.getHeight()
-    a = sn.getHead() # [0,0] 
-    d = sn.getDirection()  # left, right, up, down
+#     # TODO:  Update for proximity (ie. X squares away from edge).  
+#     w = bo.getWidth()
+#     h = bo.getHeight()
+#     a = sn.getHead() # [0,0] 
+#     d = sn.getDirection()  # left, right, up, down
     
-    # Coordinates - start [ay, ax]
-    ax = a[1]
-    ay = a[0]
-    a1 = [0] * 2
+#     # Coordinates - start [ay, ax]
+#     ax = a[1]
+#     ay = a[0]
+#     a1 = [0] * 2
 
-    r = rotation    # cw, ccw
-    p = proximity   # 0, 1, 2..
+#     r = rotation    # cw, ccw
+#     p = proximity   # 0, 1, 2..
 
     
-    for i in range(0, 4):
-        # Add one point in current direction 
-        a1[0] = ay + CONST.directionMap[d][0]
-        a1[1] = ax + CONST.directionMap[d][1]
+#     for i in range(0, 4):
+#         # Add one point in current direction 
+#         a1[0] = ay + CONST.directionMap[d][0]
+#         a1[1] = ax + CONST.directionMap[d][1]
         
-        # No collision & in bounds 
-        if( 0 <= a1[0] < w and 0 <= a1[1] < h):
-            bs = bo.solid[a1[0], a1[1]] 
-            bt = bo.threat[0][a1[0], a1[1]] 
-            pt = CONST.pointThreshold
-            ag = sn.getAggro()
+#         # No collision & in bounds 
+#         if( 0 <= a1[0] < w and 0 <= a1[1] < h):
+#             bs = bo.solid[a1[0], a1[1]] 
+#             bt = bo.threat[0][a1[0], a1[1]] 
+#             pt = CONST.pointThreshold
+#             ag = sn.getAggro()
 
-            # Not solid, low threat, not enclosed
-            move = fn.translateDirection(a, a1)
-            length = sn.getLength()
+#             # Not solid, low threat, not enclosed
+#             move = fn.translateDirection(a, a1)
+#             length = sn.getLength()
         
-            if (bs < pt and bt < ag and length < bo.enclosed[move]):
-              # print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
-              break
+#             if (bs < pt and bt < ag and length < bo.enclosed[move]):
+#               # print("TRACK-SOLID", str(bo.solid[a1[0], a1[1]]))
+#               break
         
-        # Rotate direction & try again 
-        if(r == CONST.counterclockwise): 
-            d = CONST.ccwMap[d] 
-        else:
-            d = CONST.cwMap[d]
+#         # Rotate direction & try again 
+#         if(r == CONST.counterclockwise): 
+#             d = CONST.ccwMap[d] 
+#         else:
+#             d = CONST.cwMap[d]
      
-    bo.logger.log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
-    return a1
+#     bo.logger.log('strategy-trackwall', str(w), str(h), str(a), str(d), str(r), str(p), str(a1))
+#     return a1
 
 
 def getSnakeTails(snakes): 
@@ -1115,8 +1107,7 @@ def controlSpace(bo, us, snakes):
     return copy.copy(target)
 
 
-
-def enemyStrategy(bo, us, snakes, future=2): 
+def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy): 
     # (1) select possible paths for enemy
     dirn_avoid = []
     
@@ -1128,7 +1119,9 @@ def enemyStrategy(bo, us, snakes, future=2):
     sid_us = bo.getIdentity()
     length_us = snakes[sid_us].getLength()
     steps_us = snakes[sid_us].getNextSteps()
-    
+    if not len(steps_us):
+        return [] 
+        
     for sid in snakes:
         if sid != sid_us:     
             snake = snakes[sid]
@@ -1186,21 +1179,10 @@ def enemyStrategy(bo, us, snakes, future=2):
                                 # self.markov[dy,dx] = CONST.routeThreshold
 
     snakes[sid_us].setNextSteps(steps_us)
-    # print("FINAL PATHS", dirn_avoid, steps_us)
+    print("FINAL PATHS", dirn_avoid, steps_us)
     # return directions to avoid (mark as not reachable)
     return dirn_avoid
 
-
-def findLargestLength(snakes): 
-
-    length_max = 0
-    for sid in snakes: 
-        snake = snakes[sid]
-        length = snake.getLength()
-        if length > length_max:
-          length_max = length
-
-    return max(length_max, CONST.lookAheadPath)
 
 
 # == DEPRECATE / DELETE == 

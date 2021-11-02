@@ -11,7 +11,7 @@ import numpy as np
 import copy as copy
 
 import time as time
-from logger import log
+from logClass import log
 
 import constants as CONST
 import functions as fn
@@ -93,6 +93,7 @@ class board():
                     # Recursion.  Check which prediction matrix to use based on number of turns (t)
                     turn = turn + 1
                     self.updateGradient(a1, turn)
+
 
     def updateGradientFix(self, a):
         # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn (eg. loop around & think not there)

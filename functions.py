@@ -242,4 +242,15 @@ def isClosest(a, b, others):
 import constants as CONST
 
 
+def findLargestLength(snakes): 
+
+    length_max = 0
+    for sid in snakes: 
+        snake = snakes[sid]
+        length = snake.getLength()
+        if length > length_max:
+          length_max = length
+
+    return max(length_max, CONST.lookAheadPath)
+
 # == DEPRECATE / DELETE == 

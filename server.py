@@ -48,7 +48,8 @@ def handle_start():
     game_id = data['game']['id']
 
     players = []
-    for snake in data['snakes']:
+    # print(data)
+    for snake in data['board']['snakes']:
         player = snake['name']
         players.append(player)
 
@@ -133,11 +134,12 @@ def handle_move(testData="", testOverride=False):
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
     logger.timer('updateDijkstra')
     theBoard.updateDijkstra(allSnakes)
-    logger.timer('updateGradient')
-    theBoard.updateGradient(ourSnek.getHead()) 
-    theBoard.updateGradientFix(ourSnek.getHead())
+    logger.timer('updateBest')
+    theBoard.updateBest(ourSnek.getHead())
     
-    # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
+    # DEPRECATE -- BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
+    # theBoard.updateGradient(ourSnek.getHead()) 
+    # theBoard.updateGradientFix(ourSnek.getHead())
        
     # Initialisation complete 
     logger.timer('== Init complete ==')

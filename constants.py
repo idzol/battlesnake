@@ -22,9 +22,11 @@ logfile_error = "error.log"
 
 
 # TODO:  Performance testing 
-# Localhost performance vs production 
-lookAheadEnemy = 5    # Enemy prediction 
-lookAheadPath = 20    # Path prediction 
+# TODO:  Converge these over time .. 
+lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
+lookAheadEnemy = 5          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
+lookAheadPath = 20          # Path prediction 
+lookAheadPathContinue = 40  # Path continue 
 maxRecursion = 3000
 
 
@@ -38,7 +40,11 @@ if (environment == 'prod'):
     'json':True,
     'console':False  
   }
-
+  # Time variable 
+  timeStart = 300
+  timeMid = 350
+  timeEnd = 400
+  timePanic = 400
 
 elif (environment == 'preprod'): 
   # Preprod (cloud run)
@@ -50,7 +56,11 @@ elif (environment == 'preprod'):
     'json':True,
     'console':False  
   }
-
+  # Time variable 
+  timeStart = 300
+  timeMid = 350
+  timeEnd = 400
+  timePanic = 400
 
 else:
   # Dev (localhost) 
@@ -62,14 +72,11 @@ else:
     'json':False,
     'console':True  
   }
-
-
-# Time variable 
-timeStart = 300
-timeMid = 350
-timeEnd = 400
-timePanic = 400
-
+  # Time variable 
+  timeStart = 3000
+  timeMid = 3500
+  timeEnd = 4000
+  timePanic = 4000
 
 # Routing threshold - collision probability
 routeThreshold = 99   # Ignore if route larger 
