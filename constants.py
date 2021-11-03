@@ -25,8 +25,8 @@ logfile_error = "error.log"
 # TODO:  Converge these over time .. 
 lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
 lookAheadEnemy = 5          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
-lookAheadPath = 20          # Path prediction 
-lookAheadPathContinue = 40  # Path continue 
+lookAheadPath = 20          # Path prediction (Random)
+lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
 maxRecursion = 3000
 
 
@@ -80,11 +80,11 @@ else:
 
 # Routing threshold - collision probability
 routeThreshold = 99   # Ignore if route larger 
-pointThreshold = 20   # Ignore if any step larger
+pointThreshold = 25   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
 routeSolid = 500
-routeHazard = 15 
+routeHazard = 15
 routeCell = 1
 
 # Game phases

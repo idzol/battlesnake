@@ -164,14 +164,14 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     # Returns target (next move) based on inputs 
 
     # State Machine 
-    # 1) Find target
-    # 2) Find route to target 
-    # 3) Find route padding (check safety) 
-    # 4) Check target, route, route padding 
-    # 5) Repeat until found  
-    # 6) If not found - select best routte 
+    # (1) Find target
+    # (2) Find route to target 
+    # (3) Find route padding (check safety) 
+    # (4) Check target, route, route padding 
+    # (5) Repeat until found  
+    # (6) If not found - select best routte 
 
-    depth = CONST.lookAheadPath
+    depth = CONST.lookAheadPathContinue
 
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
@@ -197,12 +197,13 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
     # alltails = getSnakeTails(snakes)
 
     # State machine 
-    found = False
     hurry = False
     i = 0  
     
     while 1:
+
       # Reset every turn 
+      found = False 
       target = []
       route = []
       route_padded = []
@@ -402,45 +403,47 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           # Defensive 
           
           if(strategy[1]==''):  
-            # Find any way out .. 
-            # TODO: Move this to "target = start" & let route Padding do the lest 
-            weight_route = 0
-            route_padded, weight_padding = bo.routePadding([start], snakes, foods)  
-            if len(route_padded):
-              # Bypass routing
-              found = True 
-              # Remove start point (head)
-              # route.pop(0) 
-              # Target is last point (reassess every turn)
-              target = route_padded[-1]
-              target_method = "routePadding"
-            
-            else:
-              target = []
+            # Find any way out using routePadding
+            target = copy.copy(start)
+            target_method = "survive"
 
-          bo.logger.log('strategy-survive. Route: %s Weight %s' % (route, weight_route))
+            # weight_route = 0
+            # route_padded, weight_padding = bo.routePadding([start], snakes, foods)  
+            # if len(route_padded):
+            #   # Bypass routing
+            #   found = True 
+            #   # Remove start point (head)
+            #   # route.pop(0) 
+            #   # Target is last point (reassess every turn)
+            #   target = route_padded[-1]
+            #   target_method = "routePadding"
+            
+            # else:
+            #   target = []
+
+          bo.logger.log('strategy-survive', 'Target: %s' % (target))
         
 
-      # 2) Find route to target 
-      if (not found):
+      # (2) Find route to target 
+      if (len(target)):
         # Find route to target 
         if 'numpy' in str(type(target)):
             # Target is an area 
-            bo.logger.log('strategy-route', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            bo.logger.log('strategy-target', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
             # route, weight = bo.route(start, target, sn)
             route, weight_route = bo.fuzzyRoute(start, target)
             route_method = "fuzzyRoute"
 
         elif 'list' in str(type(target)) and bo.inBounds(target):
             # Target is a point -- type == <class 'list'> 
-            bo.logger.log('strategy-route', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
+            bo.logger.log('strategy-target', "TARGET %s %s %s %s" % (str(strategy), str(start), str(target), str(i)))
             route, weight_route = bo.route(start, target)
             route_method = "route"
 
         # print("STRATEGY ROUTE WEIGHT", route, weight_route)
       
 
-        # 3) Find route padding
+        # (3) Find route padding
         if (len(route)):
             # Find safe path away 
 
@@ -451,33 +454,37 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
             # route = copy.copy(fn.getPointsInRoute(route))
             
             # If route valid 
-            bo.logger.log('strategy-route-final', "ROUTE %s %s %s %s" % (str(start), str(route), target_method, route_method))
+            bo.logger.log('strategy-route', "ROUTE start:%s path:%s method:'%s %s' weight_route:%s weight_padding:%s" % \
+                  (str(start), str(route), target_method, route_method, weight_route, weight_padding))
             
             # Pad out route to N moves 
-            route_padded, weight_padding = bo.routePadding(route, snakes, foods) 
+                    # Look ahead by lenght of largest snake 
+            lookahead = max(depth, fn.findLargestLength(snakes))
+            route_padded, weight_padding = bo.routePadding(route, snakes, foods, lookahead) 
             
-            # Sufficient to live 
-            # TODO:  Increase route padding to largest .. 
-            # 
-            if len(route_padded) >= min(length, CONST.lookAheadPath): 
-                found = True  
-
             # If not - keep looking and will be prioritised later 
-            bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
-            
-
-      # 4) Check target, route, route padding are safe 
+            # bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" \
+            #       % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
+          
+      # (4) Check target, route, route padding are safe 
       weight_total = weight_padding + weight_route
       route_length = len(route_padded)
-      weight_total -= route_length
-      sn.addRoutes(route_padded, weight_total, route_length, strategy[0])
-
-      bo.logger.log("strategy-add-route", route_padded, weight_total, route_length, strategy[0])
-      if (found and len(route_padded) and weight_total < CONST.pointThreshold): 
+      weight_total -= route_length 
+      # print("WEIGHT", weight_padding, weight_route)
       
+      lookahead_min = min(depth, fn.findLargestLength(snakes))
+      sn.addRoutes(route_padded, weight_total, route_length, strategy[0])
+      bo.logger.log("strategy-add-route", "ROUTE ADDED Route: %s Weight: %s, Length: %s, Strategy: %s" %
+                          (route_padded, weight_total, route_length, strategy[0]))
+
+      # print("DEBUG", CONST.pointThreshold, lookahead_min)
+
+      # TODO: How do we define a "good" route?
+      if (weight_total <= CONST.pointThreshold and len(route_padded) >= lookahead_min): 
+          found = True 
           # Safe path to & away found
           route = copy.copy(route_padded)
-          bo.logger.log('strategy-found', 'Path found \nTarget:%s \nRoute:%s \nReason:%s %s \n' %
+          bo.logger.log('strategy-found', 'PATH FOUND Target:%s Route:%s Strategy:%s %s' %
                             (str(target), str(route), target_method, route_method))
           
           # Normal exit from loop
@@ -491,7 +498,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
           hurry = True   
           
       bo.logger.timer('Strategy search')
-        
+
+
       # Termination of loop 
       # No more strategy
       # Time expired 
@@ -499,7 +507,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
       if (not len(strategylist) or hurry or i > depth):
           bo.logger.log('timer-hurry strategy:%s hurry:%s depth:%s / %s' % (len(strategylist), hurry, i, depth))
       
-          # print("STRATEGY EXIT", len(strategylist), hurry, depth)
+      # print("STRATEGY EXIT", len(strategylist), hurry, depth)
       #   Exit loop
           target = []
           route = []
@@ -547,7 +555,6 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
     p = []
 
     # print("SNAKE PATHS", sn.getRoutes())
-
     while len(route):
       # Preferred route 
       route_method = 'route_stateMachine'
@@ -564,8 +571,8 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
         routes = sn.getRoutes() 
         bo.logger.log('route-not-found %s' % str(routes))
         # Best = Longest length (eg. 25) / lowest weight (50%) 
+        rfactor = 0
         if len(routes):
-          rfactor = 0
           route = []
           for r in routes:
             # len(r['route'])
@@ -586,7 +593,9 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
               found = True 
               break 
 
- 
+        bo.logger.log('route-last-resort rfactor:%s route:%s' % (rfactor, str(route)))
+        
+
     # 7) Translate next point to direction
     move = fn.translateDirection(start, p)
     
@@ -1179,7 +1188,7 @@ def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy):
                                 # self.markov[dy,dx] = CONST.routeThreshold
 
     snakes[sid_us].setNextSteps(steps_us)
-    print("FINAL PATHS", dirn_avoid, steps_us)
+    # print("FINAL PATHS", dirn_avoid, steps_us)
     # return directions to avoid (mark as not reachable)
     return dirn_avoid
 

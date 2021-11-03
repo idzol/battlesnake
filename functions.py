@@ -251,6 +251,6 @@ def findLargestLength(snakes):
         if length > length_max:
           length_max = length
 
-    return max(length_max, CONST.lookAheadPath)
+    return length_max
 
 # == DEPRECATE / DELETE == 

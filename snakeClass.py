@@ -13,7 +13,7 @@ class snake:
 
     def __init__(self, logger=log(), data="", ):
 
-        depth = CONST.lookAheadPath
+        depth = CONST.lookAheadPathContinue
         depth_enemy = CONST.lookAheadEnemy
 
         self.logger = logger
