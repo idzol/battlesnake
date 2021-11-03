@@ -165,14 +165,14 @@ class log():
           }
 
         if(logging['json']):
-          json_output = json.dumps(output)
-          stdout_print.write("%s\n" % json_output)
-
+            json_output = json.dumps(output)
+            stdout_print.write("%s\n" % json_output)
 
         if(logging['file']):
-          f = open(logfile, "a")
-          f.write(json_output+"\n")
-          f.close()
+            f = open(logfile, "a")
+            if (logging['json']):
+                f.write(json_output+"\n")
+            f.close()
 
 
     def players(self, data):
@@ -350,7 +350,7 @@ class log():
           
           if logging['console']:
             stdout_print = sys.stdout
-            stdout_print.write("%s: %s\n" % (name, output))
+            stdout_print.write("%s\n %s\n" % (name, output))
 
           else:
             self.log(name, output)

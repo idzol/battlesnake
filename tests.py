@@ -8,24 +8,70 @@ import unittest
 import json 
 import constants as CONST
 
-# import ast 
-
-# import test_eat
-# import test_functions
-# import test_gradient
-# import test_markov 
-# import test_route
 
 import functions as fn 
-from logic import checkInterrupts, stateMachine, translatePath, getClosestItem, getItemByName
+from logic import checkInterrupts, stateMachine, makeMove
 
 import numpy as np
 
 from snakeClass import snake
 from boardClass import board
-from itemClass import item
+from logClass import log 
+
 
 # ============ TEST DATA =================
+
+test_route_enemytail = np.array(
+[[31, 30, 0],
+ [20, 21, 24],
+ [ 0, 22, 23]])
+
+test_route_enemycollide = np.array(
+[[ 0, 30, 31],
+ [20, 21, 24],
+ [ 0, 22, 23]])
+
+test_route_foodtail_nopath = np.array(
+[[ 0,  0, 0],
+ [20, 21, 0],
+ [-10, 22, 23]])
+
+test_route_foodtail_path = np.array(
+[[ 0,  0, 0],
+ [20, 21, 0],
+ [-10, 22, 0]])
+
+test_route_tail = np.array(
+[[ 0, 28, 27, 0],
+ [20, 21, 26, 0],
+ [ 0, 22, 25, 0]
+ [ 0, 23, 24, 0]])
+
+test_route_death_chance = np.array(
+[[ 0,  0,  0,  0],
+ [ 0, 30, 31, 34],
+ [20, 21, 32, 33],
+ [ 0, 22, 23,  0]])
+
+test_route_enemy_food = np.array(
+[[34, 33, 30,-10],
+ [ 0, 32, 31,  0],
+ [20, 21,  0,  0],
+ [ 0, 22,  0,  0]])
+
+
+# test_route_tail 
+# 3.1 chase tail vs larger space
+ 
+# test_route_death_chance 
+# 4.1 route prioritisation - certain death vs 50% death 
+
+# test_route_us_food
+# 5.1 tail abort post food 
+
+# test_route_enemy_food
+# 6.1 predict enemy routes - incorporate food into turn 
+
 
 ## MAP0
 test_map0 = np.array(
@@ -113,9 +159,6 @@ test_map3 = np.array(
 test_map3_wall_route = [[5, 3], [5, 4], [5, 5], [5, 6]]
 
 
-
-
-
 global json_template
 json_template = """
 {
@@ -186,11 +229,6 @@ json_template = """
 }
 """
 
-if __name__ == "__main__":
-    unittest.main()
-    # getRouteToTargetTest()
-    # boardClassTest()
-
 
 def loadTestData(test_map):
   global json_template
@@ -209,6 +247,9 @@ def loadTestData(test_map):
   hazards = []
   foods = []
   
+  you_body_len = 0 
+  enemy_body_len = 0 
+  
   for row in test_map:
       y = y - 1
       x = 0
@@ -216,23 +257,47 @@ def loadTestData(test_map):
         xy = {'x':x, 'y':y}
         if (cell==CONST.legend['you-head']):
           you_head = xy
-        elif(cell==CONST.legend['you-body']):
-          you_body.append(xy)
-        elif(cell==CONST.legend['you-tail']):
-          you_body.append(xy)
-          # may be inserted out of order ..
+        # TODO: Move to constants.  You = 20-29
+        elif(cell==CONST.legend['you-body'] or (cell > 20 and cell < 30)):
+          you_body_len += 1    
         elif(cell==CONST.legend['enemy-head']):
           enemy_head = xy
-        elif(cell==CONST.legend['enemy-body']):
-          enemy_body.append(xy)
-        elif(cell==CONST.legend['enemy-tail']):
-          you_body.append(xy)
+        # TODO: Move to constants.  Enemy = 30-29
+        elif(cell==CONST.legend['enemy-body'] or (cell > 30 and cell < 40)):
+          enemy_body_len += 1 
         elif(cell==CONST.legend['food']): 
           foods.append(xy)    
         elif(cell==CONST.legend['hazard']):
           hazards.append(xy)
         x = x + 1
-        
+
+  you_body = [0] * (you_body_len + 1)
+  you_body[0] = you_head
+  enemy_body = [0] * (enemy_body_len + 1)
+  enemy_body[0] = enemy_head
+  
+  # Print body in correct order 
+  y = width
+  x = 0
+  for row in test_map:
+      y = y - 1
+      x = 0
+      for cell in row:
+        xy = {'x':x, 'y':y}
+        # TODO: Move to constants.  You 20-29, Enemy 30-39
+        if(cell > 20 and cell < 30):
+          offset = cell - 20
+          you_body[offset] = xy   
+
+        elif(cell > 30 and cell < 40):
+          offset = cell - 30
+          enemy_body[offset] = xy   
+          
+        x = x + 1
+
+  # print(you_body)
+  # print(enemy_body)
+
   json_v = { 
       '$height':str(height),
       '$width':str(width),
@@ -265,23 +330,24 @@ def loadTestData(test_map):
   return d
 
 
+
 # =========================================
 class functionsTest(unittest.TestCase):
 
-  def test_getDirection(self): 
+  # def test_getDirection(self): 
       
-      a = [1,1]
-      bn = [[1,2],[1,0],[2,1],[0,1]]
-      cn = ['right','left','up','down']
-      # X - left, right [0][X]
-      # Y - up, down.   [Y][0] 
+  #     a = [1,1]
+  #     bn = [[1,2],[1,0],[2,1],[0,1]]
+  #     cn = ['right','left','up','down']
+  #     # X - left, right [0][X]
+  #     # Y - up, down.   [Y][0] 
 
-      # QA: consider [1,1], better error handling  etc.. 
-      i = 0
-      for b in bn: 
-        c = cn.pop(0)
-        result = fn.getDirection(a, b)
-        self.assertEqual(result, c)
+  #     # QA: consider [1,1], better error handling  etc.. 
+  #     i = 0
+  #     for b in bn: 
+  #       c = cn.pop(0)
+  #       result = fn.getDirection(a, b)
+  #       self.assertEqual(result, c)
 
 
   def test_comparePoints(self):
@@ -357,8 +423,145 @@ class boardClassTest(unittest.TestCase):
 
     # def __init__():
 
-    def test_boardClassInit(self):
-      pass 
+
+    def initBoard(self, data): 
+
+        logger = log()    
+        game_id = data['game']['id']
+        
+        # Init objects 
+        theBoard = board(logger)
+        ourSnek = snake(logger)
+        
+        turn = data['turn']
+        identity = data['you']['id']
+        theBoard.setIdentity(identity)
+
+        theFoods = []
+        foods = data['board']['food']
+        for f in foods:
+          food = [f['y'], f['x']]
+          theFoods.append(food)
+
+        # Set our snake 
+        ourSnek.setAll(data['you'])
+        ourSnek.setId(identity)
+        ourSnek.setType("us")
+            
+        # Set all snakes
+        allSnakes = {} 
+        snakes = data['board']['snakes']
+        
+        for alive in snakes:
+          identity = alive['id']
+          if (identity == ourSnek.getId()):
+            # We are alive! 
+            allSnakes[identity] = ourSnek
+
+          else:
+            # Enemy snake alive (& exists)
+            if (alive['head'] and alive['body'] != ['']): 
+              allSnakes[identity] = snake(logger)
+              allSnakes[identity].setId(identity)
+              allSnakes[identity].setType("enemy")
+              allSnakes[identity].setEnemy(alive)
+
+        # If boards need to be initialised 
+        # silent = True 
+        # response = handle_move(data, silent)
+
+        for sid in allSnakes:
+            # if sid != ourSnek.getId(): 
+            snek = allSnakes[sid]
+            # print(snek.getHeadBody()) 
+
+        theBoard.updateBoards(data, ourSnek, allSnakes, theFoods) 
+        theBoard.updateChance(allSnakes, theFoods)
+        theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
+        theBoard.updateDijkstra(allSnakes)
+        theBoard.updateGradient(ourSnek.getHead()) 
+        theBoard.updateGradientFix(ourSnek.getHead())
+        
+        return (theBoard, ourSnek, allSnakes, theFoods)
+
+
+    def test_routeBasic(self): 
+    
+        # theBoard.showMaps()
+        # print(theBoard.markovs[0])
+        # print(theBoard.dijkstra[0])
+        # print(theBoard.gradient[0])
+        # print(theBoard.combine)
+        # print(theBoard.trails)
+      
+        # ============ Tests ============
+        # 1.1 -- Route to enclosed square
+        data = loadTestData(test_route_enemytail)
+        (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        # [[31, 30, 0],
+        # [20, 21, 24],
+        # [ 0, 22, 23]])
+        start = ourSnek.getHead()
+        target = [0, 0] 
+        route, weight = theBoard.route(start, target, ourSnek)
+        # print("1.1 -- Route to enclosed square.  %s should be %s" % (route, [target]))
+        self.assertEqual(route, [target])
+        
+        # 1.2 -- Route away from enclosed (should fail, no path)
+        final = target
+        route, weight = theBoard.routePadding([final], allSnakes, foods, 3)
+        # print("1.2 -- Route away from enclosed (should fail, no path).  %s should be %s" % (route, []))
+        print(route, weight)
+        self.assertEqual(route, [])
+        
+        # 1.3 -- Route to enemy tail
+        target = [2, 0] 
+        route, weight = theBoard.route(start, target, ourSnek)
+        # print("1.3 -- Route to enemy tail.  %s should be %s" % (route, [target]))
+        self.assertEqual(route, [target])
+        
+        # 1.4 -- Route away from enemy tail
+        final = target
+        route, weight = theBoard.routePadding([final], allSnakes, foods)
+        # print("1.4 -- Route away from enemy tail.  %s should contain %s" % (route, [2,1]))
+        self.assertIn([2,1], route)
+      
+        # 2.1 -- Us eating.  Confirm no path through tail (length + 1)
+        data = loadTestData(test_route_foodtail_nopath)
+        (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        # [[ 0,  0, 0],
+        # [20, 21, 0],
+        # [-10, 22, 23]])
+        start = ourSnek.getHead()
+        target = [0, 0] 
+        route, weight = theBoard.route(start, target, ourSnek)
+        final = target
+        route, weight = theBoard.routePadding([final], allSnakes, foods, 1)
+        # print("2.1 -- Us eating.  No route through tail.  %s should be %s" % (route, []))
+        self.assertEqual(route, [])
+        
+        # 2.2 -- Us eating.  Confirm path (turn > length)
+        data = loadTestData(test_route_foodtail_path)
+        # [[ 0,  0, 0],
+        # [20, 21, 0],
+        # [-10, 22, 0]])
+        (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        final = target
+        route, weight = theBoard.routePadding([final], allSnakes, foods)
+        # print("2.2 -- Us eating.  Route through tail.  %s should contain %s" % (route, [0, 1]))
+        self.assertIn([0, 1], route)
+        
+
+  
+        # X.1 -- Route to smaller snake (100% prob)
+        # data = loadTestData(test_route_enemycollide)
+        # (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        # # [[ 0, 30, 31],
+        # # [20, 21, 24],
+        # # [ 0, 22, 23]])
+
+        # X.2 -- Route see through dead snake (if 100%..)
+
 
     def test_setGetDimensions(self):
       
@@ -398,7 +601,7 @@ class boardClassTest(unittest.TestCase):
       
       i = 0 
       for a in an:
-        result = b.XYToLoc(a)
+        result = fn.XYToLoc(a)
         self.assertEqual(result, cn[i])
         i = i + 1
         
@@ -413,133 +616,134 @@ class boardClassTest(unittest.TestCase):
       # get path 
       
       # self.assertEqual(result, c)
-    def test_findClosestWall(self):
+
+    # def test_findClosestWall(self):
     
-      bo = board()
-      sn = snake()
+    #   bo = board()
+    #   sn = snake()
   
-      data = loadTestData(test_map0)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
-      sn.setLocation(data)
+    #   data = loadTestData(test_map0)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
+    #   sn.setLocation(data)
       
-      c = test_map0_wall_route
-      result = bo.findClosestWall(sn)
-      print(str(result))
-      self.assertEqual(result, c)
+    #   c = test_map0_wall_route
+    #   result = bo.findClosestWall(sn)
+    #   print(str(result))
+    #   self.assertEqual(result, c)
 
 
-      data = loadTestData(test_map3)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
-      sn.setLocation(data)
+    #   data = loadTestData(test_map3)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
+    #   sn.setLocation(data)
       
-      c = test_map3_wall_route
-      result = bo.findClosestWall(sn)
-      print(str(result))
-      self.assertEqual(result, c)
+    #   c = test_map3_wall_route
+    #   result = bo.findClosestWall(sn)
+    #   print(str(result))
+    #   self.assertEqual(result, c)
 
 
-    def test_findDirectionWith(self):
+    # def test_findDirectionWith(self):
 
-      bo = board()
+    #   bo = board()
 
-      data = loadTestData(test_map0)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
+    #   data = loadTestData(test_map0)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
       
-      c = test_map0_dirn_empty
-      result = bo.findDirectionWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
+    #   c = test_map0_dirn_empty
+    #   result = bo.findDirectionWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
 
-      c = test_map0_dirn_food
-      result = bo.findDirectionWith(CONST.legend['food'])
-      self.assertEqual(result, c)
-
-
-      data = loadTestData(test_food)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
-
-      c = test_map1_dirn_empty
-      result = bo.findDirectionWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
-
-      c = test_map1_dirn_food
-      result = bo.findDirectionWith(CONST.legend['food'])
-      self.assertEqual(result, c)
+    #   c = test_map0_dirn_food
+    #   result = bo.findDirectionWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)
 
 
-      data = loadTestData(test_food2)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
+    #   data = loadTestData(test_food)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
 
-      c = test_map2_dirn_empty
-      result = bo.findDirectionWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
+    #   c = test_map1_dirn_empty
+    #   result = bo.findDirectionWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
 
-      c = test_map2_dirn_food
-      result = bo.findDirectionWith(CONST.legend['food'])
-      self.assertEqual(result, c)
-
-
-    def test_findQuadrantWith(self):
-
-      bo = board()
-      data = loadTestData(test_map0)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
-
-      c = test_map0_quad_empty
-      result = bo.findQuadrantWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
-
-      c = test_map0_quad_food
-      result = bo.findQuadrantWith(CONST.legend['food'])
-      self.assertEqual(result, c)     
+    #   c = test_map1_dirn_food
+    #   result = bo.findDirectionWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)
 
 
-      bo = board()
-      data = loadTestData(test_food)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
+    #   data = loadTestData(test_food2)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
+
+    #   c = test_map2_dirn_empty
+    #   result = bo.findDirectionWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
+
+    #   c = test_map2_dirn_food
+    #   result = bo.findDirectionWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)
+
+
+    # def test_findQuadrantWith(self):
+
+    #   bo = board()
+    #   data = loadTestData(test_map0)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
+
+    #   c = test_map0_quad_empty
+    #   result = bo.findQuadrantWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
+
+    #   c = test_map0_quad_food
+    #   result = bo.findQuadrantWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)     
+
+
+    #   bo = board()
+    #   data = loadTestData(test_food)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
       
-      c = test_map1_quad_empty
-      result = bo.findQuadrantWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
+    #   c = test_map1_quad_empty
+    #   result = bo.findQuadrantWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
 
-      c = test_map1_quad_food
-      result = bo.findQuadrantWith(CONST.legend['food'])
-      self.assertEqual(result, c)
+    #   c = test_map1_quad_food
+    #   result = bo.findQuadrantWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)
 
 
-      data = loadTestData(test_food)
-      w = data['board']['width']
-      h = data['board']['height']
-      bo.setDimensions(w, h)
-      bo.updateBoards(data)
+    #   data = loadTestData(test_food)
+    #   w = data['board']['width']
+    #   h = data['board']['height']
+    #   bo.setDimensions(w, h)
+    #   bo.updateBoards(data)
       
-      c = test_map2_quad_empty
-      result = bo.findQuadrantWith(CONST.legend['empty'])
-      self.assertEqual(result, c)
+    #   c = test_map2_quad_empty
+    #   result = bo.findQuadrantWith(CONST.legend['empty'])
+    #   self.assertEqual(result, c)
  
-      c = test_map2_quad_food
-      result = bo.findQuadrantWith(CONST.legend['food'])
-      self.assertEqual(result, c)
+    #   c = test_map2_quad_food
+    #   result = bo.findQuadrantWith(CONST.legend['food'])
+    #   self.assertEqual(result, c)
     
 
     def loadTestPath(test_map):
@@ -567,144 +771,133 @@ class boardClassTest(unittest.TestCase):
 # ======================================
 class logicTest(unittest.TestCase):
   
-  def test_selectDestChooseMove(self):
+    pass 
+
+  # def test_selectDestChooseMove(self):
         
-    # bo.setDimensions(data)
+  #   # bo.setDimensions(data)
 
-    data = loadTestData(test_food)
+  #   data = loadTestData(test_food)
     
-    sn = snake()
+  #   sn = snake()
     
-    w = data['board']['width']
-    h = data['board']['height']
-    bo = board()
-    bo.setDimensions(w, h)
+  #   w = data['board']['width']
+  #   h = data['board']['height']
+  #   bo = board()
+  #   bo.setDimensions(w, h)
 
-    foods = data['board']['food']
-    # print(str(foods))
-    theItems = []
-    for f in foods:
-      it = item("food", f) 
-      theItems.append(it)  
-      # print(str(f))
+  #   foods = data['board']['food']
+  #   # print(str(foods))
+  #   theItems = []
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     theItems.append(it)  
+  #     # print(str(f))
 
-    c = test_foodtarget
-    result = stateMachine(bo, sn, theItems)
-    # self.assertEqual(result, c)
+  #   c = test_foodtarget
+  #   result = stateMachine(bo, sn, theItems)
+  #   # self.assertEqual(result, c)
 
-    bo.updateBoards(data)
-    sn.setLocation(data)
-    sn.setTarget(result)
-    # sn.setTarget([0,6])
+  #   bo.updateBoards(data)
+  #   sn.setLocation(data)
+  #   sn.setTarget(result)
+  #   # sn.setTarget([0,6])
     
-    result = translatePath(bo, sn)
+  #   result = makeMove(bo, sn)
 
-    c = test_foodmove
-    self.assertEqual(result, c)
+  #   c = test_foodmove
+  #   self.assertEqual(result, c)
 
-    data = loadTestData(test_food2)
+  #   data = loadTestData(test_food2)
     
-    bo.updateBoards(data)
-    sn.setLocation(data)
-    sn.setTarget(result)
+  #   bo.updateBoards(data)
+  #   sn.setLocation(data)
+  #   sn.setTarget(result)
 
-    foods = data['board']['food']
-    items = []
-    for f in foods:
-      it = item("food", f) 
-      items.append(it)
+  #   foods = data['board']['food']
+  #   items = []
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     items.append(it)
     
-    result = stateMachine(bo, sn, items)
-    c = test_foodtarget2
-    self.assertEqual(result, c)
+  #   result = stateMachine(bo, sn, items)
+  #   c = test_foodtarget2
+  #   self.assertEqual(result, c)
 
-    result = translatePath(bo, sn)
-    c = test_foodmove2
-    self.assertEqual(result, c)
+  #   result = translatePath(bo, sn)
+  #   c = test_foodmove2
+  #   self.assertEqual(result, c)
 
 
-  def test_getClosestItem(self):
+  # def test_getClosestItem(self):
     
-    # Test food 1 
-    bo = board()
-    items = []
+  #   # Test food 1 
+  #   bo = board()
+  #   items = []
     
-    data = loadTestData(test_food)
-    foods = data['board']['food']
+  #   data = loadTestData(test_food)
+  #   foods = data['board']['food']
 
-    for f in foods:
-      it = item("food", f) 
-      items.append(it)
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     items.append(it)
             
-    # Find distance from head to food 
-    loc = bo.XYToLoc(data['you']['head'])
-    result = getClosestItem(bo, items, loc, "food")
+  #   # Find distance from head to food 
+  #   loc = fn.XYToLoc(data['you']['head'])
+  #   result = getClosestItem(bo, items, loc, "food")
     
-    # Check result 
-    c = test_foodname
-    c = self.assertEqual(result, c)
+  #   # Check result 
+  #   c = test_foodname
+  #   c = self.assertEqual(result, c)
 
-    # Test food 2  
-    bo = board()
-    items = []
+  #   # Test food 2  
+  #   bo = board()
+  #   items = []
     
-    data = loadTestData(test_food2)
-    foods = data['board']['food']
+  #   data = loadTestData(test_food2)
+  #   foods = data['board']['food']
     
-    for f in foods:
-      it = item("food", f) 
-      items.append(it)
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     items.append(it)
   
-    loc = bo.XYToLoc(data['you']['head'])
-    result = getClosestItem(bo, items, loc, "food")
+  #   loc = bo.XYToLoc(data['you']['head'])
+  #   result = getClosestItem(bo, items, loc, "food")
 
-    c = test_foodname2  
-    c = self.assertEqual(result, c)
+  #   c = test_foodname2  
+  #   c = self.assertEqual(result, c)
 
 
-  def test_getItemByName(self):
+  # def test_getItemByName(self):
     
-    data = loadTestData(test_food)
-    foods = data['board']['food']
-    items = []
-    for f in foods:
-      it = item("food", f) 
-      items.append(it)
+  #   data = loadTestData(test_food)
+  #   foods = data['board']['food']
+  #   items = []
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     items.append(it)
 
-    name = test_foodname
-    it = getItemByName(items, name)
-    result = it.getLocation()
+  #   name = test_foodname
+  #   it = getItemByName(items, name)
+  #   result = it.getLocation()
 
-    c = test_foodtarget
-    self.assertEqual(result, c)
+  #   c = test_foodtarget
+  #   self.assertEqual(result, c)
 
-    data = loadTestData(test_food2)
-    foods = data['board']['food']
-    items = []
-    for f in foods:
-      it = item("food", f) 
-      items.append(it)
+  #   data = loadTestData(test_food2)
+  #   foods = data['board']['food']
+  #   items = []
+  #   for f in foods:
+  #     it = item("food", f) 
+  #     items.append(it)
 
-    name = test_foodname2
-    it = getItemByName(items, name)
-    result = it.getLocation()
+  #   name = test_foodname2
+  #   it = getItemByName(items, name)
+  #   result = it.getLocation()
     
-    c = test_foodtarget2
-    self.assertEqual(result, c)
+  #   c = test_foodtarget2
+  #   self.assertEqual(result, c)
     
-
-# ======================================
-
-class itemClassTest(unittest.TestCase):
-  
-  def test_getDistances(self):
-    pass 
-    # getDistances(self):
-
-  def test_getDistance(self):
-    pass 
-    # getDistance(self, thing):
-
 
 # ======================================
 # 
@@ -722,3 +915,14 @@ class itemClassTest(unittest.TestCase):
 
 #    logic 
 #       Separated functions to avoid recursion
+
+
+if __name__ == "__main__":
+    unittest.main()
+    # getRouteToTargetTest()
+    # boardClassTest()
+
+    functionsTest()
+    boardClassTest()
+    logicTest()
+

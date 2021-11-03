@@ -47,7 +47,22 @@ def handle_start():
     data = request.get_json()
     game_id = data['game']['id']
 
-    logger.message("start", data['game']['id'])
+    players = []
+    # print(data)
+    for snake in data['board']['snakes']:
+        player = snake['name']
+        players.append(player)
+
+    if len(players) == 2:
+        mode = 'duel'
+    else:
+        mode = 'arena'
+
+    # Print game ID, players & mode
+    logger.message("start", game_id)
+    logger.message("start-players", players)
+    logger.message("start-mode", mode)
+
     logger.print(data)
 
     return "ok" 
@@ -118,12 +133,13 @@ def handle_move(testData="", testOverride=False):
     logger.timer('updateMarkov')
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
     logger.timer('updateDijkstra')
-    theBoard.updateDijkstra(ourSnek)
-    logger.timer('updateGradient')
-    theBoard.updateGradient(ourSnek.getHead()) 
-    theBoard.updateGradientFix(ourSnek.getHead())
+    theBoard.updateDijkstra(allSnakes)
+    logger.timer('updateBest')
+    theBoard.updateBest(ourSnek.getHead())
     
-    # BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
+    # DEPRECATE -- BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
+    # theBoard.updateGradient(ourSnek.getHead()) 
+    # theBoard.updateGradientFix(ourSnek.getHead())
        
     # Initialisation complete 
     logger.timer('== Init complete ==')
@@ -202,8 +218,8 @@ def reporting(logger, board, us, snakes, data):
     # print('MOVE: Reporting complete')
 
     # Kill PID 
-    my_pid = os.getpid()
-    os.kill(my_pid, signal.SIGINT)
+    # my_pid = os.getpid()
+    # os.kill(my_pid, signal.SIGINT)
     os._exit(0)  
 
 

@@ -119,11 +119,11 @@ class boardTest(board):
             snake.setNextSteps(paths)
 
 
-    def isRoutePoint_simulate(step, turn, us, them):
-        if (them):
-            simulate = np.zeros([h, w], np.intc) 
-            for t in them: 
-                simulate[t[1],t[0]] = CONST.routeThreshold
+    # def isRoutePoint_simulate(step, turn, us, them):
+    #     if (them):
+    #         simulate = np.zeros([h, w], np.intc) 
+    #         for t in them: 
+    #             simulate[t[1],t[0]] = CONST.routeThreshold
 
 
     def simulateBoard_basic(snakes):

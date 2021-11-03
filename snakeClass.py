@@ -13,7 +13,7 @@ class snake:
 
     def __init__(self, logger=log(), data="", ):
 
-        depth = CONST.lookAheadPath
+        depth = CONST.lookAheadPathContinue
         depth_enemy = CONST.lookAheadEnemy
 
         self.logger = logger
@@ -195,16 +195,14 @@ class snake:
     def getNextSteps(self):
         # Future predict 
         return copy.copy(self.steps)    
-    
-
-    def addRoutes(self, start, target, route, weight, routetype):
+ 
+    def addRoutes(self, route, weight, length, reason):
         # Complex - potential routes 
         self.routes.append({
-          'start':start,
-          'target':target,
           'route':route,
           'weight':weight,
-          'routetype':routetype
+          'length':length,
+          'reason':reason
         })
 
     def getRoutes(self):

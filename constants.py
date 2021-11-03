@@ -22,9 +22,11 @@ logfile_error = "error.log"
 
 
 # TODO:  Performance testing 
-# Localhost performance vs production 
-lookAheadEnemy = 5    # Enemy prediction 
-lookAheadPath = 20    # Path prediction 
+# TODO:  Converge these over time .. 
+lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
+lookAheadEnemy = 5          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
+lookAheadPath = 20          # Path prediction (Random)
+lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
 maxRecursion = 3000
 
 
@@ -38,7 +40,11 @@ if (environment == 'prod'):
     'json':True,
     'console':False  
   }
-
+  # Time variable 
+  timeStart = 300
+  timeMid = 350
+  timeEnd = 400
+  timePanic = 400
 
 elif (environment == 'preprod'): 
   # Preprod (cloud run)
@@ -50,34 +56,35 @@ elif (environment == 'preprod'):
     'json':True,
     'console':False  
   }
-
+  # Time variable 
+  timeStart = 300
+  timeMid = 350
+  timeEnd = 400
+  timePanic = 400
 
 else:
   # Dev (localhost) 
   logLevel = 4
   logging = {
-    'data':False,
-    'file':False,
+    'data':True,
+    'file':True,
     'silent':False,
     'json':False,
     'console':True  
   }
-
-
-# Time variable 
-timeStart = 100
-timeMid = 200
-timeEnd = 250
-timePanic = 250
-
+  # Time variable 
+  timeStart = 3000
+  timeMid = 3500
+  timeEnd = 4000
+  timePanic = 4000
 
 # Routing threshold - collision probability
 routeThreshold = 99   # Ignore if route larger 
-pointThreshold = 20   # Ignore if any step larger
+pointThreshold = 25   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
 routeSolid = 500
-routeHazard = 15 
+routeHazard = 15
 routeCell = 1
 
 # Game phases
@@ -99,7 +106,7 @@ aggroMed = 50
 aggroLow = 20
 
 # Strategy 
-strategyDepth = 5   # max strategies to explore each turn
+strategyDepth = 100   # max strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
 
 # Strategy - control board 
