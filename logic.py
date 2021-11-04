@@ -26,7 +26,23 @@ from boardClass import board
     # Defend -- smaller snake .. 
     # Survive -- limited moves left 
     # .. 
-    
+
+
+def checkEnemy(bo:board, sn:snake, snakes):
+    # Update / modify routes before calculating route boards 
+
+    # Enemy kills us -- playing forward X turns
+    futuremoves = CONST.lookAheadEnemyStrategy
+    avoid = enemyStrategy(bo, sn, snakes, future=futuremoves)
+
+    if (len(avoid)):
+        # If enemy kill path found 
+        for path in avoid:
+            for turn in range(0, futuremoves):
+              # Mark cell 50% kill likelihood for N turns 
+              bo.updateCell(path, 50, turn)
+
+
 # Changes strategy (state machine) based on external influence 
 def checkInterrupts(bo:board, sn:snake, snakes):
 
@@ -47,19 +63,7 @@ def checkInterrupts(bo:board, sn:snake, snakes):
     larger = CONST.controlLargerBy
     
     reason = []
-
-    # Enemy kills us -- playing forward X turns
-    t = enemyStrategy(bo, sn, snakes)
-    if (len(t)):
-        # If enemy kill path found 
-        for path in t:
-            pass 
-            # Mark cell not reachable 
-            # WORKING:  Regression in other valid routes (server_test:12)
-            # Calculate better probability .. 
-            bo.updateCell(path, 90)
             
-
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
@@ -463,19 +467,23 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list):
             route_padded, weight_padding = bo.routePadding(route, snakes, foods, lookahead) 
             
             # If not - keep looking and will be prioritised later 
-            # bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" \
-            #       % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
+            bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" \
+                  % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
           
+
       # (4) Check target, route, route padding are safe 
-      weight_total = weight_padding + weight_route
+      weight_total = weight_route + weight_padding
       route_length = len(route_padded)
-      weight_total -= route_length 
+      # weight_total -= route_length 
       # print("WEIGHT", weight_padding, weight_route)
       
       lookahead_min = min(depth, fn.findLargestLength(snakes))
-      sn.addRoutes(route_padded, weight_total, route_length, strategy[0])
-      bo.logger.log("strategy-add-route", "ROUTE ADDED Route: %s Weight: %s, Length: %s, Strategy: %s" %
-                          (route_padded, weight_total, route_length, strategy[0]))
+
+      # TODO:  Clean up all the blank & routes to start ..       
+      if not (route in [[], [start]]):
+        sn.addRoutes(route_padded, weight_total, route_length, strategy[0])
+        bo.logger.log("strategy-add-route", "ROUTE ADDED Route: %s Weight: %s, Length: %s, Strategy: %s" %
+                            (route_padded, weight_total, route_length, strategy[0]))
 
       # print("DEBUG", CONST.pointThreshold, lookahead_min)
 
@@ -576,8 +584,13 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
           route = []
           for r in routes:
             # len(r['route'])
-            # TODO: Model this .. 
-            rnew = r['length'] / (r['weight'] + 1)
+            # TODO: Model this ..
+
+            if r['weight'] == 0:
+              rnew = 10 * r['length'] 
+            else:  
+              rnew = 10 * r['length'] / r['weight'] 
+              
             if rnew > rfactor:
               rfactor = rnew 
               route = r['route']
@@ -593,7 +606,7 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
               found = True 
               break 
 
-        bo.logger.log('route-last-resort rfactor:%s route:%s' % (rfactor, str(route)))
+        bo.logger.log('route-last-resort', 'rfactor:%.2f route:%s' % (rfactor, str(p)))
         
 
     # 7) Translate next point to direction
@@ -1135,12 +1148,12 @@ def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy):
         if sid != sid_us:     
             snake = snakes[sid]
             length = snake.getLength()
-            steps = snake.getNextSteps()
+            steps_enemy = snake.getNextSteps()
 
             
             for ourstep in steps_us:
             # Iterate through our steps 
-                for step in steps:
+                for step in steps_enemy:
                 # Check against enemy steps 
                     safe = True
                     reason = ""
@@ -1150,9 +1163,9 @@ def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy):
 
                         # print("STEPS us:%s them:%s" % (ourstep, step)) 
             
-                        if step == ourstep:
+                        if step[-1] == ourstep[-1]:
                             if length > length_us:
-                            # Check for collision (we are same / smaller) 
+                            # Check for collision (same square and we are same / smaller) 
                                 safe = False 
                                 reason = "head on collision"
 
@@ -1165,7 +1178,8 @@ def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy):
                             future.remove(start)
 
                             found = bo.findEmptySpace(start, future, turn)
-        
+                            # WORKING: replace findEmptySpace (5 steps) with certainDeath (N=length steps) .. 
+                            # found = bo.certainDeath(..)  # enclosedSpace -> trails > turn_max
                             # print("FOUND start:%s turn:%s future%s found %s" % (start, turn, future, found)) 
                 
                             # No paths
@@ -1176,19 +1190,24 @@ def enemyStrategy(bo, us, snakes, future=CONST.lookAheadEnemyStrategy):
                 
                     if (not safe):
                     # One of the enemy steps is not safe for our step.  Abandon all paths in that direction (overcautious)
-                    # TODO: less agressive if we see a path out
+                    # TODO: be less cautious, more agressive if we see a path out
 
                         # print ("STEP sid:%s us:%s them:%s reason:%s" % (sid, ourstep, step, reason))
+                        # DEBUG .. 
+                        if [5,10] in ourstep:
+                            # print
+                            print("DEBUG - FINAL PATHS ourstep: (%s) steps_enemy:(%s)" % (ourstep, steps_enemy))
+                        
                         for s in steps_us:
-                            if ourstep[0] in s: 
+                            if ourstep[-1] in s: 
                                 steps_us.remove(s)
-                                dirn_avoid.append(ourstep[0])
+                                dirn_avoid.append(ourstep[-1])
                                 # dy = ourstep[0][0]
                                 # dx = ourstep[0][1]
                                 # self.markov[dy,dx] = CONST.routeThreshold
 
     snakes[sid_us].setNextSteps(steps_us)
-    # print("FINAL PATHS", dirn_avoid, steps_us)
+    
     # return directions to avoid (mark as not reachable)
     return dirn_avoid
 

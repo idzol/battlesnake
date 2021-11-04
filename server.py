@@ -15,7 +15,7 @@ from snakeClass import snake
 from boardClass import board
 
 
-from logic import checkInterrupts, stateMachine, makeMove
+from logic import checkEnemy, checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -123,7 +123,7 @@ def handle_move(testData="", testOverride=False):
         allSnakes[identity].setType("enemy")
         allSnakes[identity].setEnemy(alive)
 
-
+    
     # Update routing boards
     # TODO:  Review hazard logic & routing
     # hazards = data['board']['hazards']
@@ -133,6 +133,9 @@ def handle_move(testData="", testOverride=False):
     logger.timer('updateMarkov')
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
     logger.timer('updateDijkstra')
+    # Update board for enemy strategy 
+    checkEnemy(theBoard, ourSnek, allSnakes)
+    logger.timer('updateEnemy')
     theBoard.updateDijkstra(allSnakes)
     logger.timer('updateBest')
     theBoard.updateBest(ourSnek.getHead())
