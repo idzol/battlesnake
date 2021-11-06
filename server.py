@@ -132,17 +132,11 @@ def handle_move(testData="", testOverride=False):
     theBoard.updateChance(allSnakes, theFoods)
     logger.timer('updateMarkov')
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-    logger.timer('updateDijkstra')
-    # Update board for enemy strategy 
-    checkEnemy(theBoard, ourSnek, allSnakes)
     logger.timer('updateEnemy')
-    theBoard.updateDijkstra(allSnakes)
+    checkEnemy(theBoard, ourSnek, allSnakes)
+    # theBoard.updateDijkstra(allSnakes)
     logger.timer('updateBest')
     theBoard.updateBest(ourSnek.getHead())
-    
-    # DEPRECATE -- BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
-    # theBoard.updateGradient(ourSnek.getHead()) 
-    # theBoard.updateGradientFix(ourSnek.getHead())
        
     # Initialisation complete 
     logger.timer('== Init complete ==')
