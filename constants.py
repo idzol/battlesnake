@@ -24,7 +24,7 @@ logfile_error = "error.log"
 # TODO:  Performance testing 
 # TODO:  Converge these over time .. 
 lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
-lookAheadEnemy = 5          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
+lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPath = 20          # Path prediction (Random)
 lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
 maxRecursion = 3000
@@ -79,7 +79,7 @@ else:
   timePanic = 4000
 
 # Routing threshold - collision probability
-routeThreshold = 99   # Ignore if route larger 
+routeThreshold = 1000   # Ignore if route larger 
 pointThreshold = 25   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
@@ -90,6 +90,7 @@ routeCell = 1
 # Game phases
 lengthMidGame = 10
 lengthEndGame = 20 
+# lengthEndGame = 30
 
 # Snake variables
 healthHigh = 100

@@ -15,7 +15,7 @@ from snakeClass import snake
 from boardClass import board
 
 
-from logic import checkInterrupts, stateMachine, makeMove
+from logic import checkEnemy, checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -123,7 +123,7 @@ def handle_move(testData="", testOverride=False):
         allSnakes[identity].setType("enemy")
         allSnakes[identity].setEnemy(alive)
 
-
+    
     # Update routing boards
     # TODO:  Review hazard logic & routing
     # hazards = data['board']['hazards']
@@ -132,14 +132,11 @@ def handle_move(testData="", testOverride=False):
     theBoard.updateChance(allSnakes, theFoods)
     logger.timer('updateMarkov')
     theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-    logger.timer('updateDijkstra')
-    theBoard.updateDijkstra(allSnakes)
+    logger.timer('updateEnemy')
+    checkEnemy(theBoard, ourSnek, allSnakes)
+    # theBoard.updateDijkstra(allSnakes)
     logger.timer('updateBest')
     theBoard.updateBest(ourSnek.getHead())
-    
-    # DEPRECATE -- BUGFIX: Prevent snake from "seeing through" themselves in predict matrix in a future turn.  Needs to be applied after updateGradient complete .. 
-    # theBoard.updateGradient(ourSnek.getHead()) 
-    # theBoard.updateGradientFix(ourSnek.getHead())
        
     # Initialisation complete 
     logger.timer('== Init complete ==')

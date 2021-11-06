@@ -242,6 +242,16 @@ def isClosest(a, b, others):
 import constants as CONST
 
 
+def isEdge(pt, w, h):
+
+    if(pt[0] == 0 or pt[0] == (h - 1)
+           or pt[1] == 0 or pt[1] == (w - 1)):     
+        return True 
+    
+    else: 
+        return False
+
+
 def findLargestLength(snakes): 
 
     length_max = 0

@@ -26,6 +26,7 @@ import constants as CONST
 import functions as fn
 
 import sys
+
 # Set recursion limit
 # TODO: Replace with loop if possible ..
 sys.setrecursionlimit(50000)
@@ -44,21 +45,11 @@ class board():
         self.width = width
         self.identity = "" 
         
-        # self.land = np.zeros((height, width), np.intc)
-        # self.mask = np.ones((height, width), np.intc)
-
-        # self.win = 0
-        # self.loss = 0
-
-        # self.threat = [None] * CONST.lookAhead
-        # self.predict = [None] * CONST.lookAhead
-        # self.gradient = [None] * CONST.maxPredictTurns
-
         self.best = {}
         self.bestLength = np.zeros((height, width), np.intc)
         self.bestWeight = np.zeros((height, width), np.intc)
         
-        self.dijkstra = [None] * CONST.lookAheadPathContinue
+        # self.dijkstra = [None] * CONST.lookAheadPathContinue
         self.markovs = [None] * CONST.lookAheadPathContinue
 
         self.turn = 0
@@ -67,37 +58,51 @@ class board():
         
 
     def setLogger(self, l):
-      # Reference 
-      self.logger = l
+        """
+        Used for global reporting  
+        ===
+        l:  logClass import log
+        """
+        # Reference 
+        self.logger = l
 
     def resetCounters(self):
-        # Reset start of each turn 
+        """
+        DEPRECATE 
+        Resets timers for recursion & timers   
+        """
         self.recursion_route = 0
         self.hurry = False
         # self.gradients = {}
 
 
-    def resetRouting(self):
-        # Reset start of each turn 
-        h = self.height
-        w = self.width 
+    # def resetRouting(self):
+    #     # Reset start of each turn 
+    #     h = self.height
+    #     w = self.width 
 
-        markovs = []
-        dijkstra = []
+    #     markovs = []
+    #     dijkstra = []
         
-        depth = CONST.lookAheadPathContinue
-        for t in range(0, depth):
-            dijkstra.append(np.zeros([h, w], np.intc))
-            # Enemy prediction 
-            markovs.append(np.zeros([h, w], np.intc))
+    #     depth = CONST.lookAheadPathContinue
+    #     for t in range(0, depth):
+    #         dijkstra.append(np.zeros([h, w], np.intc))
+    #         # Enemy prediction 
+    #         markovs.append(np.zeros([h, w], np.intc))
 
-        self.markovs = copy.copy(markovs)
-        self.dijkstra = copy.copy(dijkstra)
+    #     self.markovs = copy.copy(markovs)
+    #     self.dijkstra = copy.copy(dijkstra)
 
 
 # == GETTER / SETTER ==
 
-    def setDimensions(self, x, y):
+    def setDimensions(self, x:int, y:int):
+        """
+        Board dimensions 
+        ===
+        x:  width
+        y:  height 
+        """
         if isinstance(x, int) and isinstance(y, int):
             self.width = x
             self.height = y
@@ -108,9 +113,14 @@ class board():
             return False
 
     def getDimensions(self):
+        """
+        Board dimensions 
+        ===
+        (width:int, height:int) 
+        """
         return [self.width, self.height]
 
-    def getWidth(self):
+    def getWidth(self): 
         return self.width
 
     def setIdentity(self, i):
@@ -157,11 +167,11 @@ class board():
     def getItems(self):
         return copy.copy(self.items)
 
-    def getDijkstra(self):
-        return copy.copy(self.dijkstra)
+    # def getDijkstra(self):
+    #     return copy.copy(self.dijkstra)
 
-    def setDijkstra(self, d):
-        self.dijkstra = copy.copy(d)
+    # def setDijkstra(self, d):
+    #     self.dijkstra = copy.copy(d)
 
     # # Return future predict matrix
     # def getPredictMatrix(self, t):
@@ -216,17 +226,18 @@ class board():
         # predict = []
         # threat = []
         markovs = []
-        dijkstra = []
+        # dijkstra = []
   
         for t in range(0, depth):
             # predict.append(np.zeros([height, width], np.intc))
             # threat.append(np.zeros([height, width], np.intc))
             markovs.append(np.zeros([height, width], np.intc))
-            dijkstra.append(np.zeros([height, width], np.intc))
+            # dijkstra.append(np.zeros([height, width], np.intc))
 
             # self.updateGradient() -- only update when rqd for routing
+        
         self.markovs = copy.copy(markovs)
-        self.dijkstra = copy.copy(dijkstra)
+        # self.dijkstra = copy.copy(dijkstra)
 
 
         # self.predict = predict
@@ -368,6 +379,11 @@ class board():
         for sid in snakes:
             
             sn = snakes[sid]
+            who = sn.getType() 
+            head = sn.getHead()
+            tail = sn.getTail()
+            length = sn.getLength()
+                              
             markov = np.zeros([w,h], np.intc)
             sn_body = []
             sn_future = []
@@ -400,8 +416,19 @@ class board():
                     # Paint markov matrix for turn t + 1
                     y = cell[0]
                     x = cell[1]
-                    markov[y, x] = 100
-            
+                       
+                    if who == "us" and cell == head:
+                        # Adjust head to zero for routing
+                        markov[y, x] = 0
+
+                    elif length > 3 and self.trails[y, x] == 1: 
+                        # Erase tail unless snake is eating
+                        markov[y, x] = 1
+
+                    else:
+                        markov[y, x] = 100
+
+
             sn.setMarkovBase(copy.copy(markov), t)
             # Set markov + chance
             if (not len(body)):
@@ -435,7 +462,11 @@ class board():
         # TODO: Calculate second iteration of probability, based on first round of markov models
         # for sn in snakes:
         #     self.updateMarkov_step(sn, snakes, foods, t)
+
+
             
+
+
       # Sum all snakes into final markov matrix
       for sn in snakes:
         for t in range(0, turns - 1): 
@@ -459,59 +490,58 @@ class board():
       # self.markovs = copy.copy(markovs)     
 
 
-    def updateDijkstra(self, snakes, depth=CONST.lookAheadPathContinue):
+    # def updateDijkstra(self, snakes, depth=CONST.lookAheadPathContinue):
 
-        w = self.width
-        h = self.height
+    #     w = self.width
+    #     h = self.height
 
-        dijksmap = [None] * depth
+    #     dijksmap = [None] * depth
 
-        for t in range(0, depth):
-            dijksmap[t] = np.zeros([h, w], np.intc)
+    #     for t in range(0, depth):
+    #         dijksmap[t] = np.zeros([h, w], np.intc)
 
-        # ones = CONST.routeCell * np.ones((w, h), np.intc)
+    #     # ones = CONST.routeCell * np.ones((w, h), np.intc)
 
-        for t in range(0, depth):
-            # Get relevant predict / threat matrix
-            markov = self.markovs[t]
-            try:
-                # Dijkstra combines solids, foods, hazards (threats)
-                dijksmap[t] = markov + 1
+    #     for t in range(0, depth):
+    #         # Get relevant predict / threat matrix
+    #         markov = self.markovs[t]
+    #         try:
+    #             # Dijkstra combines solids, foods, hazards (threats)
+    #             dijksmap[t] = markov + 1
 
-                for sid in snakes:
-                    sn = snakes[sid]
-                    head = sn.getHead()
-                    tail = sn.getTail()
-                    length = sn.getLength()
-                    who = sn.getType() 
+    #             for sid in snakes:
+    #                 sn = snakes[sid]
+    #                 head = sn.getHead()
+    #                 tail = sn.getTail()
+    #                 length = sn.getLength()
+    #                 who = sn.getType() 
                     
-                    if who == "us":
-                        # This turn only (t=0). 
-                        # Adjust head & tail location to zero for routing
-                        dijksmap[0][head[0], head[1]] = 0
+    #                 if who == "us":
+    #                     # This turn only (t=0). 
+    #                     # Adjust head & tail location to zero for routing
+    #                     dijksmap[0][head[0], head[1]] = 0
                 
-                    # Erase tail unless snake is eating
-                    if length > 3 : 
-                        # Check trail == 1 (when eating == 2)
-                        if self.trails[tail[0], tail[1]] == 1: 
-                            # Reset to markov value (enemy chance)
-                            dijksmap[0][tail[0], tail[1]] = markov[tail[0], tail[1]] + 1
+    #                 # Erase tail unless snake is eating
+    #                 if length > 3 : 
+    #                     # Check trail == 1 (when eating == 2)
+    #                     if self.trails[tail[0], tail[1]] == 1: 
+    #                         # Reset to markov value (enemy chance)
+    #                         dijksmap[0][tail[0], tail[1]] = markov[tail[0], tail[1]] + 1
                         
 
-            except Exception as e:
-                self.logger.error('exception', 'updateDijkstra#1', str(e))
+    #         except Exception as e:
+    #             self.logger.error('exception', 'updateDijkstra#1', str(e))
 
-        self.dijkstra = copy.copy(dijksmap)
+    #     self.dijkstra = copy.copy(dijksmap)
 
-
+       
     def updateBest(self, start):
         # OPTIMISE: Benchmark with/without copy.copy 
 
         w = self.width 
         h = self.height
         # Find path to all points on the board by length, weight 
-
-
+      
         dot_alpha = {'loc':start, 'weight':0, 'length':0, 'path':[], 'from':''}
         # Recursive dots 
         dots = []
@@ -546,11 +576,15 @@ class board():
                     dot_loc = copy.copy(step)
                     dot_path = copy.copy(dot['path'])
                     dot_length = copy.copy(dot['length'] + 1)
+
                     # Check in bounds 
                     if self.inBounds(step):
-                        t = min(dot_length, CONST.lookAheadPathContinue - 1) 
-                        dot_weight = copy.copy(dot['weight'] + self.markovs[t][step[0]][step[1]]) 
-                    
+                        t = min(dot_length, CONST.lookAheadPathContinue) 
+                        dot_weight = dot['weight'] + self.markovs[t-1][step[0]][step[1]]
+                        
+                        
+                        # Check if edge - don't route along walls, save for escapes
+                        # if not self.isEdge(step):
                         # Check we can route 
                         if dot_length >= self.trails[dot_loc[0], dot_loc[1]]:
                             # Check if first path 
@@ -571,6 +605,11 @@ class board():
                     else:
                         # Kill dot 
                         pass 
+
+                    # DEBUG 
+                    # if (dot_loc in [[9, 8]]):
+                    #     print("DEBUG", alive, dot_loc, dot_weight, self.markovs[t-1][step[0]][step[1]]) 
+
 
                     if alive == True: 
 
@@ -743,10 +782,14 @@ class board():
         w = self.width
         h = self.height
         chance = np.zeros([w, h], np.intc)
+        
+        # OPTIMISE:  are results reused?
+        # self.enclosed = copy.copy(enclosed)
+        # self.directions = copy.copy(dirn_avail)
 
         enclosed = self.enclosedSpacev2(head)
         dirn_avail = dict(filter(lambda elem: elem[1] > 0, enclosed.items()))
-
+        
         # Calculate random walk probabiliy of each square
         for dirn in dirn_avail:
             path = [copy.copy(head)]
@@ -1066,13 +1109,13 @@ class board():
         largest_point = 0
         
         # Iterate through path
-        dt = self.getDijkstra()
+        # dt = self.getDijkstra()
 
         for p in path:
             if self.inBounds(p):
 
-                # Add dijkstra value
-                increment = int(dt[tmax][p[0], p[1]])
+                # Add markov value
+                increment = int(self.markovs[tmax][p[0], p[1]])
                 result = result + increment
                 tmax = tmax + 1
                 if (increment > largest_point):
@@ -1081,86 +1124,57 @@ class board():
         return copy.copy(result), copy.copy(largest_point)
 
 
-    def routePadding(self, route, snakes, foods, depth=CONST.lookAheadPathContinue):
-        # Make sure there is always a path with N moves (eg. route_complex + random walk)
-        # Else return []
-        
+    def routePadding(self, route:list, snakes:list, foods:list, depth=CONST.lookAheadPathContinue, method="weight"):
+        """
+        Extend an existing route path by N moves to check whether it is safe
+        ===
+        route:      Existing route (used to avoid collisions with self) 
+        snakes:     All snakes 
+        foods:      All food (used to determine eating)
+        depth:      Max number of turns padding to search. CONST.lookAheadPathContinue (default)
+        method      Padding method.  "weight" (default), "length", "tail", "random"
+        ===
+        route:     route of padding, [] if not found
+        weight:    weight of padding, CONST.Threshold if no path, 0 if no padding (?)
+        """
+
         path = []
         weight = CONST.routeThreshold
-        
+        routefound = False
+
         # Needs minimum one point to start padding route
         if (not len(route)):
             return path, weight
 
         # Convert vectors to points
         if (len(route) > 1):
-            path = fn.getPointsInRoute(route)
+            path_start = fn.getPointsInRoute(route)
         else: 
-            path = copy.copy(route)
+            path_start = copy.copy(route)
 
-        turns_found = len(path)
-        path_start = copy.copy(path)
-
-        # start = route[-1]
-        # TODO:  Increase depth as snake increases rather than fixed amount
-        # CONFIRM:  If no path == depth, return max lenght
-        # depth = sn.getLength() * 2
-
+        
         # Confirm we have a path
-        if (turns_found):
+        if (turn := len(path_start)):
+
             # Get snake info 
             sid_us = self.getIdentity()
             us = snakes[sid_us]
-            length = us.getLength()
-            head = us.getHead()
-
-            # Get turn based on path (past moves)
-            turn = len(path)
-            start = path[-1]
-
-            routefound = False 
-
-            tailrouting = False     # don't think this works anymore .. 
-            bestrouting = True
-            randomrouting = True  
             
-            # self.logger.log("route pad", str(path)) 
-
-            if (tailrouting and not routefound): 
-            # A) Route to tail for end game control -- NOTE: longest path may NOT always be tail -> head 
-                if length > CONST.lengthEndGame:
-                    tail = us.getTail()
-                    path_padding, weight = self.route(start, tail)  
-                    # ROUTE broken since new start != start 
-                    # Create ROUTEv2 -- can we reuse self.best? 
-                    # How expensive ...  
-                    # print("ROUTE TO TAIL", path, weight, original)      
-                    if len(path_padding) > 0 and weight < CONST.routeThreshold:
-                        # Add rest of body 
-                        body = (us.getBody())
-                        body.pop(-1)
-                        body.reverse()
-                        # Return total
-                        path = path_start + path_padding + body
-                        path = fn.getPointsInRoute(path)
-                        routefound = True  
-                # print("DEBUG", original, path, body)
+            # Get turn based on path (past moves)
+            start = path_start[-1]
 
             # A) Largest path - using bestPath 
-            if (bestrouting and not routefound): 
+            if method in ['weight', 'length', 'tail', 'rfactor']:
+            
+                routes = self.continuePath(path_start, snakes, foods, depth, method)
 
-                routes = self.continuePath(path_start, snakes, foods, depth)
                 if (len(routes)):  
+                    
                     routes_sorted = sorted(routes, key=lambda d: d['weight']) 
-                    # TODO: Introduce weight if multiple paths 
                     # Path comes back reversed 
                     weight = routes_sorted[0]['weight']
-                    path_padding = routes_sorted[0]['path']
-                    path = copy.copy(path_padding)
-                        
-                    # Path contains the target 
-                    # if len(path): 
-                    # path.pop(0)
+                    path = routes_sorted[0]['path']
+                    # path = copy.copy(path_padding)                        
                     routefound = True 
 
                 else:  
@@ -1168,63 +1182,47 @@ class board():
                     weight = CONST.routeThreshold
 
             # B) Find Largest path in random walk 
-            if (randomrouting and not routefound):
-                newpath = self.findLargestPath(path_start, snakes, turn, foods, depth)
-                weight = len(newpath)
-                path = copy.copy(newpath)
-            
+            if method in 'random' or not routefound:
+                
+                path, weight = self.findLargestPath(path_start, snakes, turn, foods, depth)
+                
+                if (len(path)):  
+                    target = path[-1]
+                    # weight = 0 # self.bestWeight[target[0], target[1]]        
+                    routefound = True 
+
                 # print("DEBUG", randomrouting, routefound, newpath, weight)
                    
         # self.logger.log("route pad", str(path), str(len(path)), str(depth))
-
-        # Return path (list) & wheth max depth found (boolean)
-        # route = route + path
+        # Return path = route + path_padding 
         # Remove first point of route (head)
-        while len(path):
-            if path[0] == start: 
+        if (routefound and len(path)):
+            if path[0] == start:
                 path.pop(0)
-            else: 
-                # path_length = len(path)
-                # weight -= path_length
-                break 
+            
+            return copy.copy(path), copy.copy(weight)
 
-        return copy.copy(path), copy.copy(weight)
+        else:
+            # Return original route & zero incremental weight 
+            if route[0] == start:
+                route.pop(0)
+             
+            return copy.copy(route), 0
 
-
-    # def isRoutePoint(self, step, turn, path=[]):
-
-    #     # Get step
-    #     dy = step[0]
-    #     dx = step[1]
-
-    #     # Get markov 
-    #     t = min(turn, CONST.lookAheadEnemy - 1)
-    #     markov = copy.copy(self.markovs[t])
-
-    #     # Get tails 
-    #     s = copy.copy(self.trails)
-
-    #     # Route logic 
-    #     if (self.inBounds(step)):
-    #       if ((s[dy, dx] == 0) and 
-    #           ((markov[dy, dx] < CONST.pointThreshold) or 
-    #           (t >= s[dy, dx] and 
-    #           markov[dy, dx] < CONST.pointThreshold)) and 
-    #           not (step in path)):
-
-    #         return True
-
-    #     else: 
-
-    #       return False 
 
 
     def isRoutePointv2(self, start, turn, eating={}, path=[], enemy=False):
-        # Start - check route points from start location
-        # Turn - adjust for future turn state 
-        # Eating - adjust for past / future eating 
-        # Path - check past path points for collision
-        # Enemy - ignore markov threat when predicting enemy moves
+        """
+        Check if point is a valid route point based on threat (markov) and collision (snakes)
+        ===
+        start - check route points from start location
+        turn - adjust for future turn state 
+        eating - adjust for past / future eating 
+        path - check past path points for collision
+        enemy - ignore markov threat when predicting enemy moves
+        ===
+        boolean - confirm if valid route point or not
+        """
 
         w = self.width
         h = self.height
@@ -1256,13 +1254,17 @@ class board():
         #     print("DEBUG", dx, dy, turn, step, path)
         #     print("MARKOV", markov[dy, dx])
         #     print("BOARD", board[dy, dx])
-            
+        # if(step in [[4,7]]):
+        #     print("DEBUG", markov[dy, dx], turn, board[dy, dx])
+
         # Route logic 
         if (self.inBounds(step)):
-          if ( # Our prediction logic 
-                (((markov[dy, dx] < CONST.pointThreshold) or 
-                (turn >= board[dy, dx] and 
-                markov[dy, dx] >= CONST.routeThreshold)) and 
+          if ( # Our prediction logic
+                ((turn >= board[dy, dx] and 
+                markov[dy, dx] < CONST.routeThreshold) and 
+                # (((markov[dy, dx] < CONST.pointThreshold) or 
+                # (turn >= board[dy, dx] and 
+                # markov[dy, dx] >= CONST.routeThreshold)) and 
                 not (step in path)) or 
                 # Enemy prediction logic 
                 (enemy and 
@@ -1302,36 +1304,69 @@ class board():
         return eating 
 
 
-    def continuePath(self, route, snakes, foods=[], depth=CONST.lookAheadPathContinue):
+    def continuePath(self, route, snakes, foods=[], depth=CONST.lookAheadPathContinue, method="weight"):
    
-        w = self.width 
+        w = self.width  
 
         if not len(route):
-            return [], CONST.routeThreshold
-
+            return []
+            
         else:
             start = copy.copy(route[-1])
             path = copy.copy(route)
                 
         # Look for dots that makes it to longest path..
         routes = []
-        weight = 0 
-
-        # Find largest route (usually tail->head)
-        # TODO: Check why weight = 100X,  probably because markov limit  
-        rfactor = self.bestLength / (self.bestWeight + 1)
-        # rfactor = self.bestLength 
-        # print ("RFACTOR", rfactor)
+        target = []
         
-        smax = np.argmax(rfactor)
-        sy = int(smax / w)
-        sx = smax % w
-        target = [sy, sx]
-        # print ("RFACTOR BEST", target)
+        # Find BEST route 
+        # 1) longest with no weight 
+        if (method == "weight"):
+            rfactor = copy.copy(self.bestLength)
+            while smax := np.argmax(rfactor):      
+                sy = int(smax / w)
+                sx = smax % w
+                target = [sy, sx]
+                if self.bestWeight[sy,sx] == 0:
+                    break
+                else:
+                    rfactor[sy, sx] = 0
+
+        # 2) Weighted rfactor 
+        elif (method == "tail"):
+            # Get snake info 
+            sid_us = self.getIdentity()
+            us = snakes[sid_us]
+            target = us.getTail()
+            sy = target[0]
+            sx = target[1]
+
+
+        # 2) Weighted rfactor 
+        elif (method == "rfactor"):
+            rfactor = np.round(20 * pow(1.2, self.bestLength) / (self.bestWeight + 1), 0)
+            smax = np.argmax(rfactor)
+            sy = int(smax / w)
+            sx = smax % w
+            target = [sy, sx]
+
+        else:  # method == 'length'
+        # 3) Longest length 
+            rfactor = self.bestLength
+            smax = np.argmax(rfactor)
+            sy = int(smax / w)
+            sx = smax % w
+            target = [sy, sx]
+
+        
+        if not len(target):
+            return []
+
         dot_route = copy.copy(route)
         dot_length = self.bestLength[start[0], start[1]]
         length_max = self.bestLength[sy, sx]
         
+
         dot_alpha = {'loc':start, 'weight':0, 'length':dot_length, 'path':dot_route, 'from':''}
         # print("DEBUG", route, dot_alpha, target)
         
@@ -1379,16 +1414,21 @@ class board():
                     if self.inBounds(dot_loc):
 
                         # Check if food is in past moves
-                        eating = self.findEating(snakes, path + [step], foods)    
+                        eating = self.findEating(snakes, path + [step], foods)   
+                        
+                        # if(dot_loc in [[4,7], [2,7], [3,6]]):
+                        #     print("DEBUG", dot_loc, eating)
+
                         # Check next path is in bounds, available and not already visited**            
                         found = self.isRoutePointv2(step, turn, eating, path)
                         if (found):
                             # TODO:  Introduce weight once markov extended to N 
                             t = min(turn, CONST.lookAheadPathContinue - 1) 
+                            
+                            # DEBUG
+                            # if step == [8, 5]:
+                            #     print("DEBUG MARKOV WEIGHT", self.markovs[t][step[0]][step[1]])
                             dot_weight = copy.copy(dot['weight'] + self.markovs[t][step[0]][step[1]]) 
-                            # dot_weight = 0 
-
-                            # print ("LOC", dot_length, self.bestLength[dot_loc[0], dot_loc[1]])
 
                             # Check if we can route 
                             if dot_length == self.bestLength[dot_loc[0], dot_loc[1]]:
@@ -1447,17 +1487,29 @@ class board():
 
 
     def findLargestPath(self, route, snakes, turn=0, foods=[], depth=CONST.lookAheadPath):
-        # Iterate through closed space to check volume
-        # **TODO: Include own path as layer in future updateTrails
-        # TODO: Introduce panic timers if routing too long
-        # TODO: Introduce threat from other snakes into s[dy, dx] -> s[turn][dy, dx] udating predict matrix
-        # TODO:  Return best path vs any path (similar to introducing snake threat
+        """
+        Iterate through opath closed space to check volume
+        ===
+        self
+        route
+        snakes
+        turn=0
+        foods=[]
+        depth=CONST.lookAheadPath
+        ===
+        path
+        weight
+        """
+
         allpaths = []
+        newpath = []
+        weight = CONST.routeThreshold
+
         if (len(route)):
             start = copy.copy(route[-1])
 
         else:
-            return []
+            return newpath, weight 
 
         # Look in all directions
         for d in CONST.directions:
@@ -1465,7 +1517,8 @@ class board():
             step = list(map(add, start, CONST.directionMap[d]))
             path = copy.copy(route)
             newpath = []
-            
+            newweight = 0 
+                    
             # Check if food is in past moves
             eating = self.findEating(snakes, path + [step], foods)
               
@@ -1475,7 +1528,9 @@ class board():
             
             if(found):
                 # print("FIND LARGEST STEP", found, step, newturn, path)
-                
+                t = min(turn, CONST.lookAheadPathContinue - 1) 
+                weight = self.markovs[t][step[0]][step[1]]
+            
                 # Increment turn 
                 newturn += 1
                 # Recursive 
@@ -1484,10 +1539,8 @@ class board():
                 # WORKING | CHECK:  if tail AND length 
                 # Move out of recursion into while loop for better control .. ie rr > rmax ?
                 # if (path == tail and len(path) < eating)
-
-                
-                newpath = self.findLargestPath_step(step, snakes, turn, depth, path)
-                
+     
+                (newpath, newweight) = self.findLargestPath_step(step, snakes, turn, depth, path, weight)
                 allpaths.append(newpath)
                 if (len(newpath) >= depth):
                     # Good path found - Exit search
@@ -1503,11 +1556,11 @@ class board():
             a_sort = sorted(allpaths, key=len)
             newpath = a_sort[-1]
 
-        if len(newpath):
-            return copy.copy(newpath)
+        # if len(newpath):
+        return copy.copy(newpath), copy.copy(newweight)
 
-        else:
-            return []
+        # else:
+        #     return [], CONST.routeThreshold
 
 
     def findLargestPath_step(self,
@@ -1515,14 +1568,16 @@ class board():
                              snakes, 
                              turn=0,
                              depth=CONST.lookAheadPath,
-                             path=[]):
+                             path=[],
+                             weight=0):
 
         # If path meets depth, end recursion
         if (len(path) >= depth):
-            return path
+            return path, weight
 
         start = copy.copy(route)
         pathnew = copy.copy(path)
+        weightnew = copy.copy(weight)
 
         # Look in all directions
         for d in CONST.directions:
@@ -1538,16 +1593,22 @@ class board():
             if(self.isRoutePointv2(step, turn, path=path)):
 
                 # Add to dirns
-                turn = turn + 1
                 path.append(copy.copy(step))
-                pathnew = self.findLargestPath_step(step, snakes, turn, depth, path)
 
+                # Get turn & weight 
+                turn = turn + 1
+                t = min(turn, CONST.lookAheadPathContinue - 1)                 
+                weight += self.markovs[t][step[0], step[1]]
+
+                # Get next step (Recursive)
+                (pathnew, weightnew) = self.findLargestPath_step(step, snakes, turn, depth, path, weight)
+        
                 # print("LARGEST STEP", str(pathnew), str(path), str(step))
 
             if (len(pathnew) > depth):
                 break
 
-        return copy.copy(pathnew)
+        return copy.copy(pathnew), copy.copy(weightnew)
 
 
 # == FINDERS ==
@@ -1568,7 +1629,9 @@ class board():
             for dirn in CONST.directions:
                 # initial step in each direction 
                 step = list(map(add, head, CONST.directionMap[dirn]))
-                found = self.isRoutePointv2(step, 0, {}, [], enemy)
+        
+                found = self.isRoutePointv2(step, 0, eating={}, path=[], enemy=enemy)
+                # found = self.isRoutePointv2(step, 0, eating={}, path=[], enemy=enemy)
                 if (found):    
                     paths.append(copy.copy([step]))
 
@@ -1580,9 +1643,12 @@ class board():
                 for path in paths:             
                     for dirn in CONST.directions:
             
-                        head_n = path[-1]                     
+                        head_n = path[-1]                 
                         step = list(map(add, head_n, CONST.directionMap[dirn]))
-                        found = self.isRoutePointv2(step, turn)
+
+                        # TODO: Eating - adjust for past / future eating .. 
+                        # eating = self.findEating(snakes, path + [step], foods)   
+                        found = self.isRoutePointv2(step, turn, path=path)
                         route = path + [step]
                         if (found):    
                             # New path found 
@@ -1591,6 +1657,7 @@ class board():
                 # Concatenate new paths 
                 paths = paths + paths_new
 
+            # print("DEBUG SNAKE PATH", enemy, paths)
             # print("SNAKE", snake.getId(), paths)
             snake.setNextSteps(paths)
 
@@ -1862,6 +1929,19 @@ class board():
             return b
 
         return a
+
+
+    def isEdge(self, pt):
+        w = self.width
+        h = self.height
+
+        if(pt[0] == 0 or pt[0] == (h - 1)
+            or pt[1] == 0 or pt[1] == (w - 1)):     
+            return True 
+        
+        else: 
+            return False
+
 
     def inBounds(self, a):
         # Check a point (a = [y,x]) is in map bounds
@@ -2225,8 +2305,17 @@ class board():
 
         return closest
 
-    def findEmptySpace(self, point, path=[], turn=1):
-        # Iterate through closed space to check volume
+    def findEmptySpace(self, point, path=[], turn=1, dirn=True):
+        """
+        Look at each direction for an empty square. Only looks at body length, not markov .. 
+        
+        point:  start location 
+        path:   previous turns to include in calculation 
+        turn:   len(path) 
+        dirn:   True = direction (eg. left), False = point (eg. [10,0])
+        
+        TODO:  Check if this needs to account for food as well?
+        """
 
         s = self.trails
 
@@ -2242,39 +2331,53 @@ class board():
             if(self.inBounds(dnext) and \
                     turn >= s[dy, dx] and \
                     not dnext in path):
+                
                 # Add to dirns
-                dirns_avail.append(d)
+                if (dirn):
+                    dirns_avail.append(d)
+                else:
+                    dirns_avail.append(dnext)
 
         return dirns_avail
+
 
     def showMaps(self):
       
         # Routing maps
-        # log('map', 'PREDICT', self.predict[0])
-        # log('map', 'THREAT', self.threat[0])
-        # log('map', 'SOLID', self.solid)
-        # self.logger.maps('GRADIENT', self.gradient)
         self.logger.maps('LENGTH', self.bestLength)
         self.logger.maps('WEIGHT', self.bestWeight)
         
-    
         self.logger.maps('TRAILS', self.trails)
-        t = CONST.lookAheadEnemy - 1
-        self.logger.maps('MARKOV0', self.markovs[0])
-        
-        # self.logger.maps('MARKOV1', self.markovs[1])
-        # self.logger.maps('MARKOV2', self.markovs[2])
-        self.logger.maps('MARKOV MAX', self.markovs[t])
-        self.logger.maps('DIJKSTRA 0', self.dijkstra[0])
-        # log('map', 'DIJKSTRA1', self.dijkstra[1])
-        # log('map', 'DIJKSTRA2', self.dijkstra[2])
-        #  t = CONST.lookAheadEnemy - 1
+        self.logger.maps('MARKOV', self.markovs[0])
+        # print(self.markovs)
+        # self.logger.maps('DIJKSTRA 0', self.dijkstra[0])
         # self.logger.maps('CHANCE', self.chance)
         
         # Visual maps
         self.logger.maps('COMBINE', self.combine)
 
 # === DELETE ===
+
+    # def isRoutePoint(self, step, turn, path=[]):
+    #     # Get step
+    #     dy = step[0]
+    #     dx = step[1]
+    #     # Get markov 
+    #     t = min(turn, CONST.lookAheadEnemy - 1)
+    #     markov = copy.copy(self.markovs[t])
+    #     # Get tails 
+    #     s = copy.copy(self.trails)
+    #     # Route logic 
+    #     if (self.inBounds(step)):
+    #       if ((s[dy, dx] == 0) and 
+    #           ((markov[dy, dx] < CONST.pointThreshold) or 
+    #           (t >= s[dy, dx] and 
+    #           markov[dy, dx] < CONST.pointThreshold)) and 
+    #           not (step in path)):
+    #         return True
+    #     else: 
+    #       return False 
+
 
     # def updateBoardYou(self, data):
     #     # DEPRECATE: Replace with -- updateBoardClass
