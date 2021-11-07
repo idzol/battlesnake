@@ -412,17 +412,17 @@ class snake:
     def setInterrupt(self, i): 
         self.interruptlist = copy.copy(i)
 
-    def setStrategy(self, s, sinfo):
+    def setStrategyInfo(self, sinfo):
     # review strategy and update 
-      self.strategylist = copy.copy(s)
+      # self.strategylist = copy.copy(s)
       self.strategyinfo = copy.copy(sinfo)
 
 
-    def getStrategy(self):
+    def getStrategyInfo(self):
     # review strategy and update 
-      s = copy.copy(self.strategylist)
+      # s = copy.copy(self.strategylist)
       sinfo = copy.copy(self.strategyinfo)
-      return (s, sinfo)
+      return sinfo
 
   
     def setTarget(self, dest):   
@@ -441,13 +441,9 @@ class snake:
       return r[:]
 
     def setShout(self, turn):
-      # Shout every 10 turns 
+      # Shout every N turns 
       if (turn % CONST.shoutFrequency == 0): 
-        s, sinfo = self.getStrategy()  
-        #     if (strategy=="enlarge"):
-        #     elif (strategy=="taunt"):
-        #     ... 
- 
+        
         self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
       
       return self.getShout()

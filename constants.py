@@ -27,6 +27,7 @@ lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyS
 lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPath = 20          # Path prediction (Random)
 lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
+lookAheadPathContinueEnemy = 40  # Path continue (Enemy path lookahead)  
 maxRecursion = 3000
 
 
@@ -108,11 +109,12 @@ aggroLow = 20
 
 # Strategy 
 strategyDepth = 100   # max strategies to explore each turn
+strategyDepthEnemy = 10    # max enemy strategies to explore each turn
 strategyLength = 5   # number of strategies to remember between turns
 
 # Strategy - control board 
 controlMinLength = 25
-controlLargerBy = 3
+controlLargerBy = 10
 
 # Strategy - kill radius 
 killRadius = 2

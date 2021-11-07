@@ -101,6 +101,12 @@ def handle_move(testData="", testOverride=False):
       food = [f['y'], f['x']]
       theFoods.append(food)
 
+    theHazards = []
+    hazards = data['board']['hazards']
+    for h in hazards:
+      hazard = [f['y'], f['x']]
+      theHazards.append(hazard)
+
     # Set our snake 
     ourSnek.setAll(data['you'])
     ourSnek.setId(identity)
@@ -123,30 +129,50 @@ def handle_move(testData="", testOverride=False):
         allSnakes[identity].setType("enemy")
         allSnakes[identity].setEnemy(alive)
 
-    
     # Update routing boards
-    # TODO:  Review hazard logic & routing
-    # hazards = data['board']['hazards']
-    theBoard.updateBoards(data, ourSnek, allSnakes, theFoods)
+    theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards)
     logger.timer('updateChance')
-    theBoard.updateChance(allSnakes, theFoods)
-    logger.timer('updateMarkov')
-    theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-    logger.timer('updateEnemy')
-    checkEnemy(theBoard, ourSnek, allSnakes)
-    # theBoard.updateDijkstra(allSnakes)
+
+    # == DEPRECATE | CONFLICTS with statemachine == 
+    # checkEnemy(theBoard, ourSnek, allSnakes)
+
+    # if ('speed' in game_type):
+    # else:
+
+    # Apply state machine to all enemy snakes 
+    logger.timer('stateMachineEnemy')
+    for sid in allSnakes:
+        snek = allSnakes[sid]
+        if (snek != ourSnek):
+            logger.timer('updateBestEnemy')
+            theBoard.updateBest(snek.getHead())
+            
+            silent = copy.copy(logger.silent) 
+            logger.silent = True        # Supress enemy updates
+    
+            # AllSnakes updated with setRoute()
+            stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
+            # print("ENEMY ROUTE", snek.getRoute())
+            logger.silent = silent 
+
+    # Adjust boards for enemy moves 
+    logger.timer('updateBoardsEnemy')
+    theBoard.updateBoardsEnemyMoves(allSnakes)
+
+    # Chance board -- handled in updateBoards
+    # logger.timer('updateChance')
+    # theBoard.updateChance(allSnakes, theFoods)
+
+    # Update our routing board  
     logger.timer('updateBest')
     theBoard.updateBest(ourSnek.getHead())
-       
-    # Initialisation complete 
-    logger.timer('== Init complete ==')
-    
+
     # Check strategy interrupts     
     logger.timer('checkInterrupts')
     checkInterrupts(theBoard, ourSnek, allSnakes)
     
-    logger.timer('stateMachine')
-    # Progress state machine, set route
+    logger.timer('stateMachineEnemyUs')
+    # Progress state machine for our snake
     stateMachine(theBoard, ourSnek, allSnakes, theFoods)
     
     # Strategy Complete 
@@ -207,6 +233,8 @@ def reporting(logger, board, us, snakes, data):
     # Print log info
     us.showStats()
     board.showMaps()
+    board.showMapsFuture(snakes)
+
     for key in snakes:
         snk = snakes[key]
         logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
