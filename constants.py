@@ -27,7 +27,7 @@ lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyS
 lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPath = 20          # Path prediction (Random)
 lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
-lookAheadPathContinueEnemy = 40  # Path continue (Enemy path lookahead)  
+lookAheadPathContinueEnemy = 5  # Path continue (Enemy path lookahead)  
 maxRecursion = 3000
 
 
@@ -84,8 +84,8 @@ routeThreshold = 1000   # Ignore if route larger
 pointThreshold = 25   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
-routeSolid = 500
-routeHazard = 15
+routeSolid = routeThreshold
+routeHazard = 100 
 routeCell = 1
 
 # Game phases

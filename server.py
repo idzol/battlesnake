@@ -15,7 +15,7 @@ from snakeClass import snake
 from boardClass import board
 
 
-from logic import checkEnemy, checkInterrupts, stateMachine, makeMove
+from logic import checkEnemy, enemyInterrupts, checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -144,13 +144,15 @@ def handle_move(testData="", testOverride=False):
     for sid in allSnakes:
         snek = allSnakes[sid]
         if (snek != ourSnek):
-            logger.timer('updateBestEnemy')
+            logger.timer('updateEnemyBest')
             theBoard.updateBest(snek.getHead())
             
             silent = copy.copy(logger.silent) 
             logger.silent = True        # Supress enemy updates
-    
+            logger.timer('updateEnemyInterrupts')
+            enemyInterrupts(theBoard, snek, allSnakes)
             # AllSnakes updated with setRoute()
+            logger.timer('updatesEnemyStateMachine')
             stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
             # print("ENEMY ROUTE", snek.getRoute())
             logger.silent = silent 

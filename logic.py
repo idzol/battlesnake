@@ -49,7 +49,34 @@ def checkEnemy(bo:board, sn:snake, snakes):
         for path in avoid:
             for turn in range(0, futuremoves):
               # Mark cell 50% kill likelihood for N turns 
-              bo.updateCell(path, CONST.routeThreshold/2, turn)
+              bo.updateCell(path, CONST.routeSolid/2, turn)
+
+
+# Enemy interrupt / strategy (state machine) based on external influence 
+def enemyInterrupts(bo:board, sn:snake, snakes:list):
+    """
+    Check for events that change enemy strategy
+    """
+    # Return your snake 
+    you = bo.getIdentity()
+
+    strategyinfo =  {}
+    interruptlist = []
+
+    # sn = snakes[you]
+    # length = sn.getLength()
+    start = sn.getHead()
+
+    if(largestSnake(bo, sn, snakes, 0)): 
+      interruptlist.insert(0, ['Control', 'Space'])
+
+    # if(distToWall <= 1 
+    #  ['Idle', 'Wall']
+
+
+
+    sn.setStrategyInfo(strategyinfo) 
+    sn.setInterrupt(interruptlist) 
 
 
 # Changes strategy (state machine) based on external influence 
@@ -69,17 +96,14 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
       sn.setStrategy(strategylist, strategyinfo) 
       sn.setInterrupt(interruptlist) 
     """
-    
-
+  
     # Return your snake 
     you = bo.getIdentity()
     # sn = snakes[you]
     
-    health = sn.getHealth() 
     length = sn.getLength()
+    health = sn.getHealth()
     start = sn.getHead()
-    # aggro = sn.getAggro()
-    # path = sn.getRoute()
     
     strategyinfo =  {}
     interruptlist = []
@@ -117,7 +141,7 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
 
     # End game - Control space
     # if (health > CONST.healthLow and length >= CONST.lengthEndGame and numsnakes == 2):
-    if (health > CONST.healthLow and largestSnake(bo, snakes) and length >= CONST.lengthEndGame and numsnakes == 2):
+    if (health > CONST.healthLow and largestSnake(bo, sn, snakes) and length >= CONST.lengthEndGame and numsnakes == 2):
         interruptlist.append(['Control', 'Box'])
         for sndata in snakes: 
           sid = snakes[sndata].getId() 
@@ -128,7 +152,7 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
 
     # Mid game - Idle centre 
     # if (health > CONST.healthMed and length >= CONST.lengthMidGame):
-    if (largestSnake(bo, snakes) and health > CONST.healthMed and length >= CONST.lengthMidGame):
+    if (largestSnake(bo, sn, snakes) and health > CONST.healthMed and length >= CONST.lengthMidGame):
         interruptlist.append(['Idle', 'Centre'])
         reason.append('largest snake by '+str(larger)+' length and length is '+str(length))
     
@@ -181,28 +205,27 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     length = sn.getLength()
 
     # Inputs to state machine 
-    if not enemy:
-      interruptlist = sn.getInterrupt() 
-      strategyinfo = sn.getStrategyInfo()
-      strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Idle', 'Centre'], \
-                    ['Survive', 'Weight'], ['Survive', 'Length'], ['Survive', 'Tail']]
-
-      if len(interruptlist):
-        # interruptlist - delete every turn 
-        strategylist = interruptlist + strategylist_default
-        reason.append('interrupt was triggered')
-      else:
-        strategylist = strategylist_default
+    interruptlist = sn.getInterrupt() 
+    strategyinfo = sn.getStrategyInfo()
     
-
+    # Us / enemy trategy 
+    if not enemy:
+        strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Idle', 'Centre'], \
+                    ['Survive', 'Weight'], ['Survive', 'Length'], ['Survive', 'Tail']]
     else:
-      
-      strategylist_default = [['Idle','Wall'],['Eat', 'Simple']]
-      # ['Control', 'Space'], ['Survive', 'Weight']]
+        strategylist_default = [['Idle','Wall'],['Eat', 'Simple']]
+        # ['Control', 'Space'], ['Survive', 'Weight']]
+        depth_strategy = CONST.strategyDepthEnemy
+        depth = min(length, CONST.lookAheadPathContinueEnemy)
+    
+    # Add interrupts 
+    if len(interruptlist):
+      # interruptlist - delete every turn 
+      strategylist = interruptlist + strategylist_default
+      reason.append('interrupt was triggered')
+    
+    else:
       strategylist = strategylist_default
-      strategyinfo = {}
-      depth_strategy = CONST.strategyDepthEnemy
-      depth = min(length, CONST.lookAheadPathContinueEnemy)
     
     foodsort = fn.findClosestItem(foods, start)
     
@@ -231,11 +254,11 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
         # Terminate search 
         route = [] 
         target = [] 
-        reason.append('last strategy reached')
+        reason = 'last strategy reached'
         break 
     
       strategy = strategylist.pop(0)
-      reason.append('next strategy')
+      reason = 'next strategy'
         
       target_method = ""
       route_method = "" 
@@ -711,14 +734,14 @@ def defaultRoutes(bo, sn, snakes):
 
 # == HELPERS == 
 
-def largestSnake(bo, snakes,  larger=CONST.controlLargerBy):
+def largestSnake(bo, us, snakes, larger=CONST.controlLargerBy):
     # if larger than enemy
-    you = bo.getIdentity()
-    you_len = snakes[you].getLength() 
+    
+    you_len = us.getLength() 
     largest = True 
     for identity in snakes:
       sn = snakes[identity]
-      if sn.getType() != "us":
+      if sn != us:
         enemy_len = sn.getLength()
         if you_len >= (enemy_len + larger):
           pass 

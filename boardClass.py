@@ -406,7 +406,7 @@ class board():
 
                 # Predict up to snake length moves 
                 # decrease certainty after 2*length? 
-                for m in range(0, len(moves) * 2):
+                for m in range(0, CONST.lookAheadPathContinueEnemy):
                     # Get first m steps in route
                     if m > length:
                         n += 1
@@ -423,6 +423,17 @@ class board():
                             # Draw markov board one move in advance ..
                             self.updateCell(step, CONST.routeSolid, m-1)
                             
+
+    def updateHazard(self, hazards:list): 
+        """
+        Add threat to hazard cells 
+
+        """
+        turns = CONST.lookAheadPathContinue
+        for h in hazards: 
+            for turn in range(0, turns):
+                self.updateCell(h, CONST.routeHazard, turn)
+
 
     def updateMarkov(self, us, snakes:dict, foods:list, turns=CONST.lookAheadPathContinue): 
       
@@ -998,6 +1009,7 @@ class board():
             sid_us = self.getIdentity()
             us = snakes[sid_us]
             head = us.getHead()
+            length = us.getLength()
 
             # BUGFIX:  When route contains start, looks like we are one turn further 
             if head == path_start[0]:
@@ -1028,6 +1040,7 @@ class board():
             # B) Find Largest path in random walk 
             if method in 'random' or not routefound:
                 
+                # depth = min(length, depth)
                 path, weight = self.findLargestPath(path_start, snakes, turn, foods, depth)
                 
                 if (len(path)):  
@@ -1407,7 +1420,7 @@ class board():
             newpath = a_sort[-1]
 
         # if len(newpath):
-        return copy.copy(newpath), copy.copy(newweight)
+        return newpath, newweight
 
         # else:
         #     return [], CONST.routeThreshold
@@ -1425,46 +1438,44 @@ class board():
         if (len(path) >= depth):
             return path, weight
 
+        start = copy.copy(route)
         pathnew = copy.copy(path)
-        pathstep = copy.copy(path)
         weightnew = copy.copy(weight)
-    
-        start = route
 
         # Look in all directions
         for d in CONST.directions:
 
             step = list(map(add, start, CONST.directionMap[d]))
-            
+
             # Check next path is in bounds. 
             # Probability of collision less than threshold 
             # available and not already visited**
 
             # OPTIMISE: Eating not checked -- too expensive
             # eating = self.findEating(snakes, path + [step], foods)
+            
             if(self.isRoutePointv2(step, turn, path=path)):
 
                 # Add to dirns
-                pathstep.append(step)
+                path.append(step)
 
                 # Get turn & weight 
                 turn = turn + 1
                 t = min(turn, CONST.lookAheadPathContinue - 1)                 
-                weightnew += self.markovs[t][step[0], step[1]]
-
-                # if(step in [[8, 7], [8, 8], [9, 8], [10, 8], [10, 9], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10], [0, 9], [1, 9], [2, 9], [3, 9], [4, 9], [5, 9], [6, 9], [7, 9], [8, 9], [7, 8], [6, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8], [0, 7], [1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7], [5, 6]]):
-                #     print("DEBUG", t, step, self.markovs[t][step[0], step[1]])
-                #     # print(self.markovs[t])
+                weight += self.markovs[t][step[0], step[1]]
 
                 # Get next step (Recursive)
-                (pathnew, weightnew) = self.findLargestPath_step(step, snakes, turn, depth, pathstep, weight)
-        
+                (pathnew, weightnew) = self.findLargestPath_step(step, snakes, turn, depth, path, weight)
+                if(step in [[8, 7], [9, 7], [9, 8], [10, 8], [10, 9], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10], [0, 9], [1, 9], [2, 9], [2, 8], [3, 8], [4, 8], [5, 8], [5, 9], [6, 9], [7, 9], [8, 9], [9, 9], [8, 8], [7, 8], [7, 7], [4, 9], [5, 7], [4, 7], [3, 7], [2, 7], [1, 7], [1, 8], [0, 8], [0, 7], [1, 6]]):
+                    print("DEBUG", t, step, self.markovs[t][step[0], step[1]])
+                # print(self.markovs[t])
                 # print("LARGEST STEP", str(pathnew), str(path), str(step))
 
             if (len(pathnew) > depth):
                 break
 
         return pathnew, weightnew
+
 
 
 # == FINDERS ==
@@ -2232,10 +2243,10 @@ class board():
                 board[m[0],m[1]] = t
 
             a = sn.getHead()
-            board[a[0],a[1]] = "-2"
+            board[a[0],a[1]] = "-20"
 
             a = sn.getTarget()
-            board[a[0],a[1]] = "-1"
+            board[a[0],a[1]] = "-10"
 
             self.logger.maps("SNAKE MOVES: %s" % sn.getType(), board)
 
