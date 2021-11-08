@@ -14,8 +14,10 @@ from logClass import log
 from snakeClass import snake
 from boardClass import board
 
+import constants as CONST 
 
-from logic import checkEnemy, enemyInterrupts, checkInterrupts, stateMachine, makeMove
+
+from logic import predictFuture, enemyInterrupts, checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -133,8 +135,8 @@ def handle_move(testData="", testOverride=False):
     theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards)
     logger.timer('updateChance')
 
-    # == DEPRECATE | CONFLICTS with statemachine == 
-    # checkEnemy(theBoard, ourSnek, allSnakes)
+    # Random play forward of moves 
+    predictFuture(theBoard, ourSnek, allSnakes)
 
     # if ('speed' in game_type):
     # else:
@@ -161,9 +163,8 @@ def handle_move(testData="", testOverride=False):
     logger.timer('updateBoardsEnemy')
     theBoard.updateBoardsEnemyMoves(allSnakes)
 
-    # Chance board -- handled in updateBoards
-    # logger.timer('updateChance')
-    # theBoard.updateChance(allSnakes, theFoods)
+    # Clear routing boards -- new info
+    theBoard.clearBest()
 
     # Update our routing board  
     logger.timer('updateBest')
@@ -194,11 +195,16 @@ def handle_move(testData="", testOverride=False):
     # games[game_id] = [theBoard, ourSnek, allSnakes]
     
     # Fork reporting (non blocking to server response )
-    newpid = os.fork()
-    if newpid == 0:
-        # p = psutil.Process(newpid.getpid())
-        # p.set_nice(10)
+    if 'localhost' in CONST.environment:
+        # Don't fork for localhost (prevent runaway PIDs during testing)
         reporting(logger, theBoard, ourSnek, allSnakes, data)
+
+    else: 
+        newpid = os.fork()
+        if newpid == 0:
+            # p = psutil.Process(newpid.getpid())
+            # p.set_nice(10)
+            reporting(logger, theBoard, ourSnek, allSnakes, data)
 
     logger.timer('== Move complete ==')    
     return {"move": move, "shout":shout}

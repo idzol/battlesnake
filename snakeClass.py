@@ -35,7 +35,7 @@ class snake:
         self.steps = []     # Future possible steps 
         self.routeHistory = []
         
-        self.aggro = CONST.aggroLow   # out of 100 
+        # self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
         self.eating = False 
         self.health = 100 
@@ -120,10 +120,10 @@ class snake:
         self.setLength(length)
 
         # Set meta 
-        aggro = CONST.aggroLow
+        # aggro = CONST.aggroLow
         hunger = 100 - health
         self.setHunger(hunger)
-        self.setAggro(aggro)
+        # self.setAggro(aggro)
         
 
     def setEnemy(self, data):

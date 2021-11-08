@@ -24,7 +24,7 @@ Core decision making engine for target selection and making moves
 """
 
 
-def checkEnemy(bo:board, sn:snake, snakes):
+def predictFuture(bo:board, sn:snake, snakes):
     """
     Play forward (futuremoves) turns 
     Check for enemy moves before calculating route boards  
@@ -63,13 +63,13 @@ def enemyInterrupts(bo:board, sn:snake, snakes:list):
     strategyinfo =  {}
     interruptlist = []
 
-    # sn = snakes[you]
-    # length = sn.getLength()
-    start = sn.getHead()
-
-    if(largestSnake(bo, sn, snakes, 0)): 
-      interruptlist.insert(0, ['Control', 'Space'])
-
+    us = snakes[you]
+    head_us = us.getHead()
+    
+    # if(largestSnake(bo, sn, snakes, 0)): 
+    #   interruptlist.insert(0, ['Kill', 'Collide'])
+    #   strategyinfo['killpath'] = head_us
+      
     # if(distToWall <= 1 
     #  ['Idle', 'Wall']
 
@@ -109,11 +109,49 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
     interruptlist = []
 
     numsnakes = len(snakes)
+    if (numsnakes == 2):
+        duel = True
+    else:
+        duel = False 
     minlength = CONST.growLength
-    larger = CONST.controlLargerBy
-    
+
+    larger = largestSnake(bo, sn, snakes, 1)
+    largest = largestSnake(bo, sn, snakes) 
+
     reason = []
+
+    # Prison -- enclosure 
+    if (larger and duel): 
+      for sid in snakes:
+        if sid != you:
+          snek = snakes[sid]
+          # Check if snake in prison
+          if (prison := bo.enclosedPrison(snek, head=start)):
+            strategyinfo['prison'] = []
+            # Check weakest prison bar
+            for bar in prison: 
+              target = bar['point']
+              expires = bar['expires']
+
+              try:               
+                dist = len(bo.best[str(start)][str(target)]['path'])
+              except:
+                # Key doesn't exist or no route 
+                dist = -1 
+              
+              # print("DEBUG BAR", target, dist, expires)
+
+              # Route distance equals bar expiry 
+              if(expires == dist):
+                strategyinfo['prison'].append(target)
+                # Only route to first point (otherwise N points in tail)
+                interruptlist.insert(0, ['Control', 'Prison'])
+                reason.append('prison was identified')
+                break 
+
+      # print("DEBUG PRISON", prison, bo.best[str(start)][str([8, 9])], strategyinfo['prison'])
             
+
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
@@ -141,20 +179,20 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
 
     # End game - Control space
     # if (health > CONST.healthLow and length >= CONST.lengthEndGame and numsnakes == 2):
-    if (health > CONST.healthLow and largestSnake(bo, sn, snakes) and length >= CONST.lengthEndGame and numsnakes == 2):
+    if (health > CONST.healthLow and largest and length >= CONST.lengthEndGame and duel):
         interruptlist.append(['Control', 'Box'])
         for sndata in snakes: 
           sid = snakes[sndata].getId() 
           if sid != you:
             strategyinfo['enemy'] = snakes[sndata]
 
-        reason.append('duel, '+str(minlength)+' length and larger by '+str(larger))
+        reason.append('duel and largest. length: '+str(length))
 
     # Mid game - Idle centre 
     # if (health > CONST.healthMed and length >= CONST.lengthMidGame):
-    if (largestSnake(bo, sn, snakes) and health > CONST.healthMed and length >= CONST.lengthMidGame):
+    if (largest and health > CONST.healthMed and length >= CONST.lengthMidGame):
         interruptlist.append(['Idle', 'Centre'])
-        reason.append('largest snake by '+str(larger)+' length and length is '+str(length))
+        reason.append('largest snake. length: '+str(length))
     
 
     # Early game - Survive & eat 
@@ -210,8 +248,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     
     # Us / enemy trategy 
     if not enemy:
-        strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Idle', 'Centre'], \
-                    ['Survive', 'Weight'], ['Survive', 'Length'], ['Survive', 'Tail']]
+        strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Rfactor']]
+        # ['Survive', 'Rfactor'], ['Survive', 'Weight'], ['Survive', 'Length'], ['Survive', 'Tail']
+    
     else:
         strategylist_default = [['Idle','Wall'],['Eat', 'Simple']]
         # ['Control', 'Space'], ['Survive', 'Weight']]
@@ -231,7 +270,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     
     # Get available directions 
     dirns_avail = bo.findEmptySpace(start, dirn=False)
-    routepadding_method = 'weight'
+    routepadding_method = 'random'
     
     # tail = sn.getTail()
     # alltails = getSnakeTails(snakes)
@@ -269,6 +308,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       # strategy = ['Eat', 'Best']
 
       if(strategy[0] == 'Kill'):
+          
           if (strategy[1] == 'Collide'):
             # HEAD ON COLLISION 
             target = strategyinfo['killpath']   
@@ -291,6 +331,14 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
             
       if(strategy[0]=='Control'):
 
+          if (strategy[1] == 'Prison'):
+            # Target equals weakest bar 
+            target = strategyinfo['prison'].pop(0)
+            routepadding_method = 'rfactor' # strategyinfo['padding']
+
+            if(len(strategyinfo['prison'])):
+                strategylist.insert(0, strategy)
+            
           # target = bo.findClosestNESW(start)  
           if (strategy[1]=='Space'):
 
@@ -324,36 +372,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
             # Update step 
             strategyinfo['control'] = step
-            
             bo.logger.log('strategy-control', str(step), str(target), '')
 
-            # TODO: sync with other snake, stay two moves ahead.. 
-            
-            # if not front line ('a', 'b' -> 'c'?) 
-            #  find food (eg. left)
-            #  loop back to start (eg. top to bottom)
-
-            # if area control lost 
-            #  snake crosses area control line 
-            #  strategy = defaultstrategy 
-
-
-      # if(strategy[0]=='Misc'):
-          
-      #     if(strategy[1]=="Stalk"):
-      #         # find enemy head square
-      #         # stay X squares ahead 
-      #         # wait for kill 
-      #         pass 
-          
-          
-      #     if(strategy[1]=="Spiral"):
-      #         # find central point of map
-      #         # spiral of death 
-      #         pass 
-          
-      #     # Spiral  
-
+    
       if(strategy[0]=='Eat'): 
 
           # No food -- change strategy
@@ -424,22 +445,28 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
           survive_execute = ['Survive', '']
 
           if(strategy[1]=='Weight'):  
-            dirns = copy.copy(dirns_avail)
+            dirns = dirns_avail + []    # copy.copy
             routepadding_method = "weight"
             strategylist.insert(0, survive_execute)
             
           if(strategy[1]=='Length'):  
-            dirns = copy.copy(dirns_avail)
+            dirns = dirns_avail + []    # copy.copy
             routepadding_method = "length"
             strategylist.insert(0, survive_execute)
             
           if(strategy[1]=='Tail'):  
-            dirns = copy.copy(dirns_avail)
+            dirns = dirns_avail + []    # copy.copy
             routepadding_method = "tail"
             strategylist.insert(0, survive_execute)
-            
+
+          if(strategy[1]=='Rfactor'):  
+            dirns = dirns_avail + []    # copy.copy
+            routepadding_method = "rfactor"
+            strategylist.insert(0, survive_execute)
+          
+
           if(strategy[1]=='Random'):  
-            dirns = copy.copy(dirns_avail)
+            dirns = dirns_avail + []    # copy.copy
             routepadding_method = "tail"
             strategylist.insert(0, survive_execute)
             
@@ -521,7 +548,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
         
           found = True 
           # Safe path to & away found
-          route = copy.copy(route_padded)
+          route = route_padded + []   # copy.copy
           bo.logger.log('strategy-found', 'PATH FOUND Target:%s Route:%s Strategy:%s %s' %
                             (str(target), str(route), target_method, route_method))
           
@@ -616,10 +643,11 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
 
             # R20211104 - changed from 10*len to 10*2^len 
             if r['weight'] == 0:
-              rnew = 10 * pow(1.2, r['length'])
+              # rnew = 100 * pow(1.2, r['length'])
+              rnew = pow(r['length'], 3)
             else:  
-              rnew = 10 * pow(1.2, r['length']) / r['weight'] 
-              
+              # rnew = 100 * pow(1.2, r['length']) / r['weight'] 
+              rnew = pow(r['length'], 3) / r['weight']
             # print("DEBUG ROUTE", rnew, r)
 
             if rnew > rfactor:
@@ -923,7 +951,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
     return:     target    (points, eg. [1,2])
     """ 
     # Preserve objects 
-    foods = copy.copy(foodsort)
+    foods = foodsort + []   # copy.copy
 
     # How many moves until we believe a target
     targetConfidence = 2 
@@ -954,7 +982,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
                   a.append(fn.distanceToPoint(food, history[i]))
 
               # Check ascending - ie. recent locations are closser 
-              dist_sort = copy.copy(a)
+              dist_sort = a + []   # copy.copy
               dist_sort.sort() 
                   
               
@@ -967,7 +995,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
 
                   # Check new target is closer 
                   if a[0] < dist_last or not len(target_last):
-                    dist_enemy = copy.copy(a[0])
+                    dist_enemy = a[0]   # copy.copy
                     len_enemy = sn.getLength()
                     foodthreat[str(food)].append({'length':len_enemy, 'dist':dist_enemy})
                     sn.setTarget(food)
@@ -1065,7 +1093,7 @@ def controlSpace(bo:board, us:snake, snakes:list):
           # Save location wtih max control 
           if control > control_max:
               control_max = control
-              target = copy.copy(step) 
+              target = step + []   # copy.copy
               # board_dist = copy.copy(dist)
 
           if dist_min < CONST.foodThreat: 
@@ -1115,6 +1143,7 @@ def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemySt
             
             for ourstep in steps_us:
             # Iterate through our steps 
+                conflict = []
                 for step in steps_enemy:
                 # Check against enemy steps 
                     safe = True
@@ -1127,9 +1156,10 @@ def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemySt
             
                         if step[-1] == ourstep[-1]:
                             if (length > length_us and 
-                                fn.distanceToPoint(head_us, step[-1]) > 1):
+                                fn.distanceToPoint(head_us, ourstep[-1]) > 1):
                                 # Check for collision (same square and we are same / smaller) 
                                 # AND exclude U loops (dumb) 
+                                conflict = step
                                 safe = False 
                                 reason = "head on collision"
 
@@ -1147,8 +1177,11 @@ def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemySt
             
                                 # No paths
                                 if (not found):
-                                    safe = False 
-                                    reason = "no path for us"
+                                    if fn.distanceToPoint(head_us, ourstep[-1]) > 1:
+                                      # AND exclude U loops (dumb) 
+                                      conflict = step
+                                      safe = False 
+                                      reason = "no path for us"
                 
                 
                     if (not safe):
@@ -1156,8 +1189,8 @@ def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemySt
                     # TODO: be less cautious, more agressive if we see a path out
 
                         # DEBUG .. 
-                        # if [8,3] in ourstep:
-                        #     print("DEBUG - FINAL PATHS ourstep: (%s) steps_enemy:(%s)" % (ourstep, steps_enemy))
+                        if [8,0] in ourstep:
+                            print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
                         
                         for s in steps_us:
                             if ourstep[-1] in s: 

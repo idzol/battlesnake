@@ -23,7 +23,7 @@ logfile_error = "error.log"
 
 # TODO:  Performance testing 
 # TODO:  Converge these over time .. 
-lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
+lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:predictFuture)
 lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPath = 20          # Path prediction (Random)
 lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
@@ -99,18 +99,18 @@ healthMed = 75
 healthLow = 50
 healthCritical = 25
 
-threatHigh = 80
-threatMed = 50
-threatLow = 20
+# threatHigh = 80
+# threatMed = 50
+# threatLow = 20
 
-aggroHigh = 80
-aggroMed = 50
-aggroLow = 20
+# aggroHigh = 80
+# aggroMed = 50
+# aggroLow = 20
 
 # Strategy 
 strategyDepth = 100   # max strategies to explore each turn
 strategyDepthEnemy = 10    # max enemy strategies to explore each turn
-strategyLength = 5   # number of strategies to remember between turns
+# strategyLength = 5   # DEPRECATE - stateless.  number of strategies to remember between turns
 
 # Strategy - control board 
 controlMinLength = 25

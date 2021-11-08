@@ -44,7 +44,7 @@ test_route_foodtail_path = np.array(
 test_route_tail = np.array(
 [[ 0, 28, 27, 0],
  [20, 21, 26, 0],
- [ 0, 22, 25, 0]
+ [ 0, 22, 25, 0],
  [ 0, 23, 24, 0]])
 
 test_route_death_chance = np.array(
@@ -60,6 +60,7 @@ test_route_enemy_food = np.array(
  [ 0, 22,  0,  0]])
 
 
+
 # test_route_tail 
 # 3.1 chase tail vs larger space
  
@@ -72,6 +73,20 @@ test_route_enemy_food = np.array(
 # test_route_enemy_food
 # 6.1 predict enemy routes - incorporate food into turn 
 
+
+# Prison break 
+
+# 1.1  Prison doesn't exists
+# 1.2  Prison exists 
+  # enemy larger 
+  # not reachable (time)
+# 1.3   Prison ..  
+
+test_prison_exists = np.array(
+[[27, 26, 36,-10],
+ [20, 25, 35, 30],
+ [21, 24, 34, 31],
+ [22, 23, 33, 32]])
 
 ## MAP0
 test_map0 = np.array(
@@ -443,6 +458,12 @@ class boardClassTest(unittest.TestCase):
           food = [f['y'], f['x']]
           theFoods.append(food)
 
+        theHazards = []
+        hazards = data['board']['hazards']
+        for h in hazards:
+          hazard = [f['y'], f['x']]
+          theHazards.append(hazard)
+
         # Set our snake 
         ourSnek.setAll(data['you'])
         ourSnek.setId(identity)
@@ -475,12 +496,9 @@ class boardClassTest(unittest.TestCase):
             snek = allSnakes[sid]
             # print(snek.getHeadBody()) 
 
-        theBoard.updateBoards(data, ourSnek, allSnakes, theFoods) 
+        theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards) 
         theBoard.updateChance(allSnakes, theFoods)
         theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-        theBoard.updateDijkstra(allSnakes)
-        theBoard.updateGradient(ourSnek.getHead()) 
-        theBoard.updateGradientFix(ourSnek.getHead())
         
         return (theBoard, ourSnek, allSnakes, theFoods)
 
@@ -524,6 +542,7 @@ class boardClassTest(unittest.TestCase):
         final = target
         route, weight = theBoard.routePadding([final], allSnakes, foods)
         # print("1.4 -- Route away from enemy tail.  %s should contain %s" % (route, [2,1]))
+        # DEBUG -- print(route,weight,[final], foods)
         self.assertIn([2,1], route)
       
         # 2.1 -- Us eating.  Confirm no path through tail (length + 1)
@@ -550,9 +569,7 @@ class boardClassTest(unittest.TestCase):
         route, weight = theBoard.routePadding([final], allSnakes, foods)
         # print("2.2 -- Us eating.  Route through tail.  %s should contain %s" % (route, [0, 1]))
         self.assertIn([0, 1], route)
-        
-
-  
+          
         # X.1 -- Route to smaller snake (100% prob)
         # data = loadTestData(test_route_enemycollide)
         # (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
@@ -562,6 +579,40 @@ class boardClassTest(unittest.TestCase):
 
         # X.2 -- Route see through dead snake (if 100%..)
 
+    def test_enclosedPrison2(self):
+        
+        data = loadTestData(test_prison_exists)
+        (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        
+        # 1.1 - Test prison 
+        start = ourSnek.getHead()
+        theBoard.updateBest(start)
+        strategyPrison = False 
+        
+        uid = theBoard.identity
+        # Check snakes 
+        for sid in allSnakes:
+          if sid != uid:
+            snek = allSnakes[sid]
+            snek.setLength(10)    # Not set in setBody
+            # Check prison 
+            prison = theBoard.enclosedPrison(snek)
+            for bar in prison: 
+              target = bar['point']
+              expires = bar['expires']
+              dist = len(theBoard.best[str(start)][str(target)])
+              if(expires == dist):
+                  print(bar)
+                  print(theBoard.best[str(start)][str(target)]['path'])
+                  strategyPrison = True 
+
+        # Check prison strategy 
+        self.assertEqual(strategyPrison, True)
+        # bar -- ..{'expires': 5, 'point': [0, 1]}
+        # route -- [[3, 0], [3, 1], [2, 1], [1, 1], [0, 1]]
+      
+        # theBoard.showMaps()
+      
 
     def test_setGetDimensions(self):
       

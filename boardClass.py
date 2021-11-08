@@ -542,6 +542,8 @@ class board():
           for snid in snakes:
               sn = snakes[snid]
               # markov_sn = sn[identity].getMarkov()
+              
+              # if t >= CONST.lookAheadEnemy:
               if sn.getLength() < us.getLength() or t >= CONST.lookAheadEnemy:
                 # Remove threat from smaller snakes, or after N turns (because snake threat unknown)
                 markov_sn = sn.getMarkovBase(t)
@@ -554,7 +556,18 @@ class board():
           self.markovs[t] = markov
           # self.markovbase[t] = copy.copy(markov)
       
-       
+    
+    def clearBest(self):
+        """
+        Clear routing boards.  Set self.best to none
+        ==  
+        none
+        == 
+        returns none 
+        """
+        self.best = {}
+
+
     def updateBest(self, start:list):
         """
         Calculate paths from start to any point on the board 
@@ -607,7 +620,7 @@ class board():
                     # dot_loc = copy.copy(step)
                     
                     dot_length = dot['length'] + 1
-                    dot_path = copy.copy(dot['path'])
+                    dot_path = dot['path'] + []     # copy.copy
 
                     # Check in bounds 
                     if self.inBounds(dot_loc):
@@ -825,7 +838,7 @@ class board():
         # Calculate random walk probabiliy of each square
         for dirn in dirn_avail:
             path = [head]
-            prob = 100 / len(dirn_avail)
+            prob = 100 / len(dirn_avail)    # CONST.routeSolid 
             turn = 1
             step = list(map(add, head, CONST.directionMap[dirn]))
             self.pathProbability_step(chance, path, prob, step, turn, depth)
@@ -937,6 +950,9 @@ class board():
         if start == dest: 
             return [start], 0
 
+        if not str(start) in self.best:
+            self.updateBest(start)
+
         if self.inBounds(dest):
             if str(dest) in self.best[str(start)]:
                 route = self.best[str(start)][str(dest)]['path']
@@ -973,7 +989,7 @@ class board():
         return result, largest_point
 
 
-    def routePadding(self, route:list, snakes:list, foods:list, depth=CONST.lookAheadPathContinue, method="weight"):
+    def routePadding(self, route:list, snakes:list, foods:list, depth=CONST.lookAheadPathContinue, method="random"):
         """
         Extend an existing route path by N moves to check whether it is safe
         ===
@@ -1001,7 +1017,6 @@ class board():
         else: 
             path_start = route
 
-        
         # Confirm we have a path
         if (turn := len(path_start)):
 
@@ -1022,14 +1037,14 @@ class board():
             # A) Largest path - using bestPath 
             if method in ['weight', 'length', 'tail', 'rfactor']:
             
-                routes = self.continuePath(path_start, snakes, foods, depth, method)
-
-                if (len(routes)):  
+                route_best = self.continuePath(path_start, snakes, foods, depth, method)
+                # print("BEST ROUTE", route_best)
+                if (len(route_best)):  
                     
-                    routes_sorted = sorted(routes, key=lambda d: d['weight']) 
+                    # route_sorted = sorted(route_best, key=lambda d: d['weight'])
                     # Path comes back reversed 
-                    weight = routes_sorted[0]['weight']
-                    path = routes_sorted[0]['path']
+                    weight = route_best['weight']
+                    path = path_start + route_best['path']
                     # path = copy.copy(path_padding)                        
                     routefound = True 
 
@@ -1166,7 +1181,7 @@ class board():
         return eating 
 
 
-    def continuePath(self, route, snakes, foods=[], depth=CONST.lookAheadPathContinue, method="weight"):
+    def continuePath(self, route, snakes, foods=[], depth=CONST.lookAheadPathContinue, method="random"):
    
         w = self.width  
 
@@ -1175,7 +1190,7 @@ class board():
             
         else:
             start = route[-1]
-            path = copy.copy(route)
+            path = route + []  # copy.copy
                 
         # Look for dots that makes it to longest path..
         routes = []
@@ -1190,7 +1205,7 @@ class board():
         # Find BEST route 
         # 1) longest with no weight 
         if (method == "weight"):
-            rfactor = copy.copy(self.bestLength[str(start)])
+            rfactor = self.bestLength[str(start)]       # copy.copy
             while smax := np.argmax(rfactor):      
                 sy = int(smax / w)
                 sx = smax % w
@@ -1199,7 +1214,8 @@ class board():
                     break
                 else:
                     rfactor[sy, sx] = 0
-
+        
+        
         # 2) Weighted rfactor 
         elif (method == "tail"):
             # Get snake info 
@@ -1212,7 +1228,8 @@ class board():
 
         # 2) Weighted rfactor 
         elif (method == "rfactor"):
-            rfactor = np.round(20 * pow(1.2, self.bestLength[str(start)]) / (self.bestWeight[str(start)] + 1), 0)
+            # R20211104 - changed from 10*len to 10*2^len 
+            rfactor = np.round(pow(self.bestLength[str(start)], 3) / (self.bestWeight[str(start)] + 1), 0)
             smax = np.argmax(rfactor)
             sy = int(smax / w)
             sx = smax % w
@@ -1230,123 +1247,19 @@ class board():
         if not len(target):
             return []
 
-        dot_route = copy.copy(route)
-        dot_length = self.bestLength[str(start)][start[0], start[1]]
-        length_max = self.bestLength[str(start)][sy, sx]
+        # print("DEBUG BEST WEIGHT", self.bestWeight[str(start)])
+        # print("DEBUG BEST LENGTH", self.bestLength[str(start)])
+        # print("DEBUG BEST TARGET", target)
+        # print("DEBUG BEST PATH",
         
-
-        dot_alpha = {'loc':start, 'weight':0, 'length':dot_length, 'path':dot_route, 'from':''}
-        # print("DEBUG", route, dot_alpha, target)
+        try:
+            # If key exists
+            routes = self.best[str(start)][str(target)]
+        except:
+            pass 
         
-        # Recursive dots 
-        dots = []
-        dots.append(dot_alpha)
-
-        # Complexity - O(4wh)
-        rr = 0
-        rr_max = CONST.lookAheadPathContinue   #  w + h  
-
-        best = {}
-        best[str(start)] = dot_alpha
-        # while(len(dots)):
-
-        # WORKING:  or minweight = 0 (ie. ideal path found )
-        while(len(dots) and rr < rr_max):
-
-            dots_next = []
-            # Each dot recurses into adjacent cells 
-            for dot in dots:
-                         
-                alive = False    
-                for dirn in CONST.directions:
-                    alive = False 
-                    if dot['from'] == dirn:
-                        # Skip direction we came from 
-                        next 
-
-                    dot_length = dot['length'] + 1
-                    if dot_length > length_max:
-                        next 
-
-                    # Check next swap 
-                    dot_loc = list(map(add, dot['loc'], CONST.directionMap[dirn]))
-                    dot_path = copy.copy(dot['path'])
-                    turn = dot_length - 1 
-                    
-                    # Check in bounds 
-                    if self.inBounds(dot_loc):
-
-                        # Check if food is in past moves
-                        eating = self.findEating(snakes, path + [dot_loc], foods)   
-                        
-                        # if(dot_loc in [[10,10], [9,10], [10,8]]):
-                        #     print("DEBUG", dot_loc)
-
-                        # Check next path is in bounds, available and not already visited**            
-                        found = self.isRoutePointv2(dot_loc, turn, eating, path)
-                        if (found):
-                            # TODO:  Introduce weight once markov extended to N 
-                            t = min(turn, CONST.lookAheadPathContinue - 1) 
-                            
-                            # DEBUG
-                            # if step == [8, 5]:
-                            #     print("DEBUG MARKOV WEIGHT", self.markovs[t][step[0]][step[1]])
-                            dot_weight = dot['weight'] + self.markovs[t][dot_loc[0]][dot_loc[1]]
-
-                            # Check if we can route 
-                            if dot_length == self.bestLength[str(start)][dot_loc[0], dot_loc[1]]:
-                                if not str(dot_loc) in best: 
-                                    # print("NEW", dot_loc, best)
-                                    alive = True 
-
-                                    # Check if better path 
-                                else: 
-                                    dot_omega = best[str(dot_loc)]
-                                    if ((dot_length < dot_omega['length']) or
-                                            (dot_length == dot_omega['length'] and dot_weight < dot_omega['weight'])):
-                                        
-                                        alive = True
-                
-                    else:
-                        # Kill dot 
-                        pass 
-
-                    # if (dot_loc in [[9,10],[10,9],[10,10]]):
-                        # print("DEBUG", alive, turn, step, path)
-
-                    if alive == True: 
-
-                        dot_path.append(dot_loc)
-                        # Create another dot (recursive)
-                        dot_new = {'loc':dot_loc, 
-                            'weight':dot_weight,
-                            'length':dot_length, 
-                            'path':dot_path,
-                            'from':dirn}
-                        
-                        # print("ADDED", dot_new)
-                        
-                        if dot_loc == target:
-                            routes.append(dot_new)
-
-                        else:  
-                            best[str(dot_loc)] = dot_new
-                            dots_next.append(dot_new)
-                            # Save new best path 
-                        
-                    else: 
-                        pass 
-                        
-                    # return 
-
-
-                dots = dots_next
-            
-            # print("routes", routes)
-            rr += 1
-
-        # print("CONTINUE PATH", routes)
-        return copy.copy(routes)
+        return routes
+        
 
 
     def findLargestPath(self, route, snakes, turn=0, foods=[], depth=CONST.lookAheadPath):
@@ -1376,9 +1289,9 @@ class board():
 
         # Look in all directions
         for d in CONST.directions:
-            newturn = copy.copy(turn)
+            newturn = turn + 0    # copy.copy
             step = list(map(add, start, CONST.directionMap[d]))
-            path = copy.copy(route)
+            path = route + []     # copy.copy
             newpath = []
             newweight = 0 
                     
@@ -1438,9 +1351,9 @@ class board():
         if (len(path) >= depth):
             return path, weight
 
-        start = copy.copy(route)
-        pathnew = copy.copy(path)
-        weightnew = copy.copy(weight)
+        start = route + []          # copy.copy
+        pathnew = path + []         # copy.copy
+        weightnew = weight + 0      # copy.copy
 
         # Look in all directions
         for d in CONST.directions:
@@ -1466,8 +1379,8 @@ class board():
 
                 # Get next step (Recursive)
                 (pathnew, weightnew) = self.findLargestPath_step(step, snakes, turn, depth, path, weight)
-                if(step in [[8, 7], [9, 7], [9, 8], [10, 8], [10, 9], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10], [0, 9], [1, 9], [2, 9], [2, 8], [3, 8], [4, 8], [5, 8], [5, 9], [6, 9], [7, 9], [8, 9], [9, 9], [8, 8], [7, 8], [7, 7], [4, 9], [5, 7], [4, 7], [3, 7], [2, 7], [1, 7], [1, 8], [0, 8], [0, 7], [1, 6]]):
-                    print("DEBUG", t, step, self.markovs[t][step[0], step[1]])
+                # if(step in [[8, 7], [9, 7], [9, 8], [10, 8], [10, 9], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10], [0, 9], [1, 9], [2, 9], [2, 8], [3, 8], [4, 8], [5, 8], [5, 9], [6, 9], [7, 9], [8, 9], [9, 9], [8, 8], [7, 8], [7, 7], [4, 9], [5, 7], [4, 7], [3, 7], [2, 7], [1, 7], [1, 8], [0, 8], [0, 7], [1, 6]]):
+                #     print("DEBUG", t, step, self.markovs[t][step[0], step[1]])
                 # print(self.markovs[t])
                 # print("LARGEST STEP", str(pathnew), str(path), str(step))
 
@@ -1536,6 +1449,7 @@ class board():
 
         w = self.width - 1
         h = self.height - 1
+        target = []
         walls = [
             [ay, 0],  # Left
             [ay, w],  # Right
@@ -1548,11 +1462,16 @@ class board():
             r = []
             # print("A")
         else:
-            r = self.leastWeightLine(start, walls)
-            # print("B")
+            best = w + h
+            for wall in walls:
+                # Check path weigth
+                distance = fn.distanceToPoint(start, wall)
+                if distance < best:
+                    best = distance
+                    target = wall
 
-        # self.logger.log('route-findclosestwall', str(walls), r)
-        return r
+        return target
+
 
     def findClosestNESW(self, start):
         # TODO: Lowest threat or highest control
@@ -2077,6 +1996,84 @@ class board():
 
         return copy.copy(allowed)
 
+
+    def enclosedPrison(self, snake, head=[]):
+        """
+        Return points that are about to expire in prison 
+        Return [] if not a prison 
+        == 
+        start:	snake head (enemy)
+        size:  	size of prison (eg. snake length)
+        == 
+        returns t:list of weakest points in prison 
+        """
+
+        w = self.width
+        h = self.height
+
+        enclosed = np.zeros([h, w], np.intc)
+        enclosed_size = 0
+
+        head = snake.getHead()
+        body = snake.getBody()
+        prison_size = 2 * snake.getLength()
+        
+        prison = []
+        dots = [head]
+
+        while(len(dots)):
+            dots_next = []
+            for dot in dots: 
+                # Check enclosed space in four directions from start
+                for d in CONST.directions:
+
+                    step = list(map(add, dot, CONST.directionMap[d]))
+
+                    # Mark off point 
+                    sy = step[0]
+                    sx = step[1]
+                    
+                    # Check inbounds (copy for performance)
+                    if (0 <= sy < h) and (0 <= sx < w):
+
+                        if (enclosed[sy, sx]):
+                            # already been here 
+                            next
+                        
+                        else: 
+                            enclosed[sy, sx] = 1
+
+                            # TODO: add body as prison wall .. 
+                            # add sn.getTrails()
+                            
+                            if(self.trails[sy, sx] == 0) :
+                                # Prison cell -- point is routable
+                                
+                                dots_next.append(step)
+                                enclosed_size += 1
+
+                            else:
+                                # Prison wall 
+                                if not (step in prison) :
+                                    expires = self.trails[sy, sx]
+                                    bar = {'expires':expires, 'point':step}
+                                    # Check not already bar, or not current head 
+                                    if not (bar in prison) and not (step in head):
+                                        prison.append(bar)
+
+                            # Check if prison size exceeded
+                            if enclosed_size > prison_size: 
+                                # Not a prison 
+                                break 
+                                
+            dots = dots_next + []   # copy.copy
+            
+        # print("PRISON", enclosed)
+        # Sort prison (ascending)
+        prison_sorted = sorted(prison, key=lambda d: d['expires'])
+        return prison_sorted
+
+
     def enclosedSpacev2(self, start):
         # Return volume of enclosed spaces in each direction
         # TODO:  If < lenght AND tail < dist...
@@ -2242,11 +2239,11 @@ class board():
                 # Get first m steps in route
                 board[m[0],m[1]] = t
 
-            a = sn.getHead()
-            board[a[0],a[1]] = "-20"
+            # a = sn.getHead()
+            # board[a[0],a[1]] = "-20"
 
-            a = sn.getTarget()
-            board[a[0],a[1]] = "-10"
+            # a = sn.getTarget()
+            # board[a[0],a[1]] = "-10"
 
             self.logger.maps("SNAKE MOVES: %s" % sn.getType(), board)
 
@@ -2676,3 +2673,123 @@ class board():
     #                 break
 
     #     return route, gradient
+
+        ## == continuePath == 
+        # dot_route = copy.copy(route)
+        # dot_length = self.bestLength[str(start)][start[0], start[1]]
+        # length_max = self.bestLength[str(start)][sy, sx]
+        
+
+        # dot_alpha = {'loc':start, 'weight':0, 'length':dot_length, 'path':dot_route, 'from':''}
+        # # print("DEBUG", route, dot_alpha, target)
+        
+        # # Recursive dots 
+        # dots = []
+        # dots.append(dot_alpha)
+
+        # # Complexity - O(4wh)
+        # rr = 0
+        # rr_max = CONST.lookAheadPathContinue   #  w + h  
+
+        # best = {}
+        # best[str(start)] = dot_alpha
+        # # while(len(dots)):
+
+        # # WORKING:  or minweight = 0 (ie. ideal path found )
+        # while(len(dots) and rr < rr_max):
+
+        #     dots_next = []
+        #     # Each dot recurses into adjacent cells 
+        #     for dot in dots:
+                         
+        #         alive = False    
+        #         for dirn in CONST.directions:
+        #             alive = False 
+        #             if dot['from'] == dirn:
+        #                 # Skip direction we came from 
+        #                 next 
+
+        #             dot_length = dot['length'] + 1
+        #             if dot_length > length_max:
+        #                 next 
+
+        #             # Check next swap 
+        #             dot_loc = list(map(add, dot['loc'], CONST.directionMap[dirn]))
+        #             dot_path = copy.copy(dot['path'])
+        #             turn = dot_length - 1 
+                    
+        #             # Check in bounds 
+        #             if self.inBounds(dot_loc):
+
+        #                 # Check if food is in past moves
+        #                 eating = self.findEating(snakes, path + [dot_loc], foods)   
+                        
+        #                 # if(dot_loc in [[10,10], [9,10], [10,8]]):
+        #                 #     print("DEBUG", dot_loc)
+
+        #                 # Check next path is in bounds, available and not already visited**            
+        #                 found = self.isRoutePointv2(dot_loc, turn, eating, path)
+        #                 if (found):
+        #                     # TODO:  Introduce weight once markov extended to N 
+        #                     t = min(turn, CONST.lookAheadPathContinue - 1) 
+                            
+        #                     # DEBUG
+        #                     # if step == [8, 5]:
+        #                     #     print("DEBUG MARKOV WEIGHT", self.markovs[t][step[0]][step[1]])
+        #                     dot_weight = dot['weight'] + self.markovs[t][dot_loc[0]][dot_loc[1]]
+
+        #                     # Check if we can route 
+        #                     if dot_length == self.bestLength[str(start)][dot_loc[0], dot_loc[1]]:
+        #                         if not str(dot_loc) in best: 
+        #                             # print("NEW", dot_loc, best)
+        #                             alive = True 
+
+        #                             # Check if better path 
+        #                         else: 
+        #                             dot_omega = best[str(dot_loc)]
+        #                             if ((dot_length < dot_omega['length']) or
+        #                                     (dot_length == dot_omega['length'] and dot_weight < dot_omega['weight'])):
+                                        
+        #                                 alive = True
+                
+        #             else:
+        #                 # Kill dot 
+        #                 pass 
+
+        #             # if (dot_loc in [[9,10],[10,9],[10,10]]):
+        #                 # print("DEBUG", alive, turn, step, path)
+
+        #             if alive == True: 
+
+        #                 dot_path.append(dot_loc)
+        #                 # Create another dot (recursive)
+        #                 dot_new = {'loc':dot_loc, 
+        #                     'weight':dot_weight,
+        #                     'length':dot_length, 
+        #                     'path':dot_path,
+        #                     'from':dirn}
+                        
+        #                 # print("ADDED", dot_new)
+                        
+        #                 if dot_loc == target:
+        #                     routes.append(dot_new)
+
+        #                 else:  
+        #                     best[str(dot_loc)] = dot_new
+        #                     dots_next.append(dot_new)
+        #                     # Save new best path 
+                        
+        #             else: 
+        #                 pass 
+                        
+        #             # return 
+
+
+        #         dots = dots_next
+            
+        #     # print("routes", routes)
+        #     rr += 1
+
+        # # print("CONTINUE PATH", routes)
+        # return copy.copy(routes)
+
