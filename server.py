@@ -106,8 +106,10 @@ def handle_move(testData="", testOverride=False):
     theHazards = []
     hazards = data['board']['hazards']
     for h in hazards:
-      hazard = [f['y'], f['x']]
+      hazard = [h['y'], h['x']]
       theHazards.append(hazard)
+
+    # print("DEBUG HAZARDS", theHazards)
 
     # Set our snake 
     ourSnek.setAll(data['you'])
@@ -135,11 +137,11 @@ def handle_move(testData="", testOverride=False):
     theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards)
     logger.timer('updateChance')
 
-    # Random play forward of moves 
-    predictFuture(theBoard, ourSnek, allSnakes)
-
     # if ('speed' in game_type):
     # else:
+
+    # Random play forward of moves 
+    predictFuture(theBoard, ourSnek, allSnakes)
 
     # Apply state machine to all enemy snakes 
     logger.timer('stateMachineEnemy')
@@ -147,13 +149,12 @@ def handle_move(testData="", testOverride=False):
         snek = allSnakes[sid]
         if (snek != ourSnek):
             logger.timer('updateEnemyBest')
-            theBoard.updateBest(snek.getHead())
+            theBoard.updateBest(snek.getHead(), turn=0)
             
             silent = copy.copy(logger.silent) 
             logger.silent = True        # Supress enemy updates
             logger.timer('updateEnemyInterrupts')
             enemyInterrupts(theBoard, snek, allSnakes)
-            # AllSnakes updated with setRoute()
             logger.timer('updatesEnemyStateMachine')
             stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
             # print("ENEMY ROUTE", snek.getRoute())
@@ -168,15 +169,21 @@ def handle_move(testData="", testOverride=False):
 
     # Update our routing board  
     logger.timer('updateBest')
-    theBoard.updateBest(ourSnek.getHead())
+    theBoard.updateBest(ourSnek.getHead(), turn=0, snakes=allSnakes, foods=theFoods)
+    # for key in theBoard.best:
+    #     print(theBoard.best[key])
+
+    # print("HEAD", ourSnek.getHead())
+    # print(theBoard.bestLength)
+    # print(theBoard.bestWeight)
 
     # Check strategy interrupts     
     logger.timer('checkInterrupts')
     checkInterrupts(theBoard, ourSnek, allSnakes)
     
-    logger.timer('stateMachineEnemyUs')
+    logger.timer('stateMachineUs')
     # Progress state machine for our snake
-    stateMachine(theBoard, ourSnek, allSnakes, theFoods)
+    stateMachine(theBoard, ourSnek, allSnakes, theFoods, enemy=False)
     
     # Strategy Complete 
     logger.timer('== Strategy complete ==')
@@ -241,7 +248,7 @@ def reporting(logger, board, us, snakes, data):
     # Print log info
     us.showStats()
     board.showMaps()
-    board.showMapsFuture(snakes)
+    # board.showMapsFuture(snakes)
 
     for key in snakes:
         snk = snakes[key]

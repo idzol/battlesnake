@@ -21,13 +21,13 @@ logfile_game = "game.log"
 logfile_error = "error.log"
 
 
-# TODO:  Performance testing 
-# TODO:  Converge these over time .. 
-lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:predictFuture)
+lookAheadPredictFuture = 3  # Enemy prediction (play forward move - logic:predictFuture)
 lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
-lookAheadPath = 20          # Path prediction (Random)
-lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
-lookAheadPathContinueEnemy = 5  # Path continue (Enemy path lookahead)  
+lookAheadPathContinueEnemy = 3  # Path continue (Enemy path lookahead)  
+
+lookAheadPath = 20          # Path prediction
+lookAheadPathRandom = 20     # Path prediction (Random - expensive)
+lookAheadPathContinue = 20  # Path continue (Best / Markov / Dijkstra)
 maxRecursion = 3000
 
 
@@ -42,8 +42,8 @@ if (environment == 'prod'):
     'console':False  
   }
   # Time variable 
-  timeStart = 300
-  timeMid = 350
+  timeStart = 200
+  timeMid = 300
   timeEnd = 400
   timePanic = 400
 
@@ -58,8 +58,8 @@ elif (environment == 'preprod'):
     'console':False  
   }
   # Time variable 
-  timeStart = 300
-  timeMid = 350
+  timeStart = 200
+  timeMid = 300
   timeEnd = 400
   timePanic = 400
 
@@ -74,10 +74,10 @@ else:
     'console':True  
   }
   # Time variable 
-  timeStart = 3000
-  timeMid = 3500
+  timeStart = 2000
+  timeMid = 3000
   timeEnd = 4000
-  timePanic = 4000
+  timePanic = 400
 
 # Routing threshold - collision probability
 routeThreshold = 1000   # Ignore if route larger 
@@ -85,7 +85,8 @@ pointThreshold = 25   # Ignore if any step larger
 minProbability = 1    # Markov probability 
 
 routeSolid = routeThreshold
-routeHazard = 100 
+routeHazard = 1
+routeConstrain = 1
 routeCell = 1
 
 # Game phases

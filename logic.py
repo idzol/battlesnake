@@ -24,7 +24,7 @@ Core decision making engine for target selection and making moves
 """
 
 
-def predictFuture(bo:board, sn:snake, snakes):
+def predictFuture(bo:board, sn:snake, snakes:list):
     """
     Play forward (futuremoves) turns 
     Check for enemy moves before calculating route boards  
@@ -41,15 +41,70 @@ def predictFuture(bo:board, sn:snake, snakes):
     # Update / modify routes
 
     # Enemy kills us -- playing forward X turns
-    futuremoves = CONST.lookAheadEnemyStrategy
-    avoid = enemyStrategy(bo, sn, snakes, future=futuremoves)
+    numfuture = CONST.lookAheadPredictFuture
+    (rr, avoid) = checkFutureDeath(bo, sn, snakes, numfuture=numfuture)
 
     if (len(avoid)):
         # If enemy kill path found 
-        for path in avoid:
-            for turn in range(0, futuremoves):
+        for step in avoid:
+            # for step in path: 
+            for turn in range(0, numfuture + 1):
               # Mark cell 50% kill likelihood for N turns 
-              bo.updateCell(path, CONST.routeSolid/2, turn)
+              bo.updateCell(step, CONST.routeSolid/2, turn)
+
+
+    # Performance monitoring 
+    return rr 
+
+def controlSpace(bo:board, us:snake, snakes:list):
+    """
+    Maximise number of points we have access to on the board 
+    Note:  Finds local maximum 
+    ==
+    bo:     boardClass as board 
+    sn:     snakeClass as snake 
+    snakes: list[] of snakes  
+    ==
+    return: target    (points, eg. [1,2])
+    """ 
+    start = us.getHead()
+    target = [] 
+
+    # Find all enemy heads 
+    heads = []
+    # Find distance to closest head 
+    dist_min = bo.width * bo.height
+
+    for sid in snakes:
+      fsnake = snakes[sid]
+      ftype = fsnake.getType()   
+      if (ftype == 'enemy'):
+        fhead = fsnake.getHead()
+        heads.append(fhead)
+        distance = fn.distanceToPoint(fhead, start)
+        dist_min = min(dist_min, distance)
+
+    # Look for each location 
+    control_max = 0
+    for d in CONST.directions: 
+        # maximise board control - stepwise max 
+        step = list(map(add, start, CONST.directionMap[d]))
+        if (bo.inBounds(step) and bo.isRoutePointv2(step, 0)):
+          # Return board control matrix 
+          dist = bo.closestDist(step, heads)
+          control = np.sum(dist)
+
+          # Save location wtih max control 
+          if control > control_max:
+              control_max = control
+              target = step + []   # copy.copy
+              # board_dist = copy.copy(dist)
+
+          if dist_min < CONST.foodThreat: 
+              # If too close to enemy, abandon 
+              target = [] 
+
+    return copy.copy(target)
 
 
 # Enemy interrupt / strategy (state machine) based on external influence 
@@ -72,8 +127,6 @@ def enemyInterrupts(bo:board, sn:snake, snakes:list):
       
     # if(distToWall <= 1 
     #  ['Idle', 'Wall']
-
-
 
     sn.setStrategyInfo(strategyinfo) 
     sn.setInterrupt(interruptlist) 
@@ -241,6 +294,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     # Snake 
     start = sn.getHead()
     length = sn.getLength()
+    # body = sn.getBody()
+    tail = sn.getTail()
 
     # Inputs to state machine 
     interruptlist = sn.getInterrupt() 
@@ -248,14 +303,14 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     
     # Us / enemy trategy 
     if not enemy:
-        strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Rfactor']]
+        strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Rfactor'], ['Survive', 'Tail']]
         # ['Survive', 'Rfactor'], ['Survive', 'Weight'], ['Survive', 'Length'], ['Survive', 'Tail']
     
     else:
-        strategylist_default = [['Idle','Wall'],['Eat', 'Simple']]
+        strategylist_default = [['Idle','Wall'], ['Eat', 'Simple']]
         # ['Control', 'Space'], ['Survive', 'Weight']]
         depth_strategy = CONST.strategyDepthEnemy
-        depth = min(length, CONST.lookAheadPathContinueEnemy)
+        depth = min(length, CONST.lookAheadPathContinueEnemy) 
     
     # Add interrupts 
     if len(interruptlist):
@@ -270,8 +325,11 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     
     # Get available directions 
     dirns_avail = bo.findEmptySpace(start, dirn=False)
-    routepadding_method = 'random'
-    
+    # print("DEBUG DIRNS AVAIL", dirns_avail)
+
+    routepadding_method = 'rfactor'
+    keepLooking = False 
+
     # tail = sn.getTail()
     # alltails = getSnakeTails(snakes)
 
@@ -302,7 +360,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       target_method = ""
       route_method = "" 
       
-      bo.logger.log('strategy %s reason:%s list:%s info:%s' % (str(strategy), str(reason), str(strategylist), str(strategyinfo)))
+      # bo.logger.log('strategy %s reason:%s list:%s info:%s' % (str(strategy), str(reason), str(strategylist), str(strategyinfo)))
 
       # Test a particular strategy 
       # strategy = ['Eat', 'Best']
@@ -313,7 +371,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
             # HEAD ON COLLISION 
             target = strategyinfo['killpath']   
             target_method = "killPath" 
-            bo.logger.log('strategy-killpath', 'killPath', str(start), str(length), str(target))
+            # bo.logger.log('strategy-killpath', 'killPath', str(start), str(length), str(target))
             # Do not repeat strategy 
 
           if (strategy[1] == 'Cutoff'):
@@ -326,7 +384,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
               # Repeat until no more paths 
                pass 
              
-            bo.logger.log('strategy-killpath', 'killCut', str(start), str(length), str(target))
+            # bo.logger.log('strategy-killpath', 'killCut', str(start), str(length), str(target))
             
             
       if(strategy[0]=='Control'):
@@ -344,7 +402,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
             target = controlSpace(bo, sn, snakes)
             target_method = "controlSpace"
-            bo.logger.log('strategy-route', "CONTROL SPACE", str(start), str(target))
+            # bo.logger.log('strategy-route', "CONTROL SPACE", str(start), str(target))
  
           
           if (strategy[1]=='Box'):
@@ -354,10 +412,10 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
             
             # try: 
             step = strategyinfo['control']
-            enemy = strategyinfo['enemy']
+            them = strategyinfo['enemy']
             
             # Get closest three vertices of enemy snake 
-            targets = bo.findSnakeBox(start, enemy)
+            targets = bo.findSnakeBox(start, them)
             for i in range(0, 3):
               # Convert each vertex box to points
               tpts = np.nonzero(targets[i] > 0)
@@ -372,7 +430,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
             # Update step 
             strategyinfo['control'] = step
-            bo.logger.log('strategy-control', str(step), str(target), '')
+            # bo.logger.log('strategy-control', str(step), str(target), '')
 
     
       if(strategy[0]=='Eat'): 
@@ -397,7 +455,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
                   # Try next food 
                   strategylist.insert(0, strategy)
           
-          bo.logger.log('strategy-eat', str(target))
+          # bo.logger.log('strategy-eat', str(target))
 
 
       if(strategy[0]=='Idle'):
@@ -420,7 +478,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
               # strategylist.append(strategy)
               pass 
 
-            bo.logger.log('strategy-findcentre', 'Centre')
+            # bo.logger.log('strategy-findcentre', 'Centre')
 
         # Find nearest wall 
         if(strategy[1]=='Wall'):   
@@ -436,7 +494,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
               # Repeat until interrupt 
               strategylist.insert(0, strategy)
               
-            bo.logger.log('strategy-findwall', target)
+            # bo.logger.log('strategy-findwall', target)
             
     
       if(strategy[0]=='Survive'):
@@ -473,52 +531,59 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
           if(strategy[1]==''):  
             # Iterate through all directions 
             if(len(dirns)):
+                keepLooking = True 
                 target = dirns.pop(0) 
                 strategylist.insert(0, strategy)
                 target_method = "survive"
+            else: 
+                keepLooking = False 
                 # Routes are added to snake routes & decision made in final stage 
                 
 
-          bo.logger.log('strategy-survive', 'Target: %s' % (target))
+          # bo.logger.log('strategy-survive', 'Target: %s' % (target))
         
 
       # (2) Find route to target 
+      # Look ahead by lenght of largest snake 
+      lookahead = max(depth, fn.findLargestLength(snakes) + 1)
+      
+      # print("DEBUG TARGET", target)
       if (len(target)):
         # Find route to target 
         if 'numpy' in str(type(target)):
             # Target is an area 
             bo.logger.log('strategy-target', "TARGET %s %s %s" % (str(strategy), str(target), str(i)))
-            # route, weight = bo.route(start, target, sn)
-            route, weight_route = bo.fuzzyRoute(start, target)
+            route, weight_route = bo.fuzzyRoute(start, target, sn)
             route_method = "fuzzyRoute"
 
         elif 'list' in str(type(target)) and bo.inBounds(target):
-            # Target is a point -- type == <class 'list'> 
-            bo.logger.log('strategy-target', "TARGET %s %s %s %s" % (str(strategy), str(start), str(target), str(i)))
-            route, weight_route = bo.route(start, target)
+            # Target is a point 
+            route, weight_route = bo.route(start, target, sn)
+            bo.logger.log('strategy-target', "TARGET %s %s %s %s %s" % (str(strategy), str(start), str(target), str(route), str(weight_route)))
             route_method = "route"
 
-        # print("STRATEGY ROUTE WEIGHT", route, weight_route)
-      
+        # if(len(route)):
+        #   while(route[0] == start):
+        #     route.pop(0)
 
         # (3) Find route padding
-        if (len(route)):
+        if (len(route) and not enemy):
             # Find safe path away 
+            bo.logger.log('strategy-route', "ROUTE start:%s path:%s method:'%s %s' weight_route:%s" % \
+                  (str(start), str(route), target_method, route_method, weight_route))
+            
+            # Pad out route to N moves.  Look ahead by lenght of largest snake 
+            if route[-1] == tail:
+                # IF tail, assume infinite moves 
+                route_padded += [tail] * lookahead 
+                weight_padding = 0 
 
-            # Insert start.  
-            route.insert(0, start)  
-            
-            # OPTIMISE: This is repeated in routePadding
-            # route = copy.copy(fn.getPointsInRoute(route))
-            
-            # If route valid 
-            bo.logger.log('strategy-route', "ROUTE start:%s path:%s method:'%s %s' weight_route:%s weight_padding:%s" % \
-                  (str(start), str(route), target_method, route_method, weight_route, weight_padding))
-            
-            # Pad out route to N moves 
-                    # Look ahead by lenght of largest snake 
-            lookahead = max(depth, fn.findLargestLength(snakes))
-            route_padded, weight_padding = bo.routePadding(route, snakes, foods, depth=lookahead, method=routepadding_method) 
+            # elif killcollide ... 
+                # route_padded += [tail] * lookahead 
+                # weight_padding = 0 
+
+            else:
+                route_padded, weight_padding = bo.routePadding(route, snakes, foods, depth=lookahead, method=routepadding_method) 
             
             # If not - keep looking and will be prioritised later 
             bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" \
@@ -528,11 +593,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       # (4) Check target, route, route padding are safe 
       weight_total = weight_route + weight_padding
       route_length = len(route_padded)
-      # weight_total -= route_length 
       # print("WEIGHT", weight_padding, weight_route)
       
-      lookahead_min = min(depth, fn.findLargestLength(snakes))
-
       # TODO:  Clean up all the blank & routes to start ..       
       if not (route in [[], [start]]):
         sn.addRoutes(route_padded, weight_total, route_length, strategy[0])
@@ -541,16 +603,18 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
       # print("DEBUG", CONST.pointThreshold, lookahead_min)
 
-      # Check if it this is a "good" route.  Enemy ignores point threshold 
-      if ((weight_total <= CONST.pointThreshold) or \
-            (enemy and weight_total <= CONST.routeThreshold)) and \
-            len(route_padded) >= lookahead_min:
+      # Check iff it this is a "good" route.  Enemy ignores point threshold 
+      if ((weight_total <= CONST.pointThreshold and 
+            (len(route_padded) >= lookahead)) and 
+            not keepLooking or
+            enemy):
+            # (enemy and weight_total <= CONST.routeThreshold)) 
         
           found = True 
           # Safe path to & away found
           route = route_padded + []   # copy.copy
-          bo.logger.log('strategy-found', 'PATH FOUND Target:%s Route:%s Strategy:%s %s' %
-                            (str(target), str(route), target_method, route_method))
+          bo.logger.log('strategy-found', 'PATH FOUND Target:%s Route:%s Strategy:%s %s Enemy %s' %
+                            (str(target), str(route), target_method, route_method, enemy))
           
           # Normal exit from loop
           break
@@ -569,7 +633,10 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       # No more strategy
       # Time expired 
       # Max depth (TODO: Remove)
-      if (not len(strategylist) or hurry or i > depth_strategy):
+      if (not len(strategylist) or 
+            hurry or 
+            i > depth_strategy):
+          
           bo.logger.log('timer-hurry strategy:%s hurry:%s depth:%s / %s' % (len(strategylist), hurry, i, depth_strategy))
       
       # print("STRATEGY EXIT", len(strategylist), hurry, depth)
@@ -658,13 +725,14 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
               # sn.setTarget
               
           while len(route):
-            # Preferred route 
+            # Preferred  route 
             route_method = 'route_getRoutes'
             p = route.pop(0)
             if p != start:
               found = True 
               break 
 
+        # print(bo.markovs)
         bo.logger.log('route-last-resort', 'rfactor:%.2f route:%s' % (rfactor, str(p)))
         
 
@@ -796,8 +864,6 @@ def largestSnake(bo, us, snakes, larger=CONST.controlLargerBy):
     
 #     return False
 
-
-
 def killPath(bo, snakes, radius=CONST.killRadius):
     # Find smaller snakes within a kill radius 
     you = bo.getIdentity()
@@ -813,20 +879,26 @@ def killPath(bo, snakes, radius=CONST.killRadius):
         enemy_head = sn.getHead()
         dist = fn.distanceToPoint(you_head, enemy_head)
 
-        # If larger & within kill zone 
-        if (you_len > enemy_len) and (dist <= radius):
-          # enemy_dirn = sn.getDirection()
-          dirns = bo.findEmptySpace(sn.getHead())
-          dist_max = radius + 2
-          # Look each available direction 
-          for d in dirns: 
-              collide = list( map(add, enemy_head, CONST.directionMap[d]) )
-              # Return closest point to us 
-              dist =  fn.distanceToPoint(you_head, collide)
-              if dist < dist_max:
-                collide_target = collide 
-                dist_max = dist
+        dirn_avail = bo.findEmptySpace(enemy_head, dirn=False)
 
+        # If larger & within kill zone 
+        if (you_len > enemy_len) and (dist <= radius) and len(dirn_avail) == 1:
+
+          collide_target = dirn_avail[0]
+
+          # enemy_dirn = sn.getDirection()
+          # dirns = bo.findEmptySpace(sn.getHead())
+          # dist_max = radius + 2
+          # # Look each available direction 
+          # for d in dirns: 
+          #     collide = list( map(add, enemy_head, CONST.directionMap[d]) )
+          #     # Return closest point to us 
+          #     dist =  fn.distanceToPoint(you_head, collide)
+          #     if dist < dist_max:
+          #       collide_target = collide 
+          #       dist_max = dist
+    
+    # print("DEBUG COLLIDE", collide_target)
     return collide_target      
     
 
@@ -1005,7 +1077,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
     target = []
     for food in foods: 
         # Route exists   
-        r, w = bo.route(start, food)
+        r, w = bo.route(start, food, us)
         if (len(r)): 
 
             reason = 'route exists'
@@ -1018,7 +1090,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
                 # t = [len_enemy, dist_enemy]
                 threats = foodthreat[str(food)]
                 for t in threats:
-                    bo.logger.log("food", food, t)
+                    # bo.logger.log("food", food, t)
 
                     len_enemy = t['length']
                     dist_enemy = t['dist']
@@ -1052,58 +1124,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
     return copy.copy(target)
 
 
-def controlSpace(bo:board, us:snake, snakes:list):
-    """
-    Maximise number of points we have access to on the board 
-    Note:  Finds local maximum 
-    ==
-    bo:     boardClass as board 
-    sn:     snakeClass as snake 
-    snakes: list[] of snakes  
-    ==
-    return: target    (points, eg. [1,2])
-    """ 
-    start = us.getHead()
-    target = [] 
-
-    # Find all enemy heads 
-    heads = []
-    # Find distance to closest head 
-    dist_min = bo.width * bo.height
-
-    for sid in snakes:
-      fsnake = snakes[sid]
-      ftype = fsnake.getType()   
-      if (ftype == 'enemy'):
-        fhead = fsnake.getHead()
-        heads.append(fhead)
-        distance = fn.distanceToPoint(fhead, start)
-        dist_min = min(dist_min, distance)
-
-    # Look for each location 
-    control_max = 0
-    for d in CONST.directions: 
-        # maximise board control - stepwise max 
-        step = list(map(add, start, CONST.directionMap[d]))
-        if (bo.inBounds(step)):
-          # Return board control matrix 
-          dist = bo.closestDist(step, heads)
-          control = np.sum(dist)
-
-          # Save location wtih max control 
-          if control > control_max:
-              control_max = control
-              target = step + []   # copy.copy
-              # board_dist = copy.copy(dist)
-
-          if dist_min < CONST.foodThreat: 
-              # If too close to enemy, abandon 
-              target = [] 
-
-    return copy.copy(target)
-
-
-def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemyStrategy): 
+def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadPredictFuture): 
     """
     Play forward the next (future) moves for us and enemies 
     Ignore routes if (a) Head on collision, or (b) No routes 
@@ -1120,90 +1141,102 @@ def enemyStrategy(bo:board, us:snake, snakes:list, future=CONST.lookAheadEnemySt
     # (1) select possible paths for enemy
     dirn_avoid = []
     
-    paths = bo.getEnemyFuture(snakes, future)
-    # O(dirs * future * snakes)
-
-    oursteps = us.getNextSteps()
+    # Update all possible enemy future moves 
+    bo.getEnemyFuture(snakes, numfuture)
     
+    # O(dirs * future * snakes)
     sid_us = bo.getIdentity()
     us = snakes[sid_us]
     length_us = us.getLength()
     steps_us = us.getNextSteps()
     head_us = us.getHead()
+    rr = 0
 
     if not len(steps_us):
-        return [] 
+        return rr, [] 
         
     for sid in snakes:
         if sid != sid_us:     
             snake = snakes[sid]
-            length = snake.getLength()
-            steps_enemy = snake.getNextSteps()
+            head_enemy = snake.getHead()
+            # Ignore snakes too far away to create collision or block route  
+            # print("DEBUG DIST", numfuture, head_us, head_enemy, fn.distanceToPoint(head_us, head_enemy))
+            if fn.distanceToPoint(head_us, head_enemy) < (2 * numfuture + 1):
+             
+              length = snake.getLength()
+              steps_enemy = snake.getNextSteps()
+              # print("PREDICT ENEMY", steps_enemy)
+              # print("CHECK", len(steps_us), len(steps_enemy))
+              
+              for ourstep in steps_us:
+              # Iterate through our steps 
+                  conflict = []
 
-            
-            for ourstep in steps_us:
-            # Iterate through our steps 
-                conflict = []
-                for step in steps_enemy:
-                # Check against enemy steps 
-                    safe = True
-                    reason = ""
-                        
-                    if len(step) == len(ourstep):
-                    # Look for same turn (same length)
+                  for step in steps_enemy:
+                      rr += 1
+                      # Check against enemy steps 
+                      safe = True
+                      reason = []
 
-                        # print("STEPS us:%s them:%s" % (ourstep, step)) 
-            
-                        if step[-1] == ourstep[-1]:
-                            if (length > length_us and 
-                                fn.distanceToPoint(head_us, ourstep[-1]) > 1):
-                                # Check for collision (same square and we are same / smaller) 
-                                # AND exclude U loops (dumb) 
-                                conflict = step
-                                safe = False 
-                                reason = "head on collision"
+                      if len(step) == len(ourstep):
+                      # Look for same turn (same length)
 
-                        else: 
-                            # Check intersection of two paths
-                            # if not (p for p in step if p in ourstep):
-                                # If two paths don't intersect 
-                                turn = len(step)
-                                start = ourstep[-1]
-                                future = ourstep + step 
-                                future.remove(start)
+                          # Exclude circular (U) loops    
+                          if (abs(head_us[0] - ourstep[-1][0] + 
+                              abs(head_us[1] - ourstep[-1][1]))) > 1 :
+                              
+                              if step[-1] == ourstep[-1]:
+                                  if (length > length_us): 
+                                    
+                                      # Check for collision (same square and we are same / smaller) 
+                                      conflict = step
+                                      safe = False 
+                                      reason.append("head on collision")
 
-                                # Check if we have moves available (I will never die)
-                                found = bo.findEmptySpace(start, future, turn)
-            
-                                # No paths
-                                if (not found):
-                                    if fn.distanceToPoint(head_us, ourstep[-1]) > 1:
+                              else: 
+                                  # Check intersection of two paths
+                                  # if not (p for p in step if p in ourstep):
+                                      # If two paths don't intersect 
+                                  turn = len(step)
+                                  start = ourstep[-1]
+                                  future = ourstep + step 
+                                  future.remove(start)
+
+                                  # Check if we have moves available (I will never die)
+                                  found = bo.findEmptySpace(start, future, turn)
+              
+                                  # No paths
+                                  if (not found):
                                       # AND exclude U loops (dumb) 
                                       conflict = step
                                       safe = False 
-                                      reason = "no path for us"
-                
-                
-                    if (not safe):
-                    # One of the enemy steps is not safe for our step.  Abandon all paths in that direction (overcautious)
-                    # TODO: be less cautious, more agressive if we see a path out
+                                      reason.append("no path for us")
+                                      
 
-                        # DEBUG .. 
-                        if [8,0] in ourstep:
-                            print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
-                        
-                        for s in steps_us:
-                            if ourstep[-1] in s: 
-                                steps_us.remove(s)
-                                dirn_avoid.append(ourstep[-1])
-                                # dy = ourstep[0][0]
-                                # dx = ourstep[0][1]
-                                # self.markov[dy,dx] = CONST.routeThreshold
+                          # print("STEPS us:%s them:%s" % (ourstep, step)) 
+                          # if [4,6] in ourstep:
+                          #   print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
+                          
+                  
+                      if (not safe):
+                      # One of the enemy steps is not safe for our step
+                      
+                          # DEBUG .. 
+                          # if [4,6] in ourstep:
+                          #     print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
+                          try: 
+                            # steps_us.remove(ourstep)
+                            dirn_avoid.append(ourstep[-1])
+                          except:
+                            # already removed 
+                            pass 
 
+    # Update possible steps (if used)     
     snakes[sid_us].setNextSteps(steps_us)
     
     # return directions to avoid (mark as not reachable)
-    return dirn_avoid
+    # print("CHECK FUTURE", rr)
+    return rr, dirn_avoid
 
 
 
