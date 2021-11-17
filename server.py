@@ -195,11 +195,11 @@ def handle_move(testData="", testOverride=False):
     logger.timer('makeMove')
     move = makeMove(theBoard, ourSnek, allSnakes)    
     move = ourSnek.getMove()
-    # shout = ourSnek.setShout(turn)
+    shout = ourSnek.setShout(turn)
     logger.timer('Path complete')
    
     logger.message("move", move)
-    # logger.message("shout", shout)
+    logger.message("shout", shout)
 
     # Save game data
     # games[game_id] = [theBoard, ourSnek, allSnakes]
@@ -217,7 +217,7 @@ def handle_move(testData="", testOverride=False):
             reporting(logger, theBoard, ourSnek, allSnakes, data)
 
     logger.timer('== Move complete ==')    
-    return {"move": move, "shout":''}
+    return {"move": move, "shout":shout}
     
 
 @app.post("/end")
@@ -255,7 +255,7 @@ def reporting(logger, board, us, snakes, data):
 
     for key in snakes:
         snk = snakes[key]
-        logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection())
+        logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
     logger.print(data)
     logger.dump(data)
     # print('MOVE: Reporting complete')

@@ -101,7 +101,7 @@ lengthEndGame = 20
 healthHigh = 100
 healthMed = 75
 healthLow = 50
-healthCritical = 25
+healthCritical = 15
 
 # threatHigh = 80
 # threatMed = 50

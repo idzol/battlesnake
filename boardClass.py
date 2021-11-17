@@ -1175,6 +1175,11 @@ class board():
                 self.logger.error('exception', 'fuzzyRoute', str(e))
                 pass
 
+        # Remove head from route (if already here)
+        if len(route):
+            if route[0] == start:
+                route.pop(0)
+
         return route, route_weight
 
 
@@ -1209,7 +1214,7 @@ class board():
                 if (snake):
                     if not self.checkHealth(snake, route):
                         reason.append("Route found.  Healtcheck failed")
-                        weight += CONST.routeThreshold
+                        weight += 2 * CONST.routeThreshold
 
         # print("DEBUG ROUTE#2", start, dest, path, route, weight)
         # print("DEBUG ROUTE#2", self.best[str(start)])
@@ -1287,7 +1292,7 @@ class board():
             sid_us = self.getIdentity()
             us = snakes[sid_us]
             head = us.getHead()
-            # length = us.getLength()
+            length = us.getLength()
 
             # BUGFIX:  When route contains start, looks like we are one turn further 
             if head == path_start[0]:
@@ -1438,9 +1443,9 @@ class board():
         w = self.width
         h = self.height
 
-        # Get step
-        dy = step[0]
-        dx = step[1]
+        # Optimisation -- Get step
+        # dy = step[0]
+        # dx = step[1]
 
         # Get markov for next turn 
         t = min(turn, CONST.lookAheadPathContinue - 2)
@@ -1448,8 +1453,7 @@ class board():
         
         # Optimise -- use previous board 
         routeKey = str(eating) + str(turn)
-        if routeKey in self.boards:
-            
+        if routeKey in self.boards:         
             board = self.boards[routeKey]
             
         else:        
@@ -1478,18 +1482,18 @@ class board():
         # Route logic 
 
         exists = False 
-        if (0 <= dy < h) and (0 <= dx < w):  
-
-          if ( # Our prediction logic
-                (turn >= (board[dy, dx] - 1) and 
-                markov[dy, dx] < CONST.routeThreshold) or 
-                # Enemy prediction logic 
-                (enemy and 
-                turn >= board[dy, dx] - 1)
-              ):
-
-            exists = True     # copy.copy(markov[dy, dx])
-            
+        if (0 <= step[0] < h):
+            if (0 <= step[1] < w):  
+                
+                # Enemy prediction logic
+                if (enemy and turn >= board[step[0], step[1]] - 1):
+                    exists = True    
+                    
+                # Our prediction logic
+                elif(turn >= (board[step[0], step[1]] - 1) and 
+                        markov[step[0], step[1]] < CONST.routeThreshold):
+                    exists = True     
+                        
         # self.routepoint[routeHash] = exists
         # if (step in [[0, 9]]): 
         #     print(step, turn, board, eating, path, exists)

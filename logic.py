@@ -69,6 +69,7 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
                 food_path = 0  
                 # Check if food is in future moves 
                 for path in paths: 
+                    # pt = path[1:@]  # truncate to first point only for now 
                     food_path = len(list(filter(lambda x: x in foods, path)))
                     food_in_route = max(food_in_route, food_path)                 
                     # print("DEBUG ENEMY PATH", sid, path, food_path)   # lookAheadPredictFuture
@@ -367,7 +368,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
       # Reset every turn 
       found = False 
-      ignoreWeight = False 
+      ignoreThreat = False 
 
       target = []
       route = []
@@ -483,7 +484,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
               target_method = "findAnyFood"
               # if(not len(target)):
               # Try next food 
-              ignoreWeight = True 
+              ignoreThreat = True 
               strategylist.insert(0, strategy)
 
 
@@ -641,18 +642,24 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
         bo.logger.log("strategy-add-route", "ROUTE ADDED Route: %s Weight: %s, Length: %s, Strategy: %s" %
                             (route_padded, weight_total, route_length, strategy[0]))
 
-      # print("DEBUG", CONST.pointThreshold, weight_total, lookahead, len(route_padded))
+      print("DEBUG", weight_total, lookahead, len(route_padded), keepLooking, ignoreThreat, enemy)
 
-      # Check iff it this is a "good" route.  Enemy ignores point threshold 
+      # Check if this is a "good" route for us 
       if ((weight_total <= CONST.pointThreshold and 
             (len(route_padded) >= lookahead)) and 
-            not keepLooking or
-            ignoreWeight or
-            enemy):
-            # (enemy and weight_total <= CONST.routeThreshold)) 
-        
+            not keepLooking):   
           found = True 
-          # Safe path to & away found
+          
+      # We are desparate.  Ignore length & route threshold (except hazard/solid)
+      elif (ignoreThreat and weight_total <= CONST.routeThreshold):
+          found = True 
+          
+      # Enemy ignores point threshold 
+      elif (enemy):
+          found = True 
+      
+      # Safe path to & away found
+      if (found):
           route = route_padded + []   # copy.copy
           bo.logger.log('strategy-found', 'PATH FOUND Target:%s Route:%s Strategy:%s %s Enemy %s' %
                             (str(target), str(route), target_method, route_method, enemy))

@@ -93,12 +93,12 @@ class snake:
 
     def setFuture(self, b, t=0):
         future = { 
-          'body':b
+          'body':copy.copy(b)
         }
-        self.futures[t] = future
+        self.futures[t] = copy.copy(future)
 
     def getFuture(self, turn=0):
-      future = self.futures[turn]
+      future = copy.copy(self.futures[turn])
       if (future == None):
         return []
       else: 
@@ -114,10 +114,10 @@ class snake:
         self.setName(name)
         # Set new location 
         self.setLocation(data)
-        # self.setEating()
+        self.setEating()
         # Save location to history 
         self.savePath()
-        # self.clearRoutes()
+        self.clearRoutes()
         
         # Set attributes
         self.setHealth(health)
@@ -133,20 +133,20 @@ class snake:
     def setEnemy(self, data):
         # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
         name = data['name']
-
         self.setName(name)
+
         self.setType("enemy")
         self.setId(data['id'])
         
         # Set whether eating 
-        # self.setEating() 
+        self.setEating() 
         # Set new location 
         self.setLocation(data)
 
         # Save location to history 
         self.savePath()
         # Clear routes from last turn 
-        # self.clearRoutes()
+        self.clearRoutes()
     
         self.setLength(data['length'])
         # self.setHealth(health)
@@ -189,8 +189,8 @@ class snake:
         # print("SNAKE PATH", str(self.getType()), str(pts))
         self.path = copy.copy(pts)
                 
-    # def clearRoutes(self):
-    #     self.routes = []
+    def clearRoutes(self):
+        self.routes = []
 
     def setNextSteps(self, p):
         # Future predict 
@@ -275,22 +275,21 @@ class snake:
         else:
           return []
 
-    def setId(self, i:str):
+    def setId(self, i):
         self.identity = copy.copy(i)
         
     def getId(self):
-        # i = copy.copy(self.identity)
-        # return i
-        return self.identity 
+        i = copy.copy(self.identity)
+        return i
 
-    def setName(self, n:str):
-        self.name = n
+    def setName(self, n):
+        self.name = copy.copy(n)
         
     def getName(self):
-        return self.name
+        return copy.copy(self.name)
         
-    def setLength(self, l:int):
-          self.length = l + 0  
+    def setLength(self, l):
+          self.length = copy.copy(l)  
           # TODO:  Check if correct (body + head)
 
     def setType(self, t):
@@ -375,19 +374,19 @@ class snake:
     def setHealth(self, h):
         self.health = h
 
-    # def getEating(self):
-    #     return copy.copy(self.eating)
+    def getEating(self):
+        return copy.copy(self.eating)
 
-    # def setEating(self):
-    #     b = self.getBody()
-    #     l = self.getLength()
-    #     e = False 
-    #     if (l > 2): 
-    #       # If last two points are the same 
-    #       if(b[-1] == b[-2]):
-    #          e = True
+    def setEating(self):
+        b = self.getBody()
+        l = self.getLength()
+        e = False 
+        if (l > 2): 
+          # If last two points are the same 
+          if(b[-1] == b[-2]):
+            e = True
 
-    #     self.eating = e
+        self.eating = e
 
     def setEatingFuture(self, e): 
         self.eatingFuture = e
@@ -450,15 +449,16 @@ class snake:
       r = self.target
       return r[:]
 
-    # def setShout(self, turn):
-    #   # Shout every N turns 
-    #   if (turn % CONST.shoutFrequency == 0): 
-    #     self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
+    def setShout(self, turn):
+      # Shout every N turns 
+      if (turn % CONST.shoutFrequency == 0): 
+        
+        self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
       
-    #   return self.getShout()
+      return self.getShout()
 
 
-    # def getShout(self):
-    #   s = copy.copy(self.shout)
-    #   return s 
+    def getShout(self):
+      s = copy.copy(self.shout)
+      return s 
       
