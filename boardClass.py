@@ -2701,19 +2701,20 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
         return encl
 
 
-    def closestDist(self, us, them: list):
+    def closestDist(self, us, them: list, same=False):
         """
         Matrix of who is closest to each square 
         ==
         us = sn.getHead()
         them = enemy.getHead()
+        same = include squares where we get there same time 
         ==
         TODO: Assumes no solids in closest distance
         otherwise requires a version of route with dijkstra / gradient (ie. closestDist_complex)
         """
 
-        if str(us + them) in self.closest: 
-            return self.closest[str(us + them)]
+        if str(us + them) + str(same) in self.closest: 
+            return self.closest[str(us + them) + str(same)]
             
         w = self.width
         h = self.height
@@ -2723,17 +2724,24 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
             for x in range(0, w):
                 us_dist = abs(us[0] - y) + abs(us[1] - x)
                 them_further = True
-
+                
+                # Check distance agains each head 
                 for th in them:
                     them_dist = abs(y - th[0]) + abs(x - th[1])
-                    if them_dist <= us_dist:
+                    if not same and them_dist <= us_dist:
+                        them_further = False
+                    elif same and them_dist < us_dist:
                         them_further = False
 
+                # if y == 8 and x == 3: 
+                #     print("DEBUG CLOSEST", us, them, us_dist, them_dist, same, them_further)
+
+                # If they are further we are closer 
                 if them_further:
                     closest[y, x] = 1
 
         # Save for optimisation 
-        self.closest[str(us + them)] = closest
+        self.closest[str(us + them) + str(same)] = closest
         return closest
 
     
