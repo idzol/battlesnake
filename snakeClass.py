@@ -37,7 +37,9 @@ class snake:
         
         # self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
-        self.eating = False 
+        self.eating = False     # Is snake eating current turn 
+        self.eatingFuture = 0   # Total food in future turns 
+ 
         self.health = 100 
         self.length = 0
 
@@ -70,11 +72,13 @@ class snake:
       return copy.copy(m)
 
     def setMarkovBase(self, m, t):
-      self.markovbase[t] = copy.copy(m) 
+      # self.markovbase[t] = copy.copy(m) 
+      self.markovbase[t] = m 
 
     def getMarkovBase(self, t):
-      m = self.markovbase[t]
-      return copy.copy(m)
+      # m = self.markovbase[t]
+      # return copy.copy(m)
+      return self.markovbase[t]
 
     def setChance(self, c, t=0):
       lmax = len(self.chance) - 1
@@ -89,12 +93,12 @@ class snake:
 
     def setFuture(self, b, t=0):
         future = { 
-          'body':copy.copy(b)
+          'body':b
         }
-        self.futures[t] = copy.copy(future)
+        self.futures[t] = future
 
     def getFuture(self, turn=0):
-      future = copy.copy(self.futures[turn])
+      future = self.futures[turn]
       if (future == None):
         return []
       else: 
@@ -110,10 +114,10 @@ class snake:
         self.setName(name)
         # Set new location 
         self.setLocation(data)
-        self.setEating()
+        # self.setEating()
         # Save location to history 
         self.savePath()
-        self.clearRoutes()
+        # self.clearRoutes()
         
         # Set attributes
         self.setHealth(health)
@@ -135,14 +139,14 @@ class snake:
         self.setId(data['id'])
         
         # Set whether eating 
-        self.setEating() 
+        # self.setEating() 
         # Set new location 
         self.setLocation(data)
 
         # Save location to history 
         self.savePath()
         # Clear routes from last turn 
-        self.clearRoutes()
+        # self.clearRoutes()
     
         self.setLength(data['length'])
         # self.setHealth(health)
@@ -185,8 +189,8 @@ class snake:
         # print("SNAKE PATH", str(self.getType()), str(pts))
         self.path = copy.copy(pts)
                 
-    def clearRoutes(self):
-        self.routes = []
+    # def clearRoutes(self):
+    #     self.routes = []
 
     def setNextSteps(self, p):
         # Future predict 
@@ -271,36 +275,36 @@ class snake:
         else:
           return []
 
-    def setId(self, i):
+    def setId(self, i:str):
         self.identity = copy.copy(i)
         
     def getId(self):
-        i = copy.copy(self.identity)
-        return i
+        # i = copy.copy(self.identity)
+        # return i
+        return self.identity 
 
-    def setName(self, n):
-        self.name = copy.copy(n)
+    def setName(self, n:str):
+        self.name = n
         
     def getName(self):
-        return copy.copy(self.name)
+        return self.name
         
-    def setLength(self, l):
-          self.length = copy.copy(l)  
+    def setLength(self, l:int):
+          self.length = l + 0  
           # TODO:  Check if correct (body + head)
 
     def setType(self, t):
         self.type = copy.copy(t)
         
     def getType(self):
-        t = copy.copy(self.type)
-        return t
+        return self.type
 
-    def setName(self, n):
-        self.name = copy.copy(n)
+    # def setName(self, n):
+    #     self.name = copy.copy(n)
         
-    def getName(self):
-        n = copy.copy(self.name)
-        return n
+    # def getName(self):
+    #     n = copy.copy(self.name)
+    #     return n
 
     def getLength(self):
         return copy.copy(self.length)
@@ -371,19 +375,25 @@ class snake:
     def setHealth(self, h):
         self.health = h
 
-    def getEating(self):
-        return copy.copy(self.eating)
+    # def getEating(self):
+    #     return copy.copy(self.eating)
 
-    def setEating(self):
-        b = self.getBody()
-        l = self.getLength()
-        e = False 
-        if (l > 2): 
-          # If last two points are the same 
-          if(b[-1] == b[-2]):
-            e = True
+    # def setEating(self):
+    #     b = self.getBody()
+    #     l = self.getLength()
+    #     e = False 
+    #     if (l > 2): 
+    #       # If last two points are the same 
+    #       if(b[-1] == b[-2]):
+    #          e = True
 
-        self.eating = e
+    #     self.eating = e
+
+    def setEatingFuture(self, e): 
+        self.eatingFuture = e
+
+    def getEatingFuture(self):
+        return self.eatingFuture
 
     def getHunger(self):
         return self.hunger
@@ -440,16 +450,15 @@ class snake:
       r = self.target
       return r[:]
 
-    def setShout(self, turn):
-      # Shout every N turns 
-      if (turn % CONST.shoutFrequency == 0): 
-        
-        self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
+    # def setShout(self, turn):
+    #   # Shout every N turns 
+    #   if (turn % CONST.shoutFrequency == 0): 
+    #     self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
       
-      return self.getShout()
+    #   return self.getShout()
 
 
-    def getShout(self):
-      s = copy.copy(self.shout)
-      return s 
+    # def getShout(self):
+    #   s = copy.copy(self.shout)
+    #   return s 
       

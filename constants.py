@@ -22,7 +22,7 @@ logfile_error = "error.log"
 
 
 lookAheadPredictFuture = 3  # Enemy prediction (play forward move - logic:predictFuture)
-lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
+lookAheadEnemy = 10          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPathContinueEnemy = 3  # Path continue (Enemy path lookahead)  
 
 lookAheadPath = 20          # Path prediction
@@ -45,7 +45,7 @@ if (environment == 'prod'):
   timeStart = 200
   timeMid = 300
   timeEnd = 400
-  timePanic = 400
+  timeWarning = 400   # 
 
 elif (environment == 'preprod'): 
   # Preprod (cloud run)
@@ -61,7 +61,7 @@ elif (environment == 'preprod'):
   timeStart = 200
   timeMid = 300
   timeEnd = 400
-  timePanic = 400
+  timeWarning = 400
 
 else:
   # Dev (localhost) 
@@ -77,12 +77,15 @@ else:
   timeStart = 2000
   timeMid = 3000
   timeEnd = 4000
-  timePanic = 400
+  timeWarning = 400
 
 # Routing threshold - collision probability
 routeThreshold = 1000   # Ignore if route larger 
 pointThreshold = 25   # Ignore if any step larger
-minProbability = 1    # Markov probability 
+
+minProbability = 10    # Markov probability 
+maxProbability = 100
+
 
 routeSolid = routeThreshold
 routeHazard = 1
@@ -187,6 +190,20 @@ movenorth = moveup
 movesouth  = movedown
 movewest = moveleft
 moveeast = moveright
+
+directionOpposite = {
+  'up':'down',
+  'down':'up',
+  'right':'left',
+  'left':'right',
+}
+
+directionRotation = {
+  'left':['left', 'down', 'up'],
+  'right':['right', 'up', 'down'],
+  'up':['up', 'left', 'right'],
+  'down':['down', 'left', 'right'],
+}
 
 directionMap = {
   'up':moveup,

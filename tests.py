@@ -940,7 +940,7 @@ class boardClassTest(unittest.TestCase):
         for y in range(0, w):
           for x in range(0, h): # h 
             ourSnek.setHead([y, x])
-            rr = predictFuture(theBoard, ourSnek, snakes)
+            rr = predictFuture(theBoard, ourSnek, snakes, foods)
             # ourSnek.setRoute(route['path'])
             # theBoard.showMapsFuture(snakes)
         
@@ -990,8 +990,8 @@ class boardClassTest(unittest.TestCase):
               expires = bar['expires']
               dist = len(theBoard.best[str(start)][str(target)])
               if(expires == dist):
-                  print(bar)
-                  print(theBoard.best[str(start)][str(target)]['path'])
+                  # print(bar)
+                  # print(theBoard.best[str(start)][str(target)]['path'])
                   strategyPrison = True 
 
         # Check prison strategy 

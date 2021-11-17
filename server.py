@@ -134,14 +134,15 @@ def handle_move(testData="", testOverride=False):
         allSnakes[identity].setEnemy(alive)
 
     # Update routing boards
+    # print(data)
     theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards)
     logger.timer('updateChance')
-
+    
     # if ('speed' in game_type):
     # else:
 
     # Random play forward of moves 
-    predictFuture(theBoard, ourSnek, allSnakes)
+    predictFuture(theBoard, ourSnek, allSnakes, theFoods)
 
     # Apply state machine to all enemy snakes 
     logger.timer('stateMachineEnemy')
@@ -163,6 +164,8 @@ def handle_move(testData="", testOverride=False):
     # Adjust boards for enemy moves 
     logger.timer('updateBoardsEnemy')
     theBoard.updateBoardsEnemyMoves(allSnakes)
+
+    # print(theBoard.markovs)
 
     # Clear routing boards -- new info
     theBoard.clearBest()
@@ -192,11 +195,11 @@ def handle_move(testData="", testOverride=False):
     logger.timer('makeMove')
     move = makeMove(theBoard, ourSnek, allSnakes)    
     move = ourSnek.getMove()
-    shout = ourSnek.setShout(turn)
+    # shout = ourSnek.setShout(turn)
     logger.timer('Path complete')
    
     logger.message("move", move)
-    logger.message("shout", shout)
+    # logger.message("shout", shout)
 
     # Save game data
     # games[game_id] = [theBoard, ourSnek, allSnakes]
@@ -214,7 +217,7 @@ def handle_move(testData="", testOverride=False):
             reporting(logger, theBoard, ourSnek, allSnakes, data)
 
     logger.timer('== Move complete ==')    
-    return {"move": move, "shout":shout}
+    return {"move": move, "shout":''}
     
 
 @app.post("/end")
@@ -252,7 +255,7 @@ def reporting(logger, board, us, snakes, data):
 
     for key in snakes:
         snk = snakes[key]
-        logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
+        logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection())
     logger.print(data)
     logger.dump(data)
     # print('MOVE: Reporting complete')

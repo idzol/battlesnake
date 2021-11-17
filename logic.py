@@ -24,7 +24,7 @@ Core decision making engine for target selection and making moves
 """
 
 
-def predictFuture(bo:board, sn:snake, snakes:list):
+def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
     """
     Play forward (futuremoves) turns 
     Check for enemy moves before calculating route boards  
@@ -42,8 +42,14 @@ def predictFuture(bo:board, sn:snake, snakes:list):
 
     # Enemy kills us -- playing forward X turns
     numfuture = CONST.lookAheadPredictFuture
+
+    # Update enemy future paths to depth of N = numfuture
+    bo.getEnemyFuture(snakes, numfuture)
+  
+    # Check for any possible futures where we die 
     (rr, avoid) = checkFutureDeath(bo, sn, snakes, numfuture=numfuture)
 
+    # Update board to avoid these cells 
     if (len(avoid)):
         # If enemy kill path found 
         for step in avoid:
@@ -52,7 +58,27 @@ def predictFuture(bo:board, sn:snake, snakes:list):
               # Mark cell 50% kill likelihood for N turns 
               bo.updateCell(step, CONST.routeSolid/2, turn)
 
+    # Update eating for snakes based on path 
+    for sid in snakes: 
+        # Ignore us -- we have better calculation because we know our route 
+        if (snakes[sid].getType() != "us"): 
+            # Uses every possible path based on self.predictEnemyMoves
+            paths = snakes[sid].getNextSteps()
+            food_in_route = 0 
+            try:
+                food_path = 0  
+                # Check if food is in future moves 
+                for path in paths: 
+                    food_path = len(list(filter(lambda x: x in foods, path)))
+                    food_in_route = max(food_in_route, food_path)                 
+                    # print("DEBUG ENEMY PATH", sid, path, food_path)   # lookAheadPredictFuture
 
+            except:
+                pass 
+
+            snakes[sid].setEatingFuture(food_in_route)
+            # print(sid, food_in_route)
+                            
     # Performance monitoring 
     return rr 
 
@@ -203,8 +229,12 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
                 break 
 
       # print("DEBUG PRISON", prison, bo.best[str(start)][str([8, 9])], strategyinfo['prison'])
-            
-
+    
+    # Critical health interrupt -- get food
+    if (health <= CONST.healthCritical):
+        interruptlist.insert(0, ['Eat', 'Any'])
+        reason.append('health was low')
+      
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
@@ -224,10 +254,6 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
     # if (len(t)):
     #   interruptlist.insert(0, ['Eat', 'Best'])
 
-    # Critical health interrupt -- get food
-    if (health <= CONST.healthLow):
-        interruptlist.insert(0, ['Eat', 'Best'])
-        reason.append('health was low')
 
 
     # End game - Control space
@@ -341,6 +367,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
       # Reset every turn 
       found = False 
+      ignoreWeight = False 
+
       target = []
       route = []
       route_padded = []
@@ -439,21 +467,33 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
           # Sort by closest food
           if(strategy[1] == 'Best'):
             if(len(foodsort)):
+              # print("FOODS", foodsort)
               target = findBestFood(foodsort, bo, sn, snakes)
               target_method = "findBestFood"
-              if(not len(target)):
-                  # Try next food 
-                  foodsort.pop(0)
-                  strategylist.insert(0, strategy)
-                
+              # if(not len(target)):
+              # Try next food 
+              foodsort.pop(0)
+              if(len(foodsort)):
+                strategylist.insert(0, strategy)
+            
+
+          if(strategy[1] == 'Any'):
+            if(len(foodsort)):
+              target = foodsort.pop(0)
+              target_method = "findAnyFood"
+              # if(not len(target)):
+              # Try next food 
+              ignoreWeight = True 
+              strategylist.insert(0, strategy)
+
 
           if(strategy[1] == 'Simple'):
             if(len(foodsort)):
               target = foodsort.pop(0)
               target_method = "findSimpleFood"
-              if(not len(target)):
-                  # Try next food 
-                  strategylist.insert(0, strategy)
+              # if(not len(target)):
+              # Try next food 
+              strategylist.insert(0, strategy)
           
           # bo.logger.log('strategy-eat', str(target))
 
@@ -575,7 +615,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
             # Pad out route to N moves.  Look ahead by lenght of largest snake 
             if route[-1] == tail:
                 # IF tail, assume infinite moves 
-                route_padded += [tail] * lookahead 
+                route_padded = route + [tail] * lookahead 
                 weight_padding = 0 
 
             # elif killcollide ... 
@@ -601,12 +641,13 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
         bo.logger.log("strategy-add-route", "ROUTE ADDED Route: %s Weight: %s, Length: %s, Strategy: %s" %
                             (route_padded, weight_total, route_length, strategy[0]))
 
-      # print("DEBUG", CONST.pointThreshold, lookahead_min)
+      # print("DEBUG", CONST.pointThreshold, weight_total, lookahead, len(route_padded))
 
       # Check iff it this is a "good" route.  Enemy ignores point threshold 
       if ((weight_total <= CONST.pointThreshold and 
             (len(route_padded) >= lookahead)) and 
             not keepLooking or
+            ignoreWeight or
             enemy):
             # (enemy and weight_total <= CONST.routeThreshold)) 
         
@@ -623,10 +664,9 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       # 5) Next strategy -- keep looking.  Check if time exceeds limit 
       st = bo.logger.getStartTime()
       diff = 1000 * (time.time() - st)
-      if diff > CONST.timePanic: 
+      if diff > CONST.timeEnd: 
           hurry = True   
           
-      bo.logger.timer('Strategy search')
 
 
       # Termination of loop 
@@ -646,6 +686,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
           break
   
       bo.logger.log('strategy-update','%s not found. Try next strategy. i: %s' % (str(strategy), i))
+      bo.logger.timer('Strategy search')
+
       i = i + 1 
         
     # TODO: Delete -- no longer required for stateless 
@@ -1026,10 +1068,12 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
     foods = foodsort + []   # copy.copy
 
     # How many moves until we believe a target
-    targetConfidence = 2 
+    targetConfidence = 3
     # Check if food under threat (ie. snake enroute) 
     foodthreat = {}
     # Init dict - empty => null 
+    reason = []
+
     for food in foods: 
         foodthreat[str(food)] = []
 
@@ -1045,19 +1089,22 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
             sn.setTarget([])
             # Check each food 
             for food in foods:
+              # Get snake body + head (ie. path history)
               history = sn.getHistory()
-              history.insert(0, sn.getHead())
+              
+              # history.insert(0, sn.getHead())
               a = []
               # If last three paths to food are descending
-              if (len(history) > targetConfidence): 
-                for i in range(0, targetConfidence + 1):
+              if (len(history) >= targetConfidence): 
+                for i in range(0, targetConfidence):
                   a.append(fn.distanceToPoint(food, history[i]))
 
               # Check ascending - ie. recent locations are closser 
               dist_sort = a + []   # copy.copy
               dist_sort.sort() 
                   
-              
+              # Compare sorted list to original to see if the same 
+              # print("FOOD SORT", history, a, dist_sort)
               if (a == dist_sort):
                   # Check if closer than existing target 
                   target_last = sn.getTarget()
@@ -1073,6 +1120,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
                     sn.setTarget(food)
                     # bo.logger.log("food target", sn.getId(), sn.getTarget())
                     
+
     # Check foods for the closest without threat 
     target = []
     for food in foods: 
@@ -1080,7 +1128,7 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
         r, w = bo.route(start, food, us)
         if (len(r)): 
 
-            reason = 'route exists'
+            reason.append('route exists')
             dist = len(fn.getPointsInRoute(r))
         
             # Threat, enemy closer & smaller - pursue??
@@ -1094,16 +1142,16 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
 
                     len_enemy = t['length']
                     dist_enemy = t['dist']
-                    
+                    # print("FOOD THREAT", start, food, t, r, dist, length)
                     # Check other snakes targeting food 
                     if (len(t)):
                         if dist_enemy < dist:
                             abandon = True
-                            reason = 'abandon - enemy closer'
+                            reason.append('abandon - enemy closer')
                             
                         elif len_enemy >= length and dist_enemy <= dist:
                             abandon = True
-                            reason = 'abandon - enemy larger & same dist' 
+                            reason.append('abandon - enemy larger & same dist')
 
             if not (abandon):
                 # Exit search (ie. for food in foods)
@@ -1111,16 +1159,14 @@ def findBestFood(foodsort:list, bo:board, us:snake, snakes:list):
                 break
                 
         else:
-            reason = 'no route'
+            reason.append('no route')
         
-        return copy.copy(target)
+        
+        break 
+        # print(reason)  
+        # return copy.copy(target)
 
-    #  Ignore Food in corners
-    #  * IF enemy approacing AND dist < N (closeby)
-
-    # Empty space -- Maximise control and wait for next food spawn. 
-    #  * See ['Control', 'Space']
-    bo.logger.log("stratey eat", food, reason)        
+    bo.logger.log("stratey eat", food, reason)      
     return copy.copy(target)
 
 
@@ -1140,9 +1186,6 @@ def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadP
     """
     # (1) select possible paths for enemy
     dirn_avoid = []
-    
-    # Update all possible enemy future moves 
-    bo.getEnemyFuture(snakes, numfuture)
     
     # O(dirs * future * snakes)
     sid_us = bo.getIdentity()
