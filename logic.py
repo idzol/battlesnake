@@ -68,6 +68,7 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
     if (len(avoid)):
         # If enemy can get to location before us 
         # If enemy kill path found 
+        # print(avoid)
         for step in avoid:
             # for step in path: 
             for turn in range(0, numfuture + 1):
@@ -1249,7 +1250,9 @@ def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadP
               steps_enemy = snake.getNextSteps()
               # print("PREDICT ENEMY", steps_enemy)
               # print("CHECK", len(steps_us), len(steps_enemy))
-              
+              # print("us", steps_us)
+              # print(snake, steps_enemy)
+
               for ourstep in steps_us:
               # Iterate through our steps 
                   conflict = []
@@ -1259,13 +1262,16 @@ def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadP
                       # Check against enemy steps 
                       safe = True
                       reason = []
-
+                          
                       if len(step) == len(ourstep):
                       # Look for same turn (same length)
-
+                          
+                          # print(step, ourstep, head_us, ourstep[-1])
                           # Exclude circular (U) loops    
-                          if (abs(head_us[0] - ourstep[-1][0] + 
-                              abs(head_us[1] - ourstep[-1][1]))) > 1 :
+                          if (len(ourstep) == 1 or 
+                                len(ourstep) > 1 and 
+                                (abs(head_us[0] - ourstep[-1][0]) + 
+                                abs(head_us[1] - ourstep[-1][1])) > 1):
                               
                               if step[-1] == ourstep[-1]:
                                   if (length > length_us): 

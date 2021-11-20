@@ -66,7 +66,14 @@ class board():
         self.turn = 0
 
         self.resetCounters()
-        
+    
+
+    def setTimeouts(self, t):
+
+        self.timeStart = 0.4 * t 
+        self.timeMid = 0.6 * t
+        self.timeEnd = 0.8 * t
+
 
     def setLogger(self, l):
         """
@@ -913,11 +920,20 @@ class board():
         """
 
         health = snake.getHealth()
+        length = snake.getLength()
+        
         alive = True 
         # print("DEBUG HEALTH", health, route)
         # print ("DEBUG CHECK HEALTH", route)
-        for turn in range(1, route['length'] + 1):
+        
+        # for turn in range(1, # route['length'] + 1):
+        # print(route['path'])
+
+        # only look ahead N moves becaues random padding doesn't accommodate for threat (ie. all long routes look bad)
+        # usually danger in next 10 moves .. 
+        for turn in range(1, 10):
             health -= 1
+            # print(health)
             if turn in route['hazard']:
                 health -= 15
             if turn in route['food']:
@@ -1317,11 +1333,6 @@ class board():
                     path = path_start + route_best['path']
                     # path = copy.copy(path_padding)                        
                     # routefound = True
-                    
-                    if not self.checkHealth(us, route_best):
-                        weight += CONST.routeThreshold
-                        # print(route_best)
-                        reason.append("Continue Path. Failed health check")
 
                     # Check if route meets min depth
                     if (len(path)) >= depth: 
@@ -1393,8 +1404,14 @@ class board():
                 if not (closest[pt[0], pt[1]]):
                     weight += CONST.routeConstrain # Solid     
             
+                            
+        if not self.checkHealth(us, route_best):
+            weight += 2 * CONST.routeThreshold
+            # print(route_best)
+            reason.append("Continue Path. Failed health check")
+
         # if [0, 5] in path:  
-            # print("DEBUG ROUTE")
+        # print("DEBUG ROUTE")
         
         us.setRoute(path)
         # self.showMapsFuture(snakes)
