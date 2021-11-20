@@ -35,9 +35,11 @@ class snake:
         self.steps = []     # Future possible steps 
         self.routeHistory = []
         
-        self.aggro = CONST.aggroLow   # out of 100 
+        # self.aggro = CONST.aggroLow   # out of 100 
         self.hunger = 0  # out of 100 
-        self.eating = False 
+        self.eating = False     # Is snake eating current turn 
+        self.eatingFuture = 0   # Total food in future turns 
+ 
         self.health = 100 
         self.length = 0
 
@@ -70,11 +72,13 @@ class snake:
       return copy.copy(m)
 
     def setMarkovBase(self, m, t):
-      self.markovbase[t] = copy.copy(m) 
+      # self.markovbase[t] = copy.copy(m) 
+      self.markovbase[t] = m 
 
     def getMarkovBase(self, t):
-      m = self.markovbase[t]
-      return copy.copy(m)
+      # m = self.markovbase[t]
+      # return copy.copy(m)
+      return self.markovbase[t]
 
     def setChance(self, c, t=0):
       lmax = len(self.chance) - 1
@@ -120,17 +124,17 @@ class snake:
         self.setLength(length)
 
         # Set meta 
-        aggro = CONST.aggroLow
+        # aggro = CONST.aggroLow
         hunger = 100 - health
         self.setHunger(hunger)
-        self.setAggro(aggro)
+        # self.setAggro(aggro)
         
 
     def setEnemy(self, data):
         # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
         name = data['name']
-
         self.setName(name)
+
         self.setType("enemy")
         self.setId(data['id'])
         
@@ -292,15 +296,14 @@ class snake:
         self.type = copy.copy(t)
         
     def getType(self):
-        t = copy.copy(self.type)
-        return t
+        return self.type
 
-    def setName(self, n):
-        self.name = copy.copy(n)
+    # def setName(self, n):
+    #     self.name = copy.copy(n)
         
-    def getName(self):
-        n = copy.copy(self.name)
-        return n
+    # def getName(self):
+    #     n = copy.copy(self.name)
+    #     return n
 
     def getLength(self):
         return copy.copy(self.length)
@@ -385,6 +388,12 @@ class snake:
 
         self.eating = e
 
+    def setEatingFuture(self, e): 
+        self.eatingFuture = e
+
+    def getEatingFuture(self):
+        return self.eatingFuture
+
     def getHunger(self):
         return self.hunger
     
@@ -412,17 +421,17 @@ class snake:
     def setInterrupt(self, i): 
         self.interruptlist = copy.copy(i)
 
-    def setStrategy(self, s, sinfo):
+    def setStrategyInfo(self, sinfo):
     # review strategy and update 
-      self.strategylist = copy.copy(s)
+      # self.strategylist = copy.copy(s)
       self.strategyinfo = copy.copy(sinfo)
 
 
-    def getStrategy(self):
+    def getStrategyInfo(self):
     # review strategy and update 
-      s = copy.copy(self.strategylist)
+      # s = copy.copy(self.strategylist)
       sinfo = copy.copy(self.strategyinfo)
-      return (s, sinfo)
+      return sinfo
 
   
     def setTarget(self, dest):   
@@ -441,13 +450,9 @@ class snake:
       return r[:]
 
     def setShout(self, turn):
-      # Shout every 10 turns 
+      # Shout every N turns 
       if (turn % CONST.shoutFrequency == 0): 
-        s, sinfo = self.getStrategy()  
-        #     if (strategy=="enlarge"):
-        #     elif (strategy=="taunt"):
-        #     ... 
- 
+        
         self.shout = CONST.shouts[int(len(CONST.shouts) * rand.random())]
       
       return self.getShout()

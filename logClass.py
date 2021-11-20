@@ -90,8 +90,10 @@ class log():
 
     def __init__(self, override=False):
 
+        logging = CONST.logging
+
         self.override = override 
-        
+        self.silent = logging['silent']  
         self.info = {} 
         self.error = []
         self.console = []
@@ -105,7 +107,7 @@ class log():
         logging = CONST.logging
         stdout_print = sys.stdout        
         
-        if(logging['silent'] or self.override):
+        if(self.silent or self.override):
             return 
 
         if(not len(data)):
@@ -133,7 +135,7 @@ class log():
       
         logging = CONST.logging
            
-        if(logging['silent'] or self.override):
+        if(self.silent or self.override):
             return 
 
         stdout_print = sys.stdout        
@@ -218,7 +220,7 @@ class log():
         
         logging = CONST.logging
 
-        if(logging['silent'] or self.override):
+        if(self.silent or self.override):
             return 
 
         value = str(values)
@@ -246,7 +248,7 @@ class log():
         global message 
 
         logging = CONST.logging
-        if(logging['silent'] or self.override):
+        if(self.silent or self.override):
             return 
 
         stdout_print = sys.stdout
@@ -315,7 +317,7 @@ class log():
         
         logging = CONST.logging 
 
-        if(logging['silent'] or self.override):
+        if(self.silent or self.override):
             return 
 
         # t = strftime("%Y-%m-%d %H:%M:%S", gmtime())
@@ -333,7 +335,7 @@ class log():
     def maps(self, name, data): 
 
           logging = CONST.logging 
-          if(logging['silent'] or self.override):
+          if(self.silent or self.override):
             return 
 
 

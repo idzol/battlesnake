@@ -8,9 +8,11 @@ import unittest
 import json 
 import constants as CONST
 
-
+import time as time
+# import matplotlib.pyplot as plt
+       
 import functions as fn 
-from logic import checkInterrupts, stateMachine, makeMove
+from logic import predictFuture, checkInterrupts, stateMachine, makeMove
 
 import numpy as np
 
@@ -44,7 +46,7 @@ test_route_foodtail_path = np.array(
 test_route_tail = np.array(
 [[ 0, 28, 27, 0],
  [20, 21, 26, 0],
- [ 0, 22, 25, 0]
+ [ 0, 22, 25, 0],
  [ 0, 23, 24, 0]])
 
 test_route_death_chance = np.array(
@@ -60,6 +62,41 @@ test_route_enemy_food = np.array(
  [ 0, 22,  0,  0]])
 
 
+# findLargestPathv2
+
+test_emptyboard = np.array(
+[[20,  0,  0, 0],
+ [ 0,  0,  0,  0],
+ [ 0,  0,  0,  0],
+ [ 0,  0,  0,  0]])
+
+test_emptyboard_11 = np.array(
+[[20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+
+
+test_predictfuture = np.array(
+[[20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0,34,35,36,37, 0],
+ [ 0, 0, 0, 0, 0, 0,33,32,31,30, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0,41,40, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0,51,50, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+
 # test_route_tail 
 # 3.1 chase tail vs larger space
  
@@ -72,6 +109,20 @@ test_route_enemy_food = np.array(
 # test_route_enemy_food
 # 6.1 predict enemy routes - incorporate food into turn 
 
+
+# Prison break 
+
+# 1.1  Prison doesn't exists
+# 1.2  Prison exists 
+  # enemy larger 
+  # not reachable (time)
+# 1.3   Prison ..  
+
+test_prison_exists = np.array(
+[[27, 26, 36,-10],
+ [20, 25, 35, 30],
+ [21, 24, 34, 31],
+ [22, 23, 33, 32]])
 
 ## MAP0
 test_map0 = np.array(
@@ -190,7 +241,7 @@ json_template = """
       "width":$width,
       "snakes":[
          {
-            "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yD",
+            "id":"gs_snake1",
             "name":"idzol",
             "latency":"",
             "health":$you_health,
@@ -201,8 +252,8 @@ json_template = """
             "squad":""
          },
          {
-            "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yE",
-            "name":"crepes",
+            "id":"gs_snake2",
+            "name":"enemy1",
             "latency":"",
             "health":$enemy_health,
             "body":$enemy_body,
@@ -216,7 +267,7 @@ json_template = """
       "hazards":$hazards
    },
    "you":{
-      "id":"gs_JMJSHhdpyWtGSj66Sv3Dt8yD",
+      "id":"gs_snake1",
       "name":"idzol",
       "latency":"",
       "health":$you_health,
@@ -229,9 +280,99 @@ json_template = """
 }
 """
 
+json_template_4snakes = """
+{
+   "game":{
+      "id":"testgame",
+      "ruleset":{
+         "name":"solo",
+         "version":"v1.0.22",
+         "settings":{
+            "foodSpawnChance":15,
+            "minimumFood":1,
+            "hazardDamagePerTurn":0,
+            "royale":{
+               "shrinkEveryNTurns":0
+            },
+            "squad":{
+               "allowBodyCollisions":false,
+               "sharedElimination":false,
+               "sharedHealth":false,
+               "sharedLength":false
+            }
+         }
+      },
+      "timeout":500
+   },
+   "turn":0,
+   "board":{
+      "height":$height,
+      "width":$width,
+      "snakes":[
+         {
+            "id":"gs_snake1",
+            "name":"idzol",
+            "latency":"",
+            "health":$you_health,
+            "body":$you_body,
+            "head":$you_head,
+            "length":$you_length,
+            "shout":"",
+            "squad":""
+         },
+         {
+            "id":"gs_snake2",
+            "name":"enemy1",
+            "latency":"",
+            "health":$enemy_health,
+            "body":$enemy_body,
+            "head":$enemy_head,
+            "length":$enemy_length,
+            "shout":"",
+            "squad":""
+         },
+         {
+            "id":"gs_snake3",
+            "name":"enemy2",
+            "latency":"",
+            "health":$enemy_health_2,
+            "body":$enemy_body_2,
+            "head":$enemy_head_2,
+            "length":$enemy_length_2,
+            "shout":"",
+            "squad":""
+         },
+         {
+            "id":"gs_snake4",
+            "name":"enemy3",
+            "latency":"",
+            "health":$enemy_health_3,
+            "body":$enemy_body_3,
+            "head":$enemy_head_3,
+            "length":$enemy_length_3,
+            "shout":"",
+            "squad":""
+         }
+      ],
+      "food":$foods,
+      "hazards":$hazards
+   },
+   "you":{
+      "id":"gs_snake1",
+      "name":"idzol",
+      "latency":"",
+      "health":$you_health,
+      "body":$you_body,
+      "head":$you_head,
+      "length":$you_length,
+      "shout":"",
+      "squad":""
+   }
+}
+"""
 
-def loadTestData(test_map):
-  global json_template
+def loadTestData(test_map, numsnakes=2):
+  global json_template, json_template_4snakes
   json_t = json_template
 
   width = len(test_map[-1])
@@ -240,15 +381,24 @@ def loadTestData(test_map):
   # Co-ordinates are reversed (y axis)
   y = width
   x = 0
-  you_head = "" 
-  you_body = []
-  enemy_head = "" 
-  enemy_body = []
   hazards = []
   foods = []
   
   you_body_len = 0 
+  you_head = "" 
+  you_body = []
+  
   enemy_body_len = 0 
+  enemy_head = "" 
+  enemy_body = []
+  
+  enemy_body_len_2 = 0 
+  enemy_head_2 = "" 
+  enemy_body_2 = []
+  
+  enemy_body_len_3 = 0 
+  enemy_head_3 = "" 
+  enemy_body_3 = []
   
   for row in test_map:
       y = y - 1
@@ -264,7 +414,20 @@ def loadTestData(test_map):
           enemy_head = xy
         # TODO: Move to constants.  Enemy = 30-29
         elif(cell==CONST.legend['enemy-body'] or (cell > 30 and cell < 40)):
-          enemy_body_len += 1 
+          enemy_body_len += 1
+
+        elif(cell==40):
+          enemy_head_2 = xy
+        # TODO: Move to constants.  Enemy = 30-29
+        elif(cell==CONST.legend['enemy-body'] or (cell > 40 and cell < 50)):
+          enemy_body_len_2 += 1 
+        
+        elif(cell==50):
+          enemy_head_3 = xy
+        # TODO: Move to constants.  Enemy = 30-29
+        elif(cell==CONST.legend['enemy-body'] or (cell > 50 and cell < 60)):
+          enemy_body_len_3 += 1 
+
         elif(cell==CONST.legend['food']): 
           foods.append(xy)    
         elif(cell==CONST.legend['hazard']):
@@ -275,6 +438,10 @@ def loadTestData(test_map):
   you_body[0] = you_head
   enemy_body = [0] * (enemy_body_len + 1)
   enemy_body[0] = enemy_head
+  enemy_body_2 = [0] * (enemy_body_len_2 + 1)
+  enemy_body_2[0] = enemy_head_2
+  enemy_body_3 = [0] * (enemy_body_len_3 + 1)
+  enemy_body_3[0] = enemy_head_3
   
   # Print body in correct order 
   y = width
@@ -292,41 +459,90 @@ def loadTestData(test_map):
         elif(cell > 30 and cell < 40):
           offset = cell - 30
           enemy_body[offset] = xy   
-          
+
+        elif(cell > 40 and cell < 50):
+          offset = cell - 40
+          enemy_body_2[offset] = xy   
+
+        elif(cell > 50 and cell < 60):
+          offset = cell - 50
+          enemy_body_3[offset] = xy   
+
         x = x + 1
 
   # print(you_body)
   # print(enemy_body)
+  if (numsnakes == 4):
+    
+    json_t = json_template_4snakes
+    json_v = { 
+        '$height':str(height),
+        '$width':str(width),
+        
+        '$foods':json.dumps(foods),
+        
+        '$you_health':str(100),
+        '$you_body':json.dumps(you_body),
+        '$you_head':json.dumps(you_head),
+        '$you_length':str(len(you_body)),
+        
+        '$enemy_health_3':str(100),
+        '$enemy_body_3':json.dumps(enemy_body_3),
+        '$enemy_head_3':json.dumps(enemy_head_3),
+        '$enemy_length_3':str(1),
+        
+        '$enemy_health_2':str(100),
+        '$enemy_body_2':json.dumps(enemy_body_2),
+        '$enemy_head_2':json.dumps(enemy_head_2),
+        '$enemy_length_2':str(1),
 
-  json_v = { 
-      '$height':str(height),
-      '$width':str(width),
-      
-      '$foods':json.dumps(foods),
-      
-      '$you_health':str(100),
-      '$you_body':json.dumps(you_body),
-      '$you_head':json.dumps(you_head),
-      '$you_length':str(len(you_body)),
+        '$enemy_health':str(100),
+        '$enemy_body':json.dumps(enemy_body),
+        '$enemy_head':json.dumps(enemy_head),
+        '$enemy_length':str(1),
 
-      '$enemy_health':str(100),
-      '$enemy_body':json.dumps(enemy_body),
-      '$enemy_head':json.dumps(enemy_head),
-      '$enemy_length':str(1),
-      
-      '$hazards':json.dumps(hazards)
-      
-  }
+        '$hazards':json.dumps(hazards)    
+      }
+    # print(json_v)
+    # print(json_t)
+    
+  # assume two snakes
+  else:
+
+    json_t = json_template
+    json_v = { 
+        '$height':str(height),
+        '$width':str(width),
+        
+        '$foods':json.dumps(foods),
+        
+        '$you_health':str(100),
+        '$you_body':json.dumps(you_body),
+        '$you_head':json.dumps(you_head),
+        '$you_length':str(len(you_body)),
+
+        '$enemy_health':str(100),
+        '$enemy_body':json.dumps(enemy_body),
+        '$enemy_head':json.dumps(enemy_head),
+        '$enemy_length':str(1),
+        
+        '$hazards':json.dumps(hazards)    
+      }
 
   # nonlocal json_test
+  d = None 
   for key in json_v:
       json_t = json_t.replace(key,json_v[key])
+      # print(json_t)
       # print(str(json_t))
   try:
       d = json.loads(json_t)
   except:
       print("ERROR: Incorrect JSON format.  Check variable in json_template, and keys in json_vals")
   
+  # if (numsnakes == 4):
+  #   print(json_t)
+
   return d
 
 
@@ -443,6 +659,12 @@ class boardClassTest(unittest.TestCase):
           food = [f['y'], f['x']]
           theFoods.append(food)
 
+        theHazards = []
+        hazards = data['board']['hazards']
+        for h in hazards:
+          hazard = [f['y'], f['x']]
+          theHazards.append(hazard)
+
         # Set our snake 
         ourSnek.setAll(data['you'])
         ourSnek.setId(identity)
@@ -475,12 +697,9 @@ class boardClassTest(unittest.TestCase):
             snek = allSnakes[sid]
             # print(snek.getHeadBody()) 
 
-        theBoard.updateBoards(data, ourSnek, allSnakes, theFoods) 
+        theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards) 
         theBoard.updateChance(allSnakes, theFoods)
-        theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-        theBoard.updateDijkstra(allSnakes)
-        theBoard.updateGradient(ourSnek.getHead()) 
-        theBoard.updateGradientFix(ourSnek.getHead())
+        theBoard.updateMarkov(ourSnek, allSnakes, theFoods, theHazards)
         
         return (theBoard, ourSnek, allSnakes, theFoods)
 
@@ -524,6 +743,7 @@ class boardClassTest(unittest.TestCase):
         final = target
         route, weight = theBoard.routePadding([final], allSnakes, foods)
         # print("1.4 -- Route away from enemy tail.  %s should contain %s" % (route, [2,1]))
+        # DEBUG -- print(route,weight,[final], foods)
         self.assertIn([2,1], route)
       
         # 2.1 -- Us eating.  Confirm no path through tail (length + 1)
@@ -550,9 +770,7 @@ class boardClassTest(unittest.TestCase):
         route, weight = theBoard.routePadding([final], allSnakes, foods)
         # print("2.2 -- Us eating.  Route through tail.  %s should contain %s" % (route, [0, 1]))
         self.assertIn([0, 1], route)
-        
-
-  
+          
         # X.1 -- Route to smaller snake (100% prob)
         # data = loadTestData(test_route_enemycollide)
         # (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
@@ -562,6 +780,227 @@ class boardClassTest(unittest.TestCase):
 
         # X.2 -- Route see through dead snake (if 100%..)
 
+
+    def test_findLargestPathv2_new(self):
+        
+        data = loadTestData(test_emptyboard)
+        (theBoard, ourSnek, snakes, foods) = self.initBoard(data)
+        w = theBoard.width
+        h = theBoard.height
+
+        # 1.1 - Test max space 
+        start = [0, 0]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        
+        start = [1, 1]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        
+        start = [2, 2]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+
+        start = [3, 3]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        # print("RESULT: ", largest['path'], largest['weight'])
+        
+        
+        # 1.2 - Test max space  (11x11) 
+        data = loadTestData(test_emptyboard_11)
+        (theBoard, ourSnek, snakes, foods) = self.initBoard(data)
+        
+        start = [0, 0]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods, depth=100)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        
+        start = [1, 1]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods, depth=100)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        
+        start = [2, 2]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods, depth=100)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+
+        start = [3, 3]
+        ourSnek.setHead(start)
+        rr, largest = theBoard.findLargestPathv2([start], snakes, turn=0, foods=foods, depth=100)
+        ourSnek.setRoute(largest['path'])
+        # theBoard.showMapsFuture(snakes)
+        # print("RESULT: ", largest['path'], largest['weight'])
+     
+
+    def test_findLargestPathv2_performance(self):
+
+        data = loadTestData(test_emptyboard_11)
+        (theBoard, ourSnek, snakes, foods) = self.initBoard(data)
+        w = theBoard.width
+        h = theBoard.height
+
+        time_start = time.time()
+        times = []
+        times.append(time_start)
+        rr_total = 0
+
+        for y in range(0, w):
+          for x in range(0, h): # h 
+            ourSnek.setHead([y, x])
+            rr, route = theBoard.findLargestPathv2([[y, x]], snakes, turn=0, foods=foods, depth=100)
+            ourSnek.setRoute(route['path'])
+            # theBoard.showMapsFuture(snakes)
+        
+            rr_total += rr 
+            
+            # print(rr, theBoard.best[str([y, x])])
+            time_next = time.time()
+            times.append(time_next)
+
+        time_end = time.time() 
+        time_ave = (time_end - time_start) / rr_total
+
+        times_diff = []
+        for t in range(1, len(times)):
+            times_diff.append(times[t] - times[t-1])
+            # _next - times[-1]
+            
+        # print(times_diff)
+        print("findLargestPathv2_performance")
+        print("Time ave:%sms min:%sms max:%sms txn:%sus * %s" % \
+            (round(1000*sum(times_diff)/len(times_diff), 0), 
+            round(1000*min(times_diff), 0), 
+            round(1000*max(times_diff), 0), 
+            round(1000000*time_ave, 0), rr_total))
+
+
+    def test_updateBest_performance(self):
+
+        data = loadTestData(test_emptyboard_11)
+        (theBoard, ourSnek, snakes, foods) = self.initBoard(data)
+        w = theBoard.width
+        h = theBoard.height
+
+        time_start = time.time()
+        times = []
+        times.append(time_start)
+        rr = 0
+
+        for y in range(0, w):
+          for x in range(0, h):
+            ourSnek.setHead([y, x])
+            rr += theBoard.updateBest([y, x])
+            # print(rr, theBoard.best[str([y, x])])
+            time_next = time.time()
+            times.append(time_next)
+
+        time_end = time.time() 
+        time_ave = (time_end - time_start) / rr 
+
+        times_diff = []
+        for t in range(1, len(times)):
+            times_diff.append(times[t] - times[t-1])
+            # _next - times[-1]
+            
+        # print(times_diff)
+        print("updateBest_performance")
+        print("Time ave:%sms min:%sms max:%sms txn:%sus * %s" % \
+            (round(1000*sum(times_diff)/len(times_diff), 0), 
+            round(1000*min(times_diff), 0), 
+            round(1000*max(times_diff), 0), 
+            round(1000000*time_ave, 0), rr))
+
+
+    def test_predictFuture_performance(self):
+        # test_predictfuture
+        
+        data = loadTestData(test_predictfuture, numsnakes=4)
+        (theBoard, ourSnek, snakes, foods) = self.initBoard(data)
+        w = theBoard.width
+        h = theBoard.height
+
+        time_start = time.time()
+        times = []
+        times.append(time_start)
+        rr_total = 1
+
+        for y in range(0, w):
+          for x in range(0, h): # h 
+            ourSnek.setHead([y, x])
+            rr = predictFuture(theBoard, ourSnek, snakes, foods)
+            # ourSnek.setRoute(route['path'])
+            # theBoard.showMapsFuture(snakes)
+        
+            rr_total += rr
+            
+            # print(rr, theBoard.best[str([y, x])])
+            time_next = time.time()
+            times.append(time_next)
+
+        time_end = time.time() 
+        time_ave = (time_end - time_start) / rr_total
+
+        times_diff = []
+        for t in range(1, len(times)):
+            times_diff.append(times[t] - times[t-1])
+            # _next - times[-1]
+            
+        # print(times_diff)
+        print("predictFuture_performance")
+        print("Time ave:%sms min:%sms max:%sms txn:%sus * %s" % \
+            (round(1000*sum(times_diff)/len(times_diff), 0), 
+            round(1000*min(times_diff), 0), 
+            round(1000*max(times_diff), 0), 
+            round(1000000*time_ave, 0), rr_total))
+
+
+    def test_enclosedPrison2(self):
+        
+        data = loadTestData(test_prison_exists)
+        (theBoard, ourSnek, allSnakes, foods) = self.initBoard(data)
+        
+        # 1.1 - Test prison 
+        start = ourSnek.getHead()
+        theBoard.updateBest(start)
+        strategyPrison = False 
+        
+        uid = theBoard.identity
+        # Check snakes 
+        for sid in allSnakes:
+          if sid != uid:
+            snek = allSnakes[sid]
+            snek.setLength(10)    # Not set in setBody
+            # Check prison 
+            prison = theBoard.enclosedPrison(snek)
+            for bar in prison: 
+              target = bar['point']
+              expires = bar['expires']
+              dist = len(theBoard.best[str(start)][str(target)])
+              if(expires == dist):
+                  # print(bar)
+                  # print(theBoard.best[str(start)][str(target)]['path'])
+                  strategyPrison = True 
+
+        # Check prison strategy 
+        self.assertEqual(strategyPrison, True)
+        # bar -- ..{'expires': 5, 'point': [0, 1]}
+        # route -- [[3, 0], [3, 1], [2, 1], [1, 1], [0, 1]]
+      
+        # theBoard.showMaps()
+      
 
     def test_setGetDimensions(self):
       
@@ -772,6 +1211,9 @@ class boardClassTest(unittest.TestCase):
 class logicTest(unittest.TestCase):
   
     pass 
+
+
+      # bo:board, sn:snake, snakes:list):
 
   # def test_selectDestChooseMove(self):
         

@@ -14,8 +14,10 @@ from logClass import log
 from snakeClass import snake
 from boardClass import board
 
+import constants as CONST 
 
-from logic import checkEnemy, checkInterrupts, stateMachine, makeMove
+
+from logic import predictFuture, enemyInterrupts, checkInterrupts, stateMachine, makeMove
 
 app = Flask(__name__)
 
@@ -101,6 +103,14 @@ def handle_move(testData="", testOverride=False):
       food = [f['y'], f['x']]
       theFoods.append(food)
 
+    theHazards = []
+    hazards = data['board']['hazards']
+    for h in hazards:
+      hazard = [h['y'], h['x']]
+      theHazards.append(hazard)
+
+    # print("DEBUG HAZARDS", theHazards)
+
     # Set our snake 
     ourSnek.setAll(data['you'])
     ourSnek.setId(identity)
@@ -123,31 +133,60 @@ def handle_move(testData="", testOverride=False):
         allSnakes[identity].setType("enemy")
         allSnakes[identity].setEnemy(alive)
 
-    
     # Update routing boards
-    # TODO:  Review hazard logic & routing
-    # hazards = data['board']['hazards']
-    theBoard.updateBoards(data, ourSnek, allSnakes, theFoods)
+    # print(data)
+    theBoard.updateBoards(data, ourSnek, allSnakes, theFoods, theHazards)
     logger.timer('updateChance')
-    theBoard.updateChance(allSnakes, theFoods)
-    logger.timer('updateMarkov')
-    theBoard.updateMarkov(ourSnek, allSnakes, theFoods)
-    logger.timer('updateEnemy')
-    checkEnemy(theBoard, ourSnek, allSnakes)
-    # theBoard.updateDijkstra(allSnakes)
-    logger.timer('updateBest')
-    theBoard.updateBest(ourSnek.getHead())
-       
-    # Initialisation complete 
-    logger.timer('== Init complete ==')
     
+    # if ('speed' in game_type):
+    # else:
+
+    # Random play forward of moves 
+    predictFuture(theBoard, ourSnek, allSnakes, theFoods)
+
+    # Apply state machine to all enemy snakes 
+    logger.timer('stateMachineEnemy')
+    for sid in allSnakes:
+        snek = allSnakes[sid]
+        if (snek != ourSnek):
+            logger.timer('updateEnemyBest')
+            theBoard.updateBest(snek.getHead(), turn=0)
+            
+            silent = copy.copy(logger.silent) 
+            logger.silent = True        # Supress enemy updates
+            logger.timer('updateEnemyInterrupts')
+            enemyInterrupts(theBoard, snek, allSnakes)
+            logger.timer('updatesEnemyStateMachine')
+            stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
+            # print("ENEMY ROUTE", snek.getRoute())
+            logger.silent = silent 
+
+    # Adjust boards for enemy moves 
+    logger.timer('updateBoardsEnemy')
+    theBoard.updateBoardsEnemyMoves(allSnakes)
+
+    # print(theBoard.markovs)
+
+    # Clear routing boards -- new info
+    theBoard.clearBest()
+
+    # Update our routing board  
+    logger.timer('updateBest')
+    theBoard.updateBest(ourSnek.getHead(), turn=0, snakes=allSnakes, foods=theFoods)
+    # for key in theBoard.best:
+    #     print(theBoard.best[key])
+
+    # print("HEAD", ourSnek.getHead())
+    # print(theBoard.bestLength)
+    # print(theBoard.bestWeight)
+
     # Check strategy interrupts     
     logger.timer('checkInterrupts')
     checkInterrupts(theBoard, ourSnek, allSnakes)
     
-    logger.timer('stateMachine')
-    # Progress state machine, set route
-    stateMachine(theBoard, ourSnek, allSnakes, theFoods)
+    logger.timer('stateMachineUs')
+    # Progress state machine for our snake
+    stateMachine(theBoard, ourSnek, allSnakes, theFoods, enemy=False)
     
     # Strategy Complete 
     logger.timer('== Strategy complete ==')
@@ -166,11 +205,16 @@ def handle_move(testData="", testOverride=False):
     # games[game_id] = [theBoard, ourSnek, allSnakes]
     
     # Fork reporting (non blocking to server response )
-    newpid = os.fork()
-    if newpid == 0:
-        # p = psutil.Process(newpid.getpid())
-        # p.set_nice(10)
+    if 'localhost' in CONST.environment:
+        # Don't fork for localhost (prevent runaway PIDs during testing)
         reporting(logger, theBoard, ourSnek, allSnakes, data)
+
+    else: 
+        newpid = os.fork()
+        if newpid == 0:
+            # p = psutil.Process(newpid.getpid())
+            # p.set_nice(10)
+            reporting(logger, theBoard, ourSnek, allSnakes, data)
 
     logger.timer('== Move complete ==')    
     return {"move": move, "shout":shout}
@@ -207,6 +251,8 @@ def reporting(logger, board, us, snakes, data):
     # Print log info
     us.showStats()
     board.showMaps()
+    # board.showMapsFuture(snakes)
+
     for key in snakes:
         snk = snakes[key]
         logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())

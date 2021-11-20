@@ -21,12 +21,13 @@ logfile_game = "game.log"
 logfile_error = "error.log"
 
 
-# TODO:  Performance testing 
-# TODO:  Converge these over time .. 
-lookAheadEnemyStrategy = 3  # Enemy prediction (play forward move - logic:enemyStrategy)
-lookAheadEnemy = 3          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
-lookAheadPath = 20          # Path prediction (Random)
-lookAheadPathContinue = 40  # Path continue (Best / Markov / Dijkstra)
+lookAheadPredictFuture = 3  # Enemy prediction (play forward move - logic:predictFuture)
+lookAheadEnemy = 10          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
+lookAheadPathContinueEnemy = 3  # Path continue (Enemy path lookahead)  
+
+lookAheadPath = 20          # Path prediction
+lookAheadPathRandom = 20     # Path prediction (Random - expensive)
+lookAheadPathContinue = 20  # Path continue (Best / Markov / Dijkstra)
 maxRecursion = 3000
 
 
@@ -41,10 +42,10 @@ if (environment == 'prod'):
     'console':False  
   }
   # Time variable 
-  timeStart = 300
-  timeMid = 350
+  timeStart = 200
+  timeMid = 300
   timeEnd = 400
-  timePanic = 400
+  timeWarning = 400   # 
 
 elif (environment == 'preprod'): 
   # Preprod (cloud run)
@@ -57,10 +58,10 @@ elif (environment == 'preprod'):
     'console':False  
   }
   # Time variable 
-  timeStart = 300
-  timeMid = 350
+  timeStart = 200
+  timeMid = 300
   timeEnd = 400
-  timePanic = 400
+  timeWarning = 400
 
 else:
   # Dev (localhost) 
@@ -73,18 +74,22 @@ else:
     'console':True  
   }
   # Time variable 
-  timeStart = 3000
-  timeMid = 3500
+  timeStart = 2000
+  timeMid = 3000
   timeEnd = 4000
-  timePanic = 4000
+  timeWarning = 400
 
 # Routing threshold - collision probability
 routeThreshold = 1000   # Ignore if route larger 
 pointThreshold = 25   # Ignore if any step larger
-minProbability = 1    # Markov probability 
 
-routeSolid = 500
-routeHazard = 15
+minProbability = 10    # Markov probability 
+maxProbability = 100
+
+
+routeSolid = routeThreshold
+routeHazard = 1
+routeConstrain = 1
 routeCell = 1
 
 # Game phases
@@ -96,23 +101,24 @@ lengthEndGame = 20
 healthHigh = 100
 healthMed = 75
 healthLow = 50
-healthCritical = 25
+healthCritical = 15
 
-threatHigh = 80
-threatMed = 50
-threatLow = 20
+# threatHigh = 80
+# threatMed = 50
+# threatLow = 20
 
-aggroHigh = 80
-aggroMed = 50
-aggroLow = 20
+# aggroHigh = 80
+# aggroMed = 50
+# aggroLow = 20
 
 # Strategy 
 strategyDepth = 100   # max strategies to explore each turn
-strategyLength = 5   # number of strategies to remember between turns
+strategyDepthEnemy = 10    # max enemy strategies to explore each turn
+# strategyLength = 5   # DEPRECATE - stateless.  number of strategies to remember between turns
 
 # Strategy - control board 
 controlMinLength = 25
-controlLargerBy = 3
+controlLargerBy = 10
 
 # Strategy - kill radius 
 killRadius = 2
@@ -184,6 +190,20 @@ movenorth = moveup
 movesouth  = movedown
 movewest = moveleft
 moveeast = moveright
+
+directionOpposite = {
+  'up':'down',
+  'down':'up',
+  'right':'left',
+  'left':'right',
+}
+
+directionRotation = {
+  'left':['left', 'down', 'up'],
+  'right':['right', 'up', 'down'],
+  'up':['up', 'left', 'right'],
+  'down':['down', 'left', 'right'],
+}
 
 directionMap = {
   'up':moveup,
