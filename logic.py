@@ -86,10 +86,11 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
             for path in paths: 
               # Todo: only paint squares in each path based on turn 
               for pt in path:
-                # Print out hazard for N = enemy length 
-                for turn in range(0, length):
+                # Print out hazard for N = enemy length or width of board
+                for turn in range(0, min(length, bo.width)):
                   if not closest[pt[0], pt[1]]:           
-                    bo.updateCell(pt, CONST.routeSolid, turn)
+                    bo.updateCell(pt, CONST.routeSolid/2, turn)
+                    # bo.updateCell(pt, CONST.routeSolid/(turn+1), turn)
             
             food_in_route = 0 
             try:
@@ -681,8 +682,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
             not keepLooking):   
           found = True 
           
-      # We are desparate.  Ignore length & route threshold (except hazard/solid)
-      elif (ignoreThreat and weight_total <= CONST.routeThreshold):
+      # We are desparate.  Ignore length & route threshold except hazard/solid death
+      elif (ignoreThreat and weight_total < 2 * CONST.routeThreshold):
           found = True 
           
       # Enemy ignores point threshold 

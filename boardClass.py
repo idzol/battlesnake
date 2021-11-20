@@ -735,7 +735,9 @@ class board():
 
                             else:
                                 # Todo: enemy eating 
-                                eating[sid] = snakes[sid].getEatingFuture()
+                                # Enemy eating in next N turns 
+                                if turn >= 1:  
+                                    eating[sid] = snakes[sid].getEatingFuture()
                                 # print(sid, eating[sid])
                             
                         # Check we can route 
@@ -1740,8 +1742,9 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
                             else: 
                                 eating[sid] = foods_eaten
                         else:
-                            # Enemy eating 
-                            eating[sid] = snakes[sid].getEatingFuture()
+                            # Enemy eating in next N turns 
+                            if turn >= 1:  
+                                eating[sid] = snakes[sid].getEatingFuture()
                             
                     # print(eating)
                     available = self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating, path=dot_path)
