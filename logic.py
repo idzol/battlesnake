@@ -69,11 +69,20 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
         # If enemy can get to location before us 
         # If enemy kill path found 
         # print(avoid)
-        for step in avoid:
-            # for step in path: 
-            for turn in range(0, numfuture + 1):
-              # Mark cell 50% kill likelihood for N turns 
-              bo.updateCell(step, CONST.routeSolid/2, turn)
+        for path in avoid:
+            # Set future markov board, where 
+            # * length of steps reflects turn, and 
+            # * routing logic looks at next markov board 
+            
+            for step in path:
+            
+              # print("PREDICT FUTURE DEATH", step)
+
+              for i in range(0, len(path)):
+                bo.updateCell(path[i], CONST.routeSolid/2, i, replace=True)
+                bo.updateCell(path[i], CONST.routeSolid/2, i+1, replace=True)
+
+              # bo.updateCell(step, CONST.routeSolid/4, len(path)+1, replace=True)
 
     # Update eating for snakes based on path 
     # Update cells that enemy snakes can get to before us 
@@ -94,6 +103,8 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
                     # bo.updateCell(pt, CONST.routeSolid/(turn+1), turn)
             
             food_in_route = 0 
+
+            # Check if there is food one square from them .. 
             try:
                 food_path = 0  
                 # Check if food is in future moves 
@@ -101,12 +112,13 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
                     pt = path[0]  # truncate to first point only for now 
                     if pt in foods: 
                         food_in_route = 1 
-                    # food_path = len(list(filter(lambda x: x in foods, path)))
-                    # food_in_route = max(food_in_route, food_path)                 
                     # print("DEBUG ENEMY PATH", sid, pt, path, food_path)   # lookAheadPredictFuture
 
             except:
                 pass 
+
+            # Check if snake ate this turn (don't we already accommodate?)
+              
 
             snakes[sid].setEatingFuture(food_in_route)
             # print(sid, food_in_route)
@@ -114,7 +126,8 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
     # Performance monitoring 
     return rr 
 
-def controlSpace(bo:board, us:snake, snakes:list):
+
+def controlSpace(bo:board, us:snake, snakes:list, aggro=False):
     """
     Maximise number of points we have access to on the board 
     Note:  Finds local maximum 
@@ -151,16 +164,19 @@ def controlSpace(bo:board, us:snake, snakes:list):
           # Return board control matrix 
           dist = bo.closestDist(step, heads)
           control = np.sum(dist)
-
           # Save location wtih max control 
+          
           if control > control_max:
               control_max = control
               target = step + []   # copy.copy
               # board_dist = copy.copy(dist)
 
-          if dist_min < CONST.foodThreat: 
+          if not aggro and dist_min < CONST.foodThreat: 
               # If too close to enemy, abandon 
               target = [] 
+
+          # print("CONTROL", step, control, target, dist_min, CONST.foodThreat)
+
 
     return copy.copy(target)
 
@@ -191,7 +207,7 @@ def enemyInterrupts(bo:board, sn:snake, snakes:list):
 
 
 # Changes strategy (state machine) based on external influence 
-def checkInterrupts(bo:board, sn:snake, snakes:list):
+def checkInterrupts(bo:board, sn:snake, snakes:list, foods:list):
     """
     Check for events that need response in three categories 
     (1) Kill logic 
@@ -231,8 +247,13 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
 
     reason = []
 
-    # Prison -- enclosure 
+    # Kill logic 
     if (larger and duel): 
+      # Control space 
+      interruptlist.insert(0, ['Control', 'Space'])
+      strategyinfo['attack'] = 1
+      
+      # Prison logic (if avaialable)
       for sid in snakes:
         if sid != you:
           snek = snakes[sid]
@@ -266,14 +287,21 @@ def checkInterrupts(bo:board, sn:snake, snakes:list):
     if (health <= CONST.healthCritical):
         interruptlist.insert(0, ['Eat', 'Any'])
         reason.append('health was low')
-      
+        # If there are hazards increase weight to solid ..  
+        if (len(bo.hazards)):
+            # set hazards to solid (except food)
+            bo.increaseHazard(foods=foods, solid=True)
+            # redo routing (move this up for performance)
+            bo.updateBest(start, turn=0, snakes=snakes, foods=foods)
+    
     # Kill interrupt -- larger than 
     t = killPath(bo, snakes)
     if (len(t)):
         interruptlist.insert(0, ['Kill', 'Collide'])
         strategyinfo['killpath'] = t
         reason.append('killpath was identified')
-
+    
+    
 
     # Kill interrupt -- cut off path 
     t = enemyEnclosed(bo, sn, snakes)
@@ -460,7 +488,13 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
           # target = bo.findClosestNESW(start)  
           if (strategy[1]=='Space'):
 
-            target = controlSpace(bo, sn, snakes)
+            if 'attack' in strategyinfo: 
+                aggro = True 
+            else: 
+                aggro = False 
+            
+            target = controlSpace(bo, sn, snakes, aggro=aggro)
+            # print("CONTROL SPACE", target, aggro)
             target_method = "controlSpace"
             # bo.logger.log('strategy-route', "CONTROL SPACE", str(start), str(target))
  
@@ -1061,7 +1095,11 @@ def findInterceptPath(start, bo:board, board_dist, board_chance, chance=CONST.in
     """ 
 
     target = start 
-    intercepts = np.nonzero(board_chance > chance)
+    if not board_chance is None:
+      intercepts = np.nonzero(board_chance > chance)
+    else:
+      return []
+    
     intdict = {} 
         
     # TODO:  Better way to sort a list with function (eg list->dict-list)?
@@ -1277,17 +1315,17 @@ def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadP
                                   if (length > length_us): 
                                     
                                       # Check for collision (same square and we are same / smaller) 
-                                      conflict = step
+                                      # conflict = step
                                       safe = False 
                                       reason.append("head on collision")
 
                               else: 
-                                  # Check intersection of two paths
-                                  # if not (p for p in step if p in ourstep):
-                                      # If two paths don't intersect 
+                                  # Combine all the occupied squares  
                                   turn = len(step)
                                   start = ourstep[-1]
                                   future = ourstep + step 
+
+                                  # Minus current position 
                                   future.remove(start)
 
                                   # Check if we have moves available (I will never die)
@@ -1296,28 +1334,30 @@ def checkFutureDeath(bo:board, us:snake, snakes:list, numfuture=CONST.lookAheadP
                                   # No paths
                                   if (not found):
                                       # AND exclude U loops (dumb) 
-                                      conflict = step
+                                      # conflict = step
                                       safe = False 
                                       reason.append("no path for us")
                                       
 
                           # print("STEPS us:%s them:%s" % (ourstep, step)) 
-                          # if [4,6] in ourstep:
-                          #   print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
+                          # if [5, 5] in ourstep:
+                          #   print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s) safe:(%s)" \
+                          #       % (ourstep, step, safe)) # steps_enemy
                           
                   
                       if (not safe):
                       # One of the enemy steps is not safe for our step
                       
-                          # DEBUG .. 
-                          # if [4,6] in ourstep:
-                          #     print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, conflict)) # steps_enemy
-                          try: 
-                            # steps_us.remove(ourstep)
-                            dirn_avoid.append(ourstep[-1])
-                          except:
-                            # already removed 
-                            pass 
+                          collision = False 
+                          for i in range(0, len(step)-1):
+                            if step[i] == ourstep[i]:
+                              collision = True 
+                          
+                          if not collision:
+                            dirn_avoid.append(step)
+                            # print("DEBUG - FINAL PATHS ourstep: (%s) conflict:(%s)" % (ourstep, step)) # steps_enemy
+                      
+
 
     # Update possible steps (if used)     
     snakes[sid_us].setNextSteps(steps_us)

@@ -182,7 +182,7 @@ def handle_move(testData="", testOverride=False):
 
     # Check strategy interrupts     
     logger.timer('checkInterrupts')
-    checkInterrupts(theBoard, ourSnek, allSnakes)
+    checkInterrupts(theBoard, ourSnek, allSnakes, theFoods)
     
     logger.timer('stateMachineUs')
     # Progress state machine for our snake

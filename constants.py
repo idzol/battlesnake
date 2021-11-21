@@ -88,7 +88,7 @@ maxProbability = 100
 
 
 routeSolid = routeThreshold
-routeHazard = 1
+routeHazard = 50
 routeConstrain = 1
 routeCell = 1
 

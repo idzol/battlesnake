@@ -188,7 +188,7 @@ class log():
         except: 
           names = ''
 
-        return copy.copy(names)
+        return names + []
   
 
     def gameinfo(self, data):
