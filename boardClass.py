@@ -1493,16 +1493,17 @@ class board():
         if step in path: 
             return False 
 
+        h = self.height
+        if not (0 <= step[0] < h):
+            return False 
+        
+        w = self.width
+        if not (0 <= step[1] < w):  
+            return False 
+        
         # routeHash = str(step) + str(turn) + str(eating) + str(path) + str(enemy)
         # if routeHash in self.routepoint:
         #     return self.routepoint[hash]
-
-        w = self.width
-        h = self.height
-
-        # Optimisation -- Get step
-        # dy = step[0]
-        # dx = step[1]
 
         # Get markov for next turn 
         t = min(turn, CONST.lookAheadPathContinue - 2)
@@ -1538,24 +1539,21 @@ class board():
             
         # Route logic 
 
-        exists = False 
-        if (0 <= step[0] < h):
-            if (0 <= step[1] < w):  
                 
-                # Enemy prediction logic
-                if (enemy and turn >= board[step[0], step[1]] - 1):
-                    exists = True    
-                    
-                # Our prediction logic
-                elif(turn >= (board[step[0], step[1]] - 1) and 
-                        markov[step[0], step[1]] < CONST.routeThreshold):
-                    exists = True     
+        # Enemy prediction logic
+        if (enemy and turn >= board[step[0], step[1]] - 1):
+            return True
+            
+        # Our prediction logic
+        elif(turn >= (board[step[0], step[1]] - 1) and 
+                markov[step[0], step[1]] < CONST.routeThreshold):
+            return True 
                         
         # self.routepoint[routeHash] = exists
         # if (step in [[0, 9]]): 
         #     print(step, turn, board, eating, path, exists)
             
-        return exists 
+        return False  
 
 
     def hasEaten(self, snakes, foods):
@@ -2847,7 +2845,7 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
         # self.logger.maps('WEIGHT', self.bestWeight)
         
         self.logger.maps('TRAILS', self.trails)
-        for i in range(0, 20):
+        for i in range(0, 1):
             self.logger.maps('MARKOV', self.markovs[i])
 
         # print(self.markovs)
