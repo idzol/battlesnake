@@ -66,7 +66,14 @@ class board():
         self.turn = 0
 
         self.resetCounters()
-        
+    
+
+    def setTimeouts(self, t):
+
+        self.timeStart = 0.4 * t 
+        self.timeMid = 0.6 * t
+        self.timeEnd = 0.8 * t
+
 
     def setLogger(self, l):
         """
@@ -412,21 +419,19 @@ class board():
 
     def updateChance(self, snakes, foods):
 
+        # 
         turns = CONST.lookAheadEnemy
         # us = self.getIdentity()
 
         for snid in snakes:
-          sn = snakes[snid]
-          head = sn.getHead()
+          snake = snakes[snid]
           
-          if (sn.getType() != "us"):
-            for turn in range(0, turns):
-                chance = self.pathProbability(head, turn)
-                sn.setChance(chance, turn)
-                # print(turn, chance)
-    
+          if (snake.getType() != "us"):
+            # Update snake chance boards
+            chance = self.pathProbability(snake, turns)
+            
 
-    def updateCell(self, cell:list, weight:int, turn:int=0):
+    def updateCell(self, cell:list, weight:int, turn:int=0, replace=True):
         """
         Update markov cell 
         ===
@@ -442,8 +447,10 @@ class board():
             # Paint markov matrix for turn t + 1
             y = cell[0]
             x = cell[1]
-            self.markovs[t][y, x] = weight
-                
+            if(replace):
+                self.markovs[t][y, x] = weight
+            else:            
+                self.markovs[t][y, x] += weight
 
     def updateBoardsEnemyMoves(self, snakes:list): 
         """
@@ -499,12 +506,34 @@ class board():
     #         for turn in range(0, turns):
     #             self.updateCell(h, CONST.routeHazard, turn)
 
+    # 
+    def increaseHazard(self, turns=CONST.lookAheadPathContinue, foods:list=[], solid=False, multiplier=1):
+        turns = min(turns, CONST.lookAheadPathContinue)
+        hazards = self.hazards 
+
+        for t in range(0, turns):
+            markov = self.markovs[t]
+            for hz in hazards: 
+                if solid:
+                    # Don't set food square to sollid 
+                    if hz not in foods: 
+                        markov[hz[0], hz[1]] = CONST.routeSolid
+
+                else:
+                    # increase threat level 
+                    markov[hz[0], hz[1]] = CONST.routeHazard * multiplier
+            
+            # print("DEBUG HAZARDS", markov)
+        
+            markov[hz[0], hz[1]] = CONST.routeHazard
+            self.markovs[t] = markov
+
 
     def updateMarkov(self, us, snakes:dict, foods:list, hazards:list, turns=CONST.lookAheadPathContinue): 
       
       w = self.width
       h = self.height
-    #   markovs = []
+      # markovs = []
 
       turns = min(turns, CONST.lookAheadPathContinue)
       for t in range(0, turns):
@@ -545,12 +574,6 @@ class board():
               
             # Update markov probability 
             # =========================
-            for hz in hazards: 
-                # Paint hazards
-                # y = cell[0]
-                # x = cell[1]
-                markov[hz[0], hz[1]] = CONST.routeHazard
-
             for b in body: 
                 # if(self.inBounds(cell)):
                 # Paint markov matrix for turn t + 1
@@ -586,14 +609,9 @@ class board():
                 else: 
                     # Draw markov   
                     chance = sn.getChance(t)
-                    try:
-                      markov = markov + chance 
+                    if chance is not None:
+                        markov = markov + chance 
 
-                    except Exception as e:
-                      # Get markov from one before 
-                      # markov = sn.getMarkov(t - 1)
-                      self.logger.error('exception', 'updateMarkov', str(e))
-                
                 sn.setMarkov(markov, t)
             
             # ===================
@@ -609,6 +627,10 @@ class board():
         for t in range(0, turns - 1): 
 
           markov = np.zeros([w, h], np.intc)
+          for hz in hazards: 
+              if hz not in foods:
+                markov[hz[0], hz[1]] = CONST.routeHazard
+          
           for snid in snakes:
               sn = snakes[snid]
               # markov_sn = sn[identity].getMarkov()
@@ -684,7 +706,7 @@ class board():
 
         # while(len(dots)):
         while(len(dots) or rr < rr_max):
-                            
+            
             dots_next = []
             # Each dot recurses into adjacent cells 
             # print("NEXT", rr, dots)
@@ -738,6 +760,7 @@ class board():
                                 # Enemy eating in next N turns 
                                 if turn >= 1:  
                                     eating[sid] = snakes[sid].getEatingFuture()
+                                    
                                 # print(sid, eating[sid])
                             
                         # Check we can route 
@@ -747,8 +770,11 @@ class board():
                             # if dot_length >= self.trails[dot_loc[0], dot_loc[1]]:
                             #     exists = True
                         # if not performance: 
-
+                        
                         if self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating , path=dot_path + start_path):
+                            # if dot_loc in [[5, 3]]: 
+                            #     print("BEST", dot_loc, dot_length, dot_path)  # eating, 
+                        
                             dot_length += 1
                             exists = True 
 
@@ -788,9 +814,10 @@ class board():
                         pass 
 
                     # DEBUG 
-                    # if (dot_weight > 0 and alive and dot_loc in [[3, 4], [4, 4]]  ): 
+                    # if (alive and dot_loc in [[9, 9], [8, 9], [7, 9], [6, 9], [5, 9], [4, 9], [3, 9], [2, 9], [1, 9], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5], [0, 4], [0, 3], [0, 2], [0, 1], [0, 0], [1, 0]]   ): 
                     #     print("DEBUG DOT LOC ", alive, eating, dot_loc, dot_weight) # , dot_path, t, self.markovs[t][dot_loc[0]][dot_loc[1]]) 
-                    #     print("DEBUG FOOD", dot_food)
+                    #     print("DEBUG MARKOV", self.markovs[t+1][dot_loc[0]][dot_loc[1]], t+1)
+                    #     # dot_food
 
                     if alive: 
 
@@ -913,11 +940,20 @@ class board():
         """
 
         health = snake.getHealth()
+        length = snake.getLength()
+        
         alive = True 
         # print("DEBUG HEALTH", health, route)
         # print ("DEBUG CHECK HEALTH", route)
-        for turn in range(1, route['length'] + 1):
+        
+        # for turn in range(1, # route['length'] + 1):
+        # print(route['path'])
+
+        # only look ahead N moves becaues random padding doesn't accommodate for threat (ie. all long routes look bad)
+        # usually danger in next 10 moves .. 
+        for turn in range(1, 10):
             health -= 1
+            # print(health)
             if turn in route['hazard']:
                 health -= 15
             if turn in route['food']:
@@ -1062,81 +1098,99 @@ class board():
         self.trails = trails
         
 
-    def pathProbability(self, head, depth=CONST.lookAheadEnemy):
-        # Calculates the probability assuming random walk from any location on the board (head), given obstacles (trails)
-        # Returns probablility board (chance) from 0 - 100 (%)
-
+    def pathProbability(self, snake, depth=CONST.lookAheadEnemy):
+        """
+        Calculates the probability assuming random walk for a snake
+         from any location on the board (head), given obstacles (trails)
+        ===
+        snake:snake     snake object   
+        depth:int       number of turns to look ahead 
+        ===
+        sn.updateChance()       updates probablility board (chance) from 0 - 100 (%)
+        """
+        
+        head = snake.getHead()
+        body = snake.getBody()
+            
         w = self.width
         h = self.height
+            
+        rr = 0
+        dot = {'step':head, 'path':body, 'prob':CONST.maxProbability, 'turn':rr }
+        dots = [dot]
+
+        s = self.trails    
+
+        # Recursive 
         chance = np.zeros([w, h], np.intc)
-        
-        # enclosed = self.enclosedSpacev2(head)
-        # dirn_avail = dict(filter(lambda elem: elem[1] > 0, enclosed.items()))        
-        dirn_avail = self.findEmptySpace(head)
+        while len(dots) and rr < depth:
+            
+            # Check each point 
+            for dot in dots:
+                
+                alive = False 
 
-        # Calculate random walk probabiliy of each square
-        for dirn in dirn_avail:
-            path = [head]
-            prob = CONST.maxProbability / len(dirn_avail)    # CONST.routeSolid 
-            turn = 1
-            step = list(map(add, head, CONST.directionMap[dirn]))
-            self.pathProbability_step(chance, path, prob, step, turn, depth)
+                # Chance board updated for each snake 
+                dots_next = []
 
-        # dirn_avail.remove(dirn)
-        # print(str(dirn_avail))
-        
-        # Avoid edges if possible .. 
-        # edges = self.paintArea('edges')
-        # chance = chance + 5 * edges 
+                turn_new = dot['turn'] + 1
+                step = dot['step']
+                prob = dot['prob']
+                path_new = dot['path'] + []
+                dirn_last = fn.translateDirection(path_new[1], path_new[0])
+                dirn_avail = self.findEmptySpace(step, path_new, turn_new)
+                
+                for dirn in dirn_avail:
+                    # Check 
+                    step_new = list(map(add, step, CONST.directionMap[dirn]))
+                    same_dirn = list(map(add, path_new[0], CONST.directionMap[dirn_last]))
+                    
+                    # If in the open and three directions (50:25:25)
+                    if len(dirn_avail) == 3:
+                        if step_new == same_dirn:
+                            prob_new = prob / 2
+                        else:
+                            prob_new = prob / 4
+                    else:
+                        # ..Otherwise (50:50, or 100)
+                            prob_new = prob / len(dirn_avail)
+            
+                    # Check if not blocked (simple)
+                    dy = step_new[0]
+                    dx = step_new[1]
+                    
+                    
+                    if (turn_new >= s[dy, dx]):
+                        
+                        # Add to enclosure
+                        # print(step_new, prob_new)
+                        chance[dy, dx] += prob_new
+                        path_new.append(step_new)
+            
+                        # If point is in map & prob > threshold to prevent loop
+                        
+                        if self.inBounds(step_new):
+                            if (turn_new < CONST.lookAheadPathContinueEnemy and prob_new > CONST.minProbability or  
+                                turn_new >= CONST.lookAheadPathContinueEnemy and prob_new == CONST.maxProbability):
 
-        return chance
-
-
-    def pathProbability_step(self, chance, path, prob, step, turn=1, depth=CONST.lookAheadEnemy):
-
-        if (len(path) > depth): 
-          return chance 
-
-        dy = int(step[0])
-        dx = int(step[1])
-        s = self.trails
-
-        # Check if not blocked
-        if (turn >= s[dy, dx]):
-
-            # Add to enclosure
-            chance[dy, dx] = chance[dy, dx] + prob
-            dirn_avail = self.findEmptySpace(step, path, turn + 1)
-           
-            # MONITOR: optimisation 
-            # path_new = copy.copy(path)
-            path_new = path
-            path_new.append(step)
-        
-
-            for d in dirn_avail:
-
-                dnext = list(map(add, step, CONST.directionMap[d]))
-                # dny = dnext[0]
-                # dnx = dnext[1]
-
-                # Reduces based on # directions
-                prob_new = prob * 1 / len(dirn_avail)
-
-                # If point is in map & prob > threshold to prevent loop
-                if self.inBounds(dnext):
-                    if (depth < CONST.lookAheadPathContinueEnemy and prob_new > CONST.minProbability or  
-                        depth >= CONST.lookAheadPathContinueEnemy and prob_new == CONST.maxProbability):
-
-                        # Recursive
-                        turn = turn + 1
-                        chance = self.pathProbability_step(chance, path_new, prob_new, dnext, turn, depth)
-
-        else:
-            pass
-
-        return chance
-
+                                
+                                # Recursive
+                                alive = True 
+                    
+                    if (alive):  
+                        dot = {
+                            'step':step_new,
+                            'path':path_new,
+                            'prob':prob_new,
+                            'turn':turn_new
+                        }
+                        dots_next.append(dot)
+                        
+            rr += 1
+            dots = dots_next
+            snake.setChance(chance, turn_new)
+            # print(dots, chance)
+               
 
 # == ROUTING ==
 
@@ -1317,11 +1371,6 @@ class board():
                     path = path_start + route_best['path']
                     # path = copy.copy(path_padding)                        
                     # routefound = True
-                    
-                    if not self.checkHealth(us, route_best):
-                        weight += CONST.routeThreshold
-                        # print(route_best)
-                        reason.append("Continue Path. Failed health check")
 
                     # Check if route meets min depth
                     if (len(path)) >= depth: 
@@ -1368,7 +1417,7 @@ class board():
                     routefound = True 
                 
                 else:
-                    weight += CONST.routeSolid 
+                    weight += CONST.routeSolid
                     reason.append("Random. Length not greater than depth_random")
 
                 # print("DEBUG RANDOM", path, weight, len(path), depth)
@@ -1393,8 +1442,14 @@ class board():
                 if not (closest[pt[0], pt[1]]):
                     weight += CONST.routeConstrain # Solid     
             
+                            
+        if not self.checkHealth(us, route_best):
+            weight += 2 * CONST.routeThreshold
+            # print(route_best)
+            reason.append("Continue Path. Failed health check")
+
         # if [0, 5] in path:  
-            # print("DEBUG ROUTE")
+        # print("DEBUG ROUTE")
         
         us.setRoute(path)
         # self.showMapsFuture(snakes)
@@ -1438,16 +1493,17 @@ class board():
         if step in path: 
             return False 
 
+        h = self.height
+        if not (0 <= step[0] < h):
+            return False 
+        
+        w = self.width
+        if not (0 <= step[1] < w):  
+            return False 
+        
         # routeHash = str(step) + str(turn) + str(eating) + str(path) + str(enemy)
         # if routeHash in self.routepoint:
         #     return self.routepoint[hash]
-
-        w = self.width
-        h = self.height
-
-        # Optimisation -- Get step
-        # dy = step[0]
-        # dx = step[1]
 
         # Get markov for next turn 
         t = min(turn, CONST.lookAheadPathContinue - 2)
@@ -1483,24 +1539,21 @@ class board():
             
         # Route logic 
 
-        exists = False 
-        if (0 <= step[0] < h):
-            if (0 <= step[1] < w):  
                 
-                # Enemy prediction logic
-                if (enemy and turn >= board[step[0], step[1]] - 1):
-                    exists = True    
-                    
-                # Our prediction logic
-                elif(turn >= (board[step[0], step[1]] - 1) and 
-                        markov[step[0], step[1]] < CONST.routeThreshold):
-                    exists = True     
+        # Enemy prediction logic
+        if (enemy and turn >= board[step[0], step[1]] - 1):
+            return True
+            
+        # Our prediction logic
+        elif(turn >= (board[step[0], step[1]] - 1) and 
+                markov[step[0], step[1]] < CONST.routeThreshold):
+            return True 
                         
         # self.routepoint[routeHash] = exists
         # if (step in [[0, 9]]): 
         #     print(step, turn, board, eating, path, exists)
             
-        return exists 
+        return False  
 
 
     def hasEaten(self, snakes, foods):
@@ -1748,7 +1801,7 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
                             
                     # print(eating)
                     available = self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating, path=dot_path)
-                    # if dot_loc in [[6, 3]]: 
+                    # if dot_loc in [[5, 3]]: 
                     #     print("LARGEST", available, rr, dot_loc, dot_length, dot_path)  # eating, 
                         
                     # Check we can route 
@@ -1784,6 +1837,7 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
                 # Put dot back on until all dirns exhausted
                 
                 if alive: 
+
                     dot_new = {'loc':dot_loc, 
                         'weight':dot_weight,
                         'length':dot_length, 
@@ -2767,20 +2821,18 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
 
         for d in CONST.directions:
 
-            dnext = list(map(add, point, CONST.directionMap[d]))
-            dy = dnext[0]
-            dx = dnext[1]
-
+            dp = list(map(add, point, CONST.directionMap[d]))
+            
             # print("EMPTY SPACE", str(d), str(turn), str(s[dy, dx]), str(dnext), str(path))
-            if(self.inBounds(dnext) and \
-                    turn >= s[dy, dx] and \
-                    not dnext in path):
+            if (not dp in path):
+                if(self.inBounds(dp)):
+                    if(turn >= s[dp[0], dp[1]]):
                 
-                # Add to dirns
-                if (dirn):
-                    dirns_avail.append(d)
-                else:
-                    dirns_avail.append(dnext)
+                        # Add to dirns
+                        if (dirn):
+                            dirns_avail.append(d)
+                        else:
+                            dirns_avail.append(dp)
 
         return dirns_avail
 
@@ -2793,7 +2845,9 @@ Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, tu
         # self.logger.maps('WEIGHT', self.bestWeight)
         
         self.logger.maps('TRAILS', self.trails)
-        self.logger.maps('MARKOV', self.markovs[0])
+        for i in range(0, 1):
+            self.logger.maps('MARKOV', self.markovs[i])
+
         # print(self.markovs)
         # self.logger.maps('CHANCE', self.chance)
         

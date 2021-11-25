@@ -60,6 +60,7 @@ class snake:
         self.chance = [None] * depth_enemy 
         # Shorter prediction 
         
+        
     def setLogger(self, l):
       # Reference 
       self.logger = l

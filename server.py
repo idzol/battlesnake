@@ -145,30 +145,30 @@ def handle_move(testData="", testOverride=False):
     predictFuture(theBoard, ourSnek, allSnakes, theFoods)
 
     # Apply state machine to all enemy snakes 
-    logger.timer('stateMachineEnemy')
-    for sid in allSnakes:
-        snek = allSnakes[sid]
-        if (snek != ourSnek):
-            logger.timer('updateEnemyBest')
-            theBoard.updateBest(snek.getHead(), turn=0)
+    # logger.timer('stateMachineEnemy')
+    # for sid in allSnakes:
+    #     snek = allSnakes[sid]
+    #     if (snek != ourSnek):
+    #         logger.timer('updateEnemyBest')
+    #         theBoard.updateBest(snek.getHead(), turn=0)
             
-            silent = copy.copy(logger.silent) 
-            logger.silent = True        # Supress enemy updates
-            logger.timer('updateEnemyInterrupts')
-            enemyInterrupts(theBoard, snek, allSnakes)
-            logger.timer('updatesEnemyStateMachine')
-            stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
-            # print("ENEMY ROUTE", snek.getRoute())
-            logger.silent = silent 
+    #         silent = copy.copy(logger.silent) 
+    #         logger.silent = True        # Supress enemy updates
+    #         logger.timer('updateEnemyInterrupts')
+    #         enemyInterrupts(theBoard, snek, allSnakes)
+    #         logger.timer('updatesEnemyStateMachine')
+    #         stateMachine(theBoard, snek, allSnakes, theFoods, enemy=True)
+    #         # print("ENEMY ROUTE", snek.getRoute())
+    #         logger.silent = silent 
 
-    # Adjust boards for enemy moves 
-    logger.timer('updateBoardsEnemy')
-    theBoard.updateBoardsEnemyMoves(allSnakes)
+    # # Adjust boards for enemy moves 
+    # logger.timer('updateBoardsEnemy')
+    # theBoard.updateBoardsEnemyMoves(allSnakes)
 
     # print(theBoard.markovs)
 
     # Clear routing boards -- new info
-    theBoard.clearBest()
+    # theBoard.clearBest()
 
     # Update our routing board  
     logger.timer('updateBest')
@@ -182,7 +182,7 @@ def handle_move(testData="", testOverride=False):
 
     # Check strategy interrupts     
     logger.timer('checkInterrupts')
-    checkInterrupts(theBoard, ourSnek, allSnakes)
+    checkInterrupts(theBoard, ourSnek, allSnakes, theFoods)
     
     logger.timer('stateMachineUs')
     # Progress state machine for our snake
@@ -201,9 +201,6 @@ def handle_move(testData="", testOverride=False):
     logger.message("move", move)
     logger.message("shout", shout)
 
-    # Save game data
-    # games[game_id] = [theBoard, ourSnek, allSnakes]
-    
     # Fork reporting (non blocking to server response )
     if 'localhost' in CONST.environment:
         # Don't fork for localhost (prevent runaway PIDs during testing)
@@ -212,9 +209,8 @@ def handle_move(testData="", testOverride=False):
     else: 
         newpid = os.fork()
         if newpid == 0:
-            # p = psutil.Process(newpid.getpid())
-            # p.set_nice(10)
             reporting(logger, theBoard, ourSnek, allSnakes, data)
+
 
     logger.timer('== Move complete ==')    
     return {"move": move, "shout":shout}
@@ -247,18 +243,24 @@ def end():
 
 
 def reporting(logger, board, us, snakes, data):
+    
     # Reporting thread
     # Print log info
-    us.showStats()
-    board.showMaps()
-    # board.showMapsFuture(snakes)
+    if 'prod' in CONST.environment:
+        logger.dump(data)
+    
+    else:
+        us.showStats()
+        board.showMaps()
+        # board.showMapsFuture(snakes)
 
-    for key in snakes:
-        snk = snakes[key]
-        logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
-    logger.print(data)
-    logger.dump(data)
-    # print('MOVE: Reporting complete')
+        for key in snakes:
+            snk = snakes[key]
+            logger.log('snakes', snk.getName(), snk.getHead(), snk.getLength(), snk.getDirection(), snk.getEating())
+        
+        logger.print(data)
+        logger.dump(data)
+        # print('MOVE: Reporting complete')
 
     # Kill PID 
     # my_pid = os.getpid()
