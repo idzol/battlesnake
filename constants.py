@@ -25,6 +25,9 @@ lookAheadPredictFuture = 3  # Enemy prediction (play forward move - logic:predic
 lookAheadEnemy = 10          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPathContinueEnemy = 3  # Path continue (Enemy path lookahead)  
 
+lookAheadHazard = 10        # No sauce penalty after N turns, otherwise all paths look bad. 
+                            # Health (100) / Damage (15) * Multiplier (1.5) = ~10 
+
 lookAheadPath = 20          # Path prediction
 lookAheadPathRandom = 20     # Path prediction (Random - expensive)
 lookAheadPathContinue = 20  # Path continue (Best / Markov / Dijkstra)
@@ -81,7 +84,7 @@ else:
 
 # Routing threshold - collision probability
 routeThreshold = 1000   # Ignore if route larger 
-pointThreshold = 25   # Ignore if any step larger
+pointThreshold = 50   # Ignore if any step larger
 
 minProbability = 10    # Markov probability 
 maxProbability = 100
@@ -89,6 +92,7 @@ maxProbability = 100
 
 routeSolid = routeThreshold
 routeHazard = 50
+routeEdge = 5
 routeConstrain = 1
 routeCell = 1
 
@@ -129,6 +133,7 @@ interceptMin = 40
 # Strategy - eat / grow 
 growLength = 25
 foodThreat = 3
+foodsToSearch = 5
 
 # Strategy 
 # defaultstrategy = ['Eat', '']

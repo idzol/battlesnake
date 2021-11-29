@@ -170,7 +170,11 @@ def handle_move(testData="", testOverride=False):
     # Clear routing boards -- new info
     # theBoard.clearBest()
 
-    # Update our routing board  
+    # Turn on friendly fire for main snakes 
+    allies = ["Idzol", "Cucumber Cat"]
+    theBoard.friendlyFire(allSnakes, allies)
+
+    # Update our routing board
     logger.timer('updateBest')
     theBoard.updateBest(ourSnek.getHead(), turn=0, snakes=allSnakes, foods=theFoods)
     # for key in theBoard.best:
@@ -202,16 +206,16 @@ def handle_move(testData="", testOverride=False):
     logger.message("shout", shout)
 
     # Fork reporting (non blocking to server response )
-    if 'localhost' in CONST.environment:
-        # Don't fork for localhost (prevent runaway PIDs during testing)
-        reporting(logger, theBoard, ourSnek, allSnakes, data)
-
-    else: 
+    if CONST.environment in ['dev', 'localhost', 'preprod']: 
         newpid = os.fork()
         if newpid == 0:
             reporting(logger, theBoard, ourSnek, allSnakes, data)
 
+    # No reporting for prod (optimise)
+    else: 
+        pass 
 
+    # Return result
     logger.timer('== Move complete ==')    
     return {"move": move, "shout":shout}
     
@@ -243,7 +247,7 @@ def end():
 
 
 def reporting(logger, board, us, snakes, data):
-    
+
     # Reporting thread
     # Print log info
     if 'prod' in CONST.environment:

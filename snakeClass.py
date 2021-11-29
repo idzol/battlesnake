@@ -41,6 +41,7 @@ class snake:
         self.eatingFuture = 0   # Total food in future turns 
  
         self.health = 100 
+        self.healthRoute = 0  # Used to keep track of health during routing 
         self.length = 0
 
         self.identity = ""  # ID, eg. gs_JMJSHhdpyWtGSj66Sv3Dt8yD
@@ -59,7 +60,7 @@ class snake:
         self.markovbase = [None] * depth        
         self.chance = [None] * depth_enemy 
         # Shorter prediction 
-        
+
         
     def setLogger(self, l):
       # Reference 
@@ -113,45 +114,49 @@ class snake:
         name = data['name']
 
         self.setName(name)
-        # Set new location 
-        self.setLocation(data)
-        self.setEating()
-        # Save location to history 
-        self.savePath()
-        self.clearRoutes()
-        
+
         # Set attributes
         self.setHealth(health)
         self.setLength(length)
 
+        # Set new location 
+        self.setLocation(data)
+
+        # Save location to history 
+        self.savePath()
+        self.clearRoutes()
+        
         # Set meta 
-        # aggro = CONST.aggroLow
         hunger = 100 - health
         self.setHunger(hunger)
-        # self.setAggro(aggro)
         
+        # Set eating
+        self.setEating()
+
 
     def setEnemy(self, data):
-        # TODO:  Include additional parameters like how the snake is feeling (health, strat etc..) 
+        
         name = data['name']
         self.setName(name)
 
         self.setType("enemy")
         self.setId(data['id'])
-        
-        # Set whether eating 
-        self.setEating() 
+
+        # Set attributes 
+        self.setLength(data['length'])
+                
         # Set new location 
         self.setLocation(data)
 
         # Save location to history 
         self.savePath()
+
         # Clear routes from last turn 
         self.clearRoutes()
     
-        self.setLength(data['length'])
-        # self.setHealth(health)
-
+        # Set whether eating 
+        self.setEating() 
+        
 
     def showStats(self):
 
@@ -375,6 +380,12 @@ class snake:
     def setHealth(self, h):
         self.health = h
 
+    def getHealthRoute(self):
+        return self.healthRoute + 0 
+
+    def setHealthRoute(self, h):
+        self.healthRoute = h
+
     def getEating(self):
         return copy.copy(self.eating)
 
@@ -384,9 +395,10 @@ class snake:
         e = False 
         if (l > 2): 
           # If last two points are the same 
-          if(b[-1] == b[-2]):
+          if (b[-1] == b[-2]):
             e = True
 
+        # print("EATING", l, e, b)
         self.eating = e
 
     def setEatingFuture(self, e): 
