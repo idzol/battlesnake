@@ -93,15 +93,17 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
             paths = snakes[sid].getNextSteps()
             length = snakes[sid].getLength()
             # 
+            threat = CONST.routeSolid/2
             for path in paths: 
               # Todo: only paint squares in each path based on turn 
               for pt in path:
                 # Print out hazard for N = enemy length or width of board
                 for turn in range(0, min(length, bo.width)):
                   if not closest[pt[0], pt[1]]:           
-                    bo.updateCell(pt, CONST.routeSolid/2, turn)
+                    bo.updateCell(pt, threat, turn)
                     # bo.updateCell(pt, CONST.routeSolid/(turn+1), turn)
-            
+                # threat = int(threat / 5)
+
             food_in_route = 0 
 
             # Check if there is food one square from them .. 
@@ -415,7 +417,8 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
     # Our strategy 
     if not enemy:
         if not 'clear' in strategyinfo:      
-          strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Rfactor'], ['Survive', 'Tail']]
+          strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Tail'], ['Survive', 'Rfactor']]
+          # strategylist_default = [['Eat', 'Best'], ['Control', 'Space'], ['Survive', 'Rfactor'], ['Survive', 'Tail'], ]
         else: 
           strategylist_default = [] 
 
@@ -735,26 +738,20 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
 
         # (3) Find route padding
         if (len(route) and not enemy):
-            # Find safe path away 
-            # bo.logger.log('strategy-route', "ROUTE start:%s path:%s method:'%s %s' weight_route:%s" % \
-            #       (str(start), str(route), target_method, route_method, weight_route))
             
             # Pad out route to N moves.  Look ahead by lenght of largest snake 
-            if route[-1] == tail:
-                # IF tail, assume infinite moves 
-                route_padded = route + [tail] * lookahead 
-                weight_padding = 0 
+            # if route[-1] == tail:
+            #     # IF tail, assume infinite moves 
+            #     route_padded = route + [tail] * lookahead 
+            #     weight_padding = 0 
 
-            # elif killcollide ... 
-                # route_padded += [tail] * lookahead 
-                # weight_padding = 0 
+            # # elif killcollide ... 
+            #     # route_padded += [tail] * lookahead 
+            #     # weight_padding = 0 
 
-            else:
+            # else:
                 route_padded, weight_padding = bo.routePadding(route, snakes, foods, depth=lookahead, method=routepadding_method) 
             
-            # If not - keep looking and will be prioritised later 
-            # bo.logger.log('strategy-route-final', "ROUTE PADDING %s %s %s %s %s" \
-            #       % (str(start), str(route_padded), len(route_padded), weight_padding, CONST.lookAheadPath))
           
 
       # (4) Check target, route, route padding are safe 
@@ -886,12 +883,14 @@ def makeMove(bo: board, sn: snake, snakes) -> str:
             # TODO: Model this ..
 
             # R20211104 - changed from 10*len to 10*2^len 
+            path_length = min(CONST.lookAheadPathContinue, r['length'])
+              
             if r['weight'] == 0:
               # rnew = 100 * pow(1.2, r['length'])
-              rnew = pow(r['length'], 3)
+              rnew = pow(path_length, 3)
             else:  
               # rnew = 100 * pow(1.2, r['length']) / r['weight'] 
-              rnew = pow(r['length'], 3) / r['weight']
+              rnew = pow(path_length, 3) / r['weight']
             # print("DEBUG ROUTE", rnew, r)
 
             if rnew > rfactor:
