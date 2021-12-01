@@ -25,7 +25,7 @@ lookAheadPredictFuture = 3  # Enemy prediction (play forward move - logic:predic
 lookAheadEnemy = 10          # Enemy prediction (calculate chance depth - boardControl:updateEnemyChance)
 lookAheadPathContinueEnemy = 3  # Path continue (Enemy path lookahead)  
 
-lookAheadHazard = 10        # No sauce penalty after N turns, otherwise all paths look bad. 
+lookAheadHazard = x        # No sauce penalty after N turns, otherwise all paths look bad. 
                             # Health (100) / Damage (15) * Multiplier (1.5) = ~10 
 
 lookAheadPath = 20          # Path prediction
@@ -156,7 +156,7 @@ cwMap = {
   'left':'up'
 }
 
-directions = ["up","right","down","left"]
+directions = ["up", "right", "down", "left"]
 
 directionSides = {
   'up':[[1,0],[0,1],[0,-1]],

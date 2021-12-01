@@ -1,12 +1,3 @@
-# Search for failed games & include as test cases 
-# https://console.cloud.google.com/logs/query 
-# resource.type="cloud_run_revision"
-# resource.labels.service_name="battlesnake1"
-# 8c202d0a-e493-4f3a-acc0-26b875d83c03
-# 66
-# v1.0.22
-
-
 from typing import List, Dict
 
 import math
@@ -15,14 +6,9 @@ from operator import add
 
 import random as rand
 
-# from matplotlib.pyplot import xcorr
 import numpy as np
-# import pandas as pd
-# import random as rand
 import copy as copy
 import time as time
-
-# from werkzeug.datastructures import T 
 
 from logClass import log
 
@@ -30,9 +16,6 @@ import constants as CONST
 import functions as fn
 
 import sys
-
-# Set recursion limit
-# TODO: Replace with loop if possible ..
 sys.setrecursionlimit(50000)
 
 
@@ -1699,10 +1682,10 @@ class board():
         # Pad route by length + 1 to accommodate for not having head 
         turn = len(route)
         
-        head = []
-        for sid in snakes: 
-            if snakes[sid].getType() == 'us':
-                head = snakes[sid].getHead()
+        # head = []
+        # for sid in snakes: 
+        #     if snakes[sid].getType() == 'us':
+        #         head = snakes[sid].getHead()
         
         # if head in route: 
         #     print("ERROR: UPDATE BEST route should not include head.  Puts turn out by 1. ", head, start, route, turn)
@@ -1829,88 +1812,97 @@ class board():
             # Each dot recurses into adjacent cells 
             # Always pull last dot 
             # print(dots)
+
             dot = dots.pop(-1)
-            # print("LARGEST", rr, dot)
-                
-            if len(dot['to']):
+
+            # CHeck if we have previously ordered directions 
+            dot_length = dot['length']
+            t = min(dot_length, CONST.lookAheadPathContinue - 2) 
+                    
+            if not 'to_order' in dot: 
+                dot['to_order'] = []
+                for dirn in dot['to']: 
+                    dot_loc = list(map(add, dot['loc'], CONST.directionMap[dirn]))
+                    # Check in bounds 
+                    if (0 <= dot_loc[0] < h) and (0 <= dot_loc[1] < w):
+                        # Very quick rough sort 
+                        if self.markovs[t+1][dot_loc[0]][dot_loc[1]] < CONST.pointThreshold: 
+                            # Small values at the start 
+                            dot['to_order'].insert(0, dot_loc)        
+                        else: 
+                            # Large values at the end 
+                            dot['to_order'].insert(-1, dot_loc)
+        
+
+            if len(dot['to_order']): 
                 
                 rr += 1
 
                 # Take next direction 
-                dirn = dot['to'][0]
-                dot['to'].pop(0)
-
-                # if [[3, 4], [3, 3], [3, 2], [4, 2], [5, 2], [6, 2]] == route: 
-                # print("LARGEST DEBUG", route, dot, dirn)  # eating, 
-
-                if len(dot['to']):
+                dot_loc = dot['to_order'].pop(0)
+                # Save dot if more directions to search 
+                if len(dot['to_order']):
                     dots.append(dot)
 
                 alive = False 
               
-                # Check next swap 
-                dot_loc = list(map(add, dot['loc'], CONST.directionMap[dirn]))
-                dot_length = dot['length']
-                    
                 # Check in bounds 
-                if (0 <= dot_loc[0] < h) and (0 <= dot_loc[1] < w):
+                # if (0 <= dot_loc[0] < h) and (0 <= dot_loc[1] < w):
 
-                    dot_path = dot['path'] + []
-                    
-                    t = min(dot_length, CONST.lookAheadPathContinue - 2) 
-                    dot_weight = dot['weight'] + self.markovs[t+1][dot_loc[0]][dot_loc[1]]
-                    
-                    # Save turn of food 
-                    dot_food = dot['food'] + []
-                    if dot_loc in self.foods:
-                        dot_food.append(dot_length)
-                    
-                    # Check if food is in past moves
-                    eating = {}
+                dot_path = dot['path'] + []
+                dot_weight = dot['weight'] + self.markovs[t+1][dot_loc[0]][dot_loc[1]]
+                
+                # Save turn of food 
+                dot_food = dot['food'] + []
+                if dot_loc in self.foods:
+                    dot_food.append(dot_length)
+                
+                # Check if food is in past moves
+                eating = {}
 
-                    foods_eaten = len(dot_food)
-                    for sid in snakes:
-                        if snakes[sid].getType() == 'us': 
-                            if sid in eating_start: 
-                                eating[sid] = eating_start[sid] + foods_eaten
-                            else: 
-                                eating[sid] = foods_eaten
-                        else:
-                            # Enemy eating in next N turns 
-                            if turn >= 1:  
-                                eating[sid] = snakes[sid].getEatingFuture()
-                            
-                    # print(eating)
-                    available = self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating, path=dot_path)
-                    # if dot_loc in [[5, 3]]: 
-                    #     print("LARGEST", available, rr, dot_loc, dot_length, dot_path)  # eating, 
+                foods_eaten = len(dot_food)
+                for sid in snakes:
+                    if snakes[sid].getType() == 'us': 
+                        if sid in eating_start: 
+                            eating[sid] = eating_start[sid] + foods_eaten
+                        else: 
+                            eating[sid] = foods_eaten
+                    else:
+                        # Enemy eating in next N turns 
+                        if turn >= 1:  
+                            eating[sid] = snakes[sid].getEatingFuture()
                         
-                    # Check we can route 
-                    if available: 
-                        
-                        # Set point as alive 
-                        alive = True   
+                # print(eating)
+                available = self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating, path=dot_path)
+                # if dot_loc in [[5, 3]]: 
+                #     print("LARGEST", available, rr, dot_loc, dot_length, dot_path)  # eating, 
+                    
+                # Check we can route 
+                if available: 
+                    
+                    # Set point as alive 
+                    alive = True   
 
-                        # Check if first path 
-                        dot_path += [dot_loc] 
-                        dot_length += 1
+                    # Check if first path 
+                    dot_path += [dot_loc] 
+                    dot_length += 1
 
-                        dot_hazard = dot['hazard'] + []
-                        # dot_constrain = dot['constrain'] + [] 
-                        
-                        # Save turn of hazard
-                        if dot_loc in self.hazards:
-                            dot_hazard.append(dot_length)
-                            # If we're out of the sauce last turn, stay out of the sauce 
-                            if not dot_length-1 in dot_hazard and dot_length < CONST.lookAheadHazard:
-                                alive = False 
+                    dot_hazard = dot['hazard'] + []
+                    # dot_constrain = dot['constrain'] + [] 
+                    
+                    # Save turn of hazard
+                    if dot_loc in self.hazards:
+                        dot_hazard.append(dot_length)
+                        # If we're out of the sauce last turn, stay out of the sauce 
+                        if not dot_length-1 in dot_hazard and dot_length < CONST.lookAheadHazard:
+                            alive = False 
 
-                        # Save location of constraint
-                        # if dot_loc in self.constrains:
-                        #     dot_constrain.append(dot_loc)
+                    # Save location of constraint
+                    # if dot_loc in self.constrains:
+                    #     dot_constrain.append(dot_loc)
 
-                        # if (dot_weight < CONST.pointThreshold):        
-                        #     alive = True
+                    # if (dot_weight < CONST.pointThreshold):        
+                    #     alive = True
                         
                 # DEBUG 
                 # if (dot_weight > 0 and alive and dot_loc in [[3, 2], [2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [3, 8], [4, 8], [5, 8], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [10, 9], [10, 10], [9, 10], [8, 10]] ): 
@@ -1944,136 +1936,6 @@ class board():
 
         # return dot_omega, rr
         return rr, dot_omega
-
-
-    # def findLargestPath(self, route, snakes, turn=0, foods=[], depth=CONST.lookAheadPath):
-    #     """
-    #     Iterate through opath closed space to check volume
-    #     ===
-    #     self
-    #     route
-    #     snakes
-    #     turn=0
-    #     foods=[]
-    #     depth=CONST.lookAheadPath
-    #     ===
-    #     path
-    #     weight
-    #     """
-
-    #     allpaths = []
-    #     newpath = []
-    #     weight = CONST.routeThreshold
-
-    #     if (len(route)):
-    #         start = route[-1]
-
-    #     else:
-    #         return newpath, weight 
-
-    #     # Look in all directions
-    #     for d in CONST.directions:
-    #         newturn = turn + 0    # copy.copy
-    #         step = list(map(add, start, CONST.directionMap[d]))
-    #         path = route + []     # copy.copy
-    #         newpath = []
-    #         newweight = 0 
-                    
-    #         # Check if food is in past moves
-    #         eating = self.findEating(snakes, path + [step], foods)
-              
-    #         # Check next path is in bounds, available and not already visited**            
-    #         found = self.isRoutePointv2(step, newturn, eating, path)
-    #         if step in [[3, 4], [4, 4], [5, 4], [5, 5], [5, 6], [5, 7], [5, 8], [5, 9], [4, 9], [3, 9], [2, 9], [1, 9], [0, 9], [0, 8], [1, 8], [2, 8]]:
-    #             print("DEBUG FINDLARGETS #1", step, found)
-
-            
-    #         if(found):
-    #             # print("FIND LARGEST STEP", found, step, newturn, path)
-    #             t = min(turn, CONST.lookAheadPathContinue - 1) 
-    #             weight = self.markovs[t][step[0]][step[1]]
-            
-    #             # Increment turn 
-    #             newturn += 1
-    #             # Recursive 
-    #             path.append(step)
-
-    #             # WORKING | CHECK:  if tail AND length 
-    #             # Move out of recursion into while loop for better control .. ie rr > rmax ?
-    #             # if (path == tail and len(path) < eating)
-     
-    #             (newpath, newweight) = self.findLargestPath_step(step, snakes, newturn, depth, path, weight)
-    #             allpaths.append(newpath)
-    #             if (len(newpath) >= depth):
-    #                 # Good path found - Exit search
-    #                 # TODO: Benefit of checking all paths   
-    #                 break
-
-    #     # Return largest path .. 
-    #     # DEBUG 
-    #     # if step == [2, 1]:
-    #     # print("FINDPATH", found, step, newpath, newturn, eating)
-    
-    #     if len(allpaths):
-    #         a_sort = sorted(allpaths, key=len)
-    #         newpath = a_sort[-1]
-
-    #     # if len(newpath):
-    #     return newpath, newweight
-
-    #     # else:
-    #     #     return [], CONST.routeThreshold
-
-
-    # def findLargestPath_step(self,
-    #                          route,
-    #                          snakes, 
-    #                          turn=0,
-    #                          depth=CONST.lookAheadPath,
-    #                          path=[],
-    #                          weight=0):
-
-        
-    #     if (len(path) >= depth):
-    #         return path, weight
-
-    #     start = route + []          # copy.copy
-    #     pathnew = path + []         # copy.copy
-    #     weightnew = weight + 0      # copy.copy
-
-    #     # Look in all directions
-    #     for d in CONST.directions:
-
-    #         step = list(map(add, start, CONST.directionMap[d]))
-
-    #         # Check next path is in bounds. 
-    #         # Probability of collision less than threshold 
-    #         # available and not already visited**
-
-    #         # OPTIMISE: Eating not checked -- too expensive
-    #         # eating = self.findEating(snakes, path + [step], foods)
-            
-    #         if(self.isRoutePointv2(step, turn, path=path)):
-
-    #             # Add to dirns
-    #             path.append(step)
-
-    #             # Get turn & weight 
-    #             turn = turn + 1
-    #             t = min(turn, CONST.lookAheadPathContinue - 1)                 
-    #             weight += self.markovs[t][step[0], step[1]]
-
-    #             # Get next step (Recursive)
-    #             (pathnew, weightnew) = self.findLargestPath_step(step, snakes, turn, depth, path, weight)
-    #             # if(step in [[8, 7], [8, 8], [8, 9], [7, 9], [6, 9], [5, 9], [4, 9], [3, 9], [2, 9], [1, 9], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5], [0, 4], [0, 3], [0, 2], [0, 1], [0, 0]]):
-    #             #     print("DEBUG", t, step, self.markovs[t][step[0], step[1]])
-    #                 # print(self.markovs[t])
-    #             # print("LARGEST STEP", str(pathnew), str(path), str(step))
-
-    #         if (len(pathnew) > depth):
-    #             break
-
-    #     return pathnew, weightnew
 
 
 
@@ -2973,3 +2835,167 @@ class board():
         # print(self.bestLength)
         # print(self.bestWeight)
         
+
+    # == DEPRECATE == 
+    def findLargestPathv1(self, route, snakes, turn=0, eating_start={}, foods=[], depth=CONST.lookAheadPathRandom):
+        """
+        Iterate through path closed space to check volume
+        ===
+        self
+        route
+        snakes
+        turn=0
+        foods=[]
+        depth=CONST.lookAheadPath
+        ===
+        path
+        weight
+        """
+
+        dots = []
+        start = route[-1]
+                    
+        head = []
+        for sid in snakes: 
+            if snakes[sid].getType() == 'us':
+                head = snakes[sid].getHead()
+        if head == route[0]: 
+            print("ERROR: LARGEST PATH route should not include head.  \
+Puts turn out by 1. head:%s start:%s route:%s turn:%s" % (head, start, route, turn))
+
+
+         # Start path includes head which is not a turn, hence len(start_path) - 1
+        dot_weight = 0 
+        dot_length = max(0, turn)
+        dot_alpha = {'loc':start, 'weight':0, 'length':dot_length, \
+                    'path':route, 'food':[], 'hazard':[], 'to':CONST.directions+[]}
+
+        # Save longest route 
+        dot_omega = copy.copy(dot_alpha)
+        dot_largest = 0
+        
+        w = self.width
+        h = self.height
+        
+        dots.append(dot_alpha)
+        rr = 0
+        rr_max = CONST.maxRecursion
+
+        # while(len(dots)):
+        found = False 
+
+        while(len(dots) and rr < rr_max and not found):
+                            
+            # Each dot recurses into adjacent cells 
+            # Always pull last dot 
+            # print(dots)
+            dot = dots.pop(-1)
+            # print("LARGEST", rr, dot)
+                
+            if len(dot['to']):
+                
+                rr += 1
+
+                # Take next direction 
+                dirn = dot['to'][0]
+                dot['to'].pop(0)
+
+                # print("LARGEST DEBUG", route, dot, dirn)  # eating, 
+                if len(dot['to']):
+                    dots.append(dot)
+
+                alive = False 
+              
+                # Check next swap 
+                dot_loc = list(map(add, dot['loc'], CONST.directionMap[dirn]))
+                dot_length = dot['length']
+                    
+                # Check in bounds 
+                if (0 <= dot_loc[0] < h) and (0 <= dot_loc[1] < w):
+
+                    dot_path = dot['path'] + []
+                    
+                    t = min(dot_length, CONST.lookAheadPathContinue - 2) 
+                    dot_weight = dot['weight'] + self.markovs[t+1][dot_loc[0]][dot_loc[1]]
+                    
+                    # Save turn of food 
+                    dot_food = dot['food'] + []
+                    if dot_loc in self.foods:
+                        dot_food.append(dot_length)
+                    
+                    # Check if food is in past moves
+                    eating = {}
+
+                    foods_eaten = len(dot_food)
+                    for sid in snakes:
+                        if snakes[sid].getType() == 'us': 
+                            if sid in eating_start: 
+                                eating[sid] = eating_start[sid] + foods_eaten
+                            else: 
+                                eating[sid] = foods_eaten
+                        else:
+                            # Enemy eating in next N turns 
+                            if turn >= 1:  
+                                eating[sid] = snakes[sid].getEatingFuture()
+                            
+                    # print(eating)
+                    available = self.isRoutePointv2(dot_loc, turn=dot_length, eating=eating, path=dot_path)
+                    # if dot_loc in [[5, 3]]: 
+                    #     print("LARGEST", available, rr, dot_loc, dot_length, dot_path)  # eating, 
+                        
+                    # Check we can route 
+                    if available: 
+                        # if dot_length >= self.trails[dot_loc[0], dot_loc[1]]:
+                        
+                        # Check if first path 
+                        dot_path += [dot_loc] 
+                        dot_length += 1
+
+                        dot_hazard = dot['hazard'] + []
+                        # dot_constrain = dot['constrain'] + [] 
+                        
+                        # Save turn of hazard
+                        if dot_loc in self.hazards:
+                            dot_hazard.append(dot_length)
+                            
+                        # Save location of constraint
+                        # if dot_loc in self.constrains:
+                        #     dot_constrain.append(dot_loc)
+                            # FIX:  Temporary until we can work out checkConstrain 
+
+                        # if (dot_weight < CONST.pointThreshold):        
+                        #     alive = True
+                        alive = True   
+                        
+                # DEBUG 
+                # if (dot_weight > 0 and alive and dot_loc in [[10, 2], [10, 1], [9, 1], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 6], [7, 6], [6, 6], [6, 7], [6, 8], [6, 9], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10]] ): 
+                #     print("DEBUG DOT LOC ", alive, dot_loc, dot_weight) # , dot_path, t, self.markovs[t][dot_loc[0]][dot_loc[1]]) 
+
+                    # print("DEBUG", alive, dot_loc, dot_weight, dot_path) 
+                
+                # Put dot back on until all dirns exhausted
+                
+                if alive: 
+
+                    dot_new = {'loc':dot_loc, 
+                        'weight':dot_weight,
+                        'length':dot_length, 
+                        'path':dot_path,
+                        'food':dot_food,          # TODO
+                        'hazard':dot_hazard,        # TODO
+                        'to':CONST.directions+[]
+                    }
+                
+                    # Create another dot (recursive)
+                    dots.append(dot_new)
+                    # Skip looking other directions 
+                    
+            if dot_length > depth:
+                dot_omega = dot
+                # print("BREAK", rr, dot_omega)
+                found = True 
+                break
+            
+
+        # return dot_omega, rr
+        return rr, dot_omega
