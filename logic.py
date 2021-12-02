@@ -86,7 +86,6 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
 
     # Update eating for snakes based on path 
     # Update cells that enemy snakes can get to before us 
-    us_length = sn.getLength()
     for sid in snakes: 
         # Ignore us -- we have better calculation because we know our route 
         if (snakes[sid].getType() != "us"): 
@@ -98,16 +97,10 @@ def predictFuture(bo:board, sn:snake, snakes:list, foods:list):
             for path in paths: 
               # Todo: only paint squares in each path based on turn 
               for pt in path:
-
                 # Print out hazard for N = enemy length or width of board
                 for turn in range(0, min(length, bo.width)):
-
                   if not closest[pt[0], pt[1]]:           
-                    if(length > us_length):
-                      bo.updateCell(pt, threat, turn)
-                    else: 
-                      bo.updateCell(pt, threat/10, turn)
-
+                    bo.updateCell(pt, threat, turn)
                     # bo.updateCell(pt, CONST.routeSolid/(turn+1), turn)
                 # threat = int(threat / 5)
 
@@ -294,6 +287,7 @@ def checkInterrupts(bo:board, sn:snake, snakes:list, foods:list):
         strategyinfo['killcut'] = t
         reason.append('enclosed enemy was identified')
 
+
     # Critical health interrupt -- get food
     if (health <= CONST.healthCritical):
         interruptlist.append(['Eat', 'Any'])
@@ -301,11 +295,7 @@ def checkInterrupts(bo:board, sn:snake, snakes:list, foods:list):
 
     if (ally and duel): 
         interruptlist.append(['Ally', 'Tail'])
-
-    # if (numMovesAvailable(bo, start) < length):
-    #     interruptlist.append(['Survive', 'Tail'])
-    #     reason.append('less than X moves available')
-
+    
     # Kill logic 
     if (larger and duel): 
       # Control space 
@@ -367,6 +357,9 @@ def checkInterrupts(bo:board, sn:snake, snakes:list, foods:list):
 
     # Early game - Survive & eat 
     # or (health > CONST.healthMed and length < CONST.lengthMidGame
+    # if (numMovesAvailable(bo, start) < length):
+    #     interruptlist.append(['Survive', 'Weight'])
+    #     reason.append('less than X moves available')
 
     # Interrupt triggered
     if (len(interruptlist)):     
@@ -775,6 +768,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
                           route_padded, weight_total, route_length, lookahead,
                           keepLooking, ignoreThreat, enemy))
               
+      
       # Check if this is a "good" route for us 
       if ((weight_total <= CONST.pointThreshold and 
             (len(route_padded) >= lookahead)) and 
@@ -784,15 +778,7 @@ def stateMachine(bo:board, sn:snake, snakes:dict, foods:list, enemy=False):
       # We are desparate.  Ignore length & route threshold except hazard/solid death
       elif (ignoreThreat and weight_total < 2 * CONST.routeThreshold):
           found = True 
-
-      # Check if this is a "good" route for us 
-      if (weight_total <= CONST.foodThreshold and
-              strategy[0] == "Eat"  and 
-              len(route_padded) >= lookahead and 
-              not keepLooking): 
-
-          found = True 
-
+          
       # Enemy ignores point threshold 
       elif (enemy):
           found = True 
@@ -1091,13 +1077,9 @@ def numMovesAvailable(bo, start):
     int       maximum length in any direction  
 
     """
-    enclosed = bo.enclosedSpacev2(start)
-    # enclosed = copy.copy(bo.enclosed)
+    en = bo.enclosedSpacev2(start)
+    enclosed = copy.copy(bo.enclosed)
     max_len = max(enclosed, key=enclosed.get)
-
-    # print(bo.closest)
-    print(enclosed)
-
     return int(enclosed[max_len])
 
 
@@ -1127,7 +1109,7 @@ def enemyEnclosed(bo:board, us:snake, snakes:list):
         # Calculate which squares we can get to 
         board_closest = bo.closestDist(head, [enemy_head])
         # Assess enemy path 
-        board_chance = sn.getChanceMax()
+        board_chance = sn.getChance()
         # print("BOARD CHANCE", board_chance)
                     # bo.pathProbability(enemy_head)
         

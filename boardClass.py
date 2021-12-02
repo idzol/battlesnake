@@ -33,7 +33,6 @@ class board():
         self.identity = "" 
         
         self.closest = {}
-        self.enclosed = {}
 
         self.best = {}
         self.bestLength = {} # np.zeros((height, width), np.intc)
@@ -51,7 +50,7 @@ class board():
         self.turn = 0
         
         # Every N turns, assume snek eats 
-        self.foodIntake = CONST.foodIntake
+        self.foodIntake = 5
             
         self.resetCounters()
     
@@ -249,16 +248,6 @@ class board():
         # Chance boards
         self.updateChance(snakes, foods)
 
-        # Closest boards
-        them = []
-        for sid in snakes:
-            enemy  = snakes[sid]
-            if (enemy.getType() == 'enemy'):
-                enemy_head = enemy.getHead()
-                them.append(enemy_head)
-
-        self.closest['all'] = self.closestDist(us.getHead(), them)               
-        
         # Routing Boards - init (blank)
         markovs = []
         for t in range(0, depth):
@@ -530,135 +519,130 @@ class board():
 
     def updateMarkov(self, us, snakes:dict, foods:list, hazards:list, turns=CONST.lookAheadPathContinue): 
       
-        w = self.width
-        h = self.height
-        start = us.getHead()
+      w = self.width
+      h = self.height
+      # markovs = []
 
-        # markovs = []
-
-        turns = min(turns, CONST.lookAheadPathContinue)
-        for t in range(0, turns):
+      turns = min(turns, CONST.lookAheadPathContinue)
+      for t in range(0, turns):
+        
+        # Iterate through snakes to get the first step / next step based on probability
+        # snakes_updated = []
+        for sid in snakes:
             
-            # Iterate through snakes to get the first step / next step based on probability
-            # snakes_updated = []
-            for sid in snakes:
-                
-                sn = snakes[sid]
-                # who = sn.getType() 
-                # head = sn.getHead()
-                # tail = sn.getTail()
-                length = sn.getLength()
-                markov = np.zeros([w, h], np.intc)
-                sn_body = []
-                # sn_future = []
-                
-                # Prediction for first turn
-                if (not t):
-                    # First move -- establish initial markov (t = 0) 
+            sn = snakes[sid]
+            # who = sn.getType() 
+            # head = sn.getHead()
+            # tail = sn.getTail()
+            length = sn.getLength()
+            markov = np.zeros([w, h], np.intc)
+            sn_body = []
+            # sn_future = []
+              
+            # Prediction for first turn
+            if (not t):
+              # First move -- establish initial markov (t = 0) 
+              
+              # BUGFIX:  check/  Body already includes head, ie. function was doubleprinting head?
+              # sn_body = sn.getHeadBody()
+              sn_body = sn.getBody()
+              sn.setFuture(sn_body, 0)
+              body = sn_body
+
+            else:
+              # Predict current move (t) based on last markov (t) 
+              # Set future location ) 
+              # sn_body = self.predictMove_step(sn, foods, t - 1)
+              sn_body = sn.getFuture(t - 1)
+              body = sn_body['body']
+              if (len(body)):
+                body.pop(-1)
+              
+              sn.setFuture(body, t)
+              
+            # Update markov probability 
+            # =========================
+            for b in body: 
+                # if(self.inBounds(cell)):
+                # Paint markov matrix for turn t + 1
+                # y = cell[0]
+                # x = cell[1]
                     
-                    # BUGFIX:  check/  Body already includes head, ie. function was doubleprinting head?
-                    # sn_body = sn.getHeadBody()
-                    sn_body = sn.getBody()
-                    sn.setFuture(sn_body, 0)
-                    body = sn_body
+                # if who == "us" and cell == head:
+                #     # Adjust head to zero for routing
+                #     markov[y, x] = 0
+
+                if length > 3 and self.trails[b[0], b[1]] == 1: 
+                    # Erase tail unless snake is eating
+                    markov[b[0], b[1]] = 1
 
                 else:
-                    # Predict current move (t) based on last markov (t) 
-                    # Set future location ) 
-                    # sn_body = self.predictMove_step(sn, foods, t - 1)
-                    sn_body = sn.getFuture(t - 1)
-                    body = sn_body['body']
-                    if (len(body)):
-                        body.pop(-1)
-                    
-                    sn.setFuture(body, t)
-                    
-                # Update markov probability 
-                # =========================
-                for b in body: 
-                    # if(self.inBounds(cell)):
-                    # Paint markov matrix for turn t + 1
-                    # y = cell[0]
-                    # x = cell[1]
-                        
-                    # if who == "us" and cell == head:
-                    #     # Adjust head to zero for routing
-                    #     markov[y, x] = 0
-
-                    if length > 3 and self.trails[b[0], b[1]] == 1: 
-                        # Erase tail unless snake is eating
-                        markov[b[0], b[1]] = 1
-
-                    else:
-                        markov[b[0], b[1]] = CONST.routeSolid
+                    markov[b[0], b[1]] = CONST.routeSolid
 
 
-                sn.setMarkovBase(markov, t)
-                # Set markov + chance
-                if (not len(body)):
-                    # Set blank markov 
-                    # markov = np.zeros([w, h], np.intc)
-                    sn.setMarkov(markov, t)
+            sn.setMarkovBase(markov, t)
+            # Set markov + chance
+            if (not len(body)):
+                # Set blank markov 
+                # markov = np.zeros([w, h], np.intc)
+                sn.setMarkov(markov, t)
+
+            else: 
+                
+                # Update probabiliy by direction
+                if(sn.getType() == 'us'):
+                    # No prediction logic rqd for us  
+                    pass
 
                 else: 
-                    
-                    # Update probabiliy by direction
-                    if(sn.getType() == 'us'):
-                        # No prediction logic rqd for us  
-                        pass
+                    # Draw markov   
+                    chance = sn.getChance(t)
+                    if chance is not None:
+                        markov = markov + chance 
 
-                    else: 
-                        # Draw markov   
-                        chance = sn.getChance(t)
-                        if chance is not None:
-                            markov = markov + chance 
-
-                    sn.setMarkov(markov, t)
-                
-
-        # Route Fill (available squares)
-        enclosed = self.enclosedSpacev2(start)
-        max_len = max(enclosed, key=enclosed.get)
-
-        # Sum all snakes into final markov matrix
-        edges = self.getEdges()
-        for sn in snakes:
-            for t in range(0, turns - 1): 
-
-                markov = np.zeros([w, h], np.intc)
-                
-                for e in edges: 
-                    if e not in foods:
-                        markov[e[0], e[1]] = CONST.routeEdge
+                sn.setMarkov(markov, t)
             
-                if t < CONST.lookAheadHazard:
-                    for hz in hazards: 
-                        if hz not in foods:
-                            markov[hz[0], hz[1]] = CONST.routeHazard
-                        
-                for snid in snakes:
-                    sn = snakes[snid]
-                    # markov_sn = sn[identity].getMarkov()
-                    
-                    # if t >= CONST.lookAheadEnemy:
-                    if sn.getLength() < us.getLength() or t >= CONST.lookAheadEnemy:
-                        # Remove threat from smaller snakes, or after N turns (because snake threat unknown)
-                        markov_sn = sn.getMarkovBase(t)
-                    else:
-                        markov_sn = sn.getMarkov(t)
-                        
-                    markov = markov + markov_sn 
+            # ===================
+            # snakes[sid] = copy.deepcopy(sn)
 
-                # Fill logic 
-                for dirn in enclosed:
-                    if enclosed[dirn] != max_len:
-                        loc = list(map(add, start, CONST.directionMap[dirn]))
-                        if self.inBounds(loc):
-                            markov[loc[0], loc[1]] += CONST.routeFill
-                        
-                # print("LENGTH", len(self.markovs), t)
-                self.markovs[t] = markov
-                # self.markovbase[t] = copy.copy(markov)
+        # TODO: Calculate second iteration of probability, based on first round of markov models
+        # for sn in snakes:
+        #     self.updateMarkov_step(sn, snakes, foods, t)
+
+
+      # Sum all snakes into final markov matrix
+      for sn in snakes:
+        for t in range(0, turns - 1): 
+
+            markov = np.zeros([w, h], np.intc)
+            
+            edges = self.getEdges()
+            for e in edges: 
+                if e not in foods:
+                    markov[e[0], e[1]] = CONST.routeEdge
+           
+            if t < CONST.lookAheadHazard:
+                for hz in hazards: 
+                    if hz not in foods:
+                        markov[hz[0], hz[1]] = CONST.routeHazard
+                    
+            for snid in snakes:
+                sn = snakes[snid]
+                # markov_sn = sn[identity].getMarkov()
+                
+                # if t >= CONST.lookAheadEnemy:
+                if sn.getLength() < us.getLength() or t >= CONST.lookAheadEnemy:
+                    # Remove threat from smaller snakes, or after N turns (because snake threat unknown)
+                    markov_sn = sn.getMarkovBase(t)
+                else:
+                    markov_sn = sn.getMarkov(t)
+                    
+                markov = markov + markov_sn 
+
+                
+            # print("LENGTH", len(self.markovs), t)
+            self.markovs[t] = markov
+            # self.markovbase[t] = copy.copy(markov)
       
     
     def clearBest(self):
@@ -1500,12 +1484,21 @@ class board():
                 # print("DEBUG RANDOM", path, weight, len(path), depth)
                     
         # Add weight for any constrained points 
-        # Calculate constraints (ie. points enemy gets to before us) 
-        closest = self.closest['all']
+        # Get heads 
+        them = []
+        for sid in snakes:
+            enemy  = snakes[sid]
+            if (enemy.getType() == 'enemy'):
+                enemy_head = enemy.getHead()
+                them.append(enemy_head)
+
+        # print(path)
+        # print(self.constrains)
         for pt in path:
             # print(pt)
             if pt in self.constrains:
                 weight += CONST.routeConstrain    
+                closest = self.closestDist(head, them)
                 # print ("ROUTE CLOSEST", closest)
                 if not (closest[pt[0], pt[1]]):
                     weight += CONST.routeConstrain # Solid     
@@ -2384,7 +2377,7 @@ class board():
 
         edges = []
         edges = edges + fn.getPointsInLine([0,0], [0,w]) + \
-                    fn.getPointsInLine([0,w], [h,w]) + \
+                    fn.getPointsInLine([w,0], [h,w]) + \
                     fn.getPointsInLine([h,w], [h,0]) + \
                     fn.getPointsInLine([h,0], [0,0])
         # print(edges)
@@ -2640,7 +2633,7 @@ class board():
         return prison_sorted
 
 
-    def enclosedSpacev2(self, start, closest=True):
+    def enclosedSpacev2(self, start):
         # Return volume of enclosed spaces in each direction
         # TODO:  If < lenght AND tail < dist...
 
@@ -2651,7 +2644,7 @@ class board():
         sx = start[1]
 
         enclosed = {}
-        
+
         # Check enclosed space in four directions from start
         for d in CONST.directions:
 
@@ -2675,7 +2668,6 @@ class board():
             # print(d, str(enclosed[d]))
 
         # self.logger.log('enclosed-sum', str(enclsum))
-        self.enclosed = enclsum
         return enclsum
 
 
@@ -2704,7 +2696,7 @@ class board():
                 dny = dnext[0]
                 dnx = dnext[1]
                 # If point is in map & not already visited
-                if (self.inBounds(dnext) and not encl[dny, dnx] and self.closest['all'][dny, dnx]):
+                if (self.inBounds(dnext) and not encl[dny, dnx]):
                     # Recursive
                     self.enclosedSpace_step(encl, dnext)
 
