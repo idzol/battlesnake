@@ -84,7 +84,7 @@ else:
 
 # Routing threshold - collision probability
 routeThreshold = 1000  # Ignore if route larger 
-foodThreshold = 50   # Ignore if food & larger
+foodThreshold = 100   # Ignore if food & larger
 pointThreshold = 50   # Ignore if any step larger
 
 minProbability = 10    # Markov probability 
