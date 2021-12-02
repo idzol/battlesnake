@@ -87,11 +87,25 @@ class snake:
       t = min(t, lmax)
       self.chance[t] = copy.copy(c)
 
+    
+    def getChanceMax(self):
+      # print(self.chance)
+      
+      # Search for first chance board that is not None 
+      for t in range(0, len(self.chance)):    
+          td = len(self.chance) - t - 1
+          if(self.chance[td] is not None): 
+              c = self.chance[td]
+              break           
+      
+      return c
+
+
     def getChance(self, t=CONST.lookAheadEnemy - 1):
       lmax = len(self.chance) - 1
       t = min(t, lmax)
       c = self.chance[t]
-      return copy.copy(c)
+      return c
 
     def setFuture(self, b, t=0):
         future = { 
